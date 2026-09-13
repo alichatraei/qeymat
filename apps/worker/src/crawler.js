@@ -3,6 +3,7 @@ import { fetchNobitex } from "./adapters/nobitex.js";
 import { fetchAlanchand } from "./adapters/alanchand.js";
 import { fetchBonbast } from "./adapters/bonbast.js";
 import { fetchTgju } from "./adapters/tgju.js";
+import { fetchTwelveData } from "./adapters/twelvedata.js";
 import { fetchCustomJson } from "./adapters/custom-json.js";
 import { cache, publish } from "./lib/cache.js";
 import { checkAlerts } from "./alerts.js";
@@ -16,6 +17,7 @@ const ADAPTERS = {
   alanchand: fetchAlanchand,
   bonbast: fetchBonbast,
   tgju: fetchTgju,
+  twelvedata: fetchTwelveData,
   "custom-json": fetchCustomJson,
 };
 
@@ -76,11 +78,27 @@ async function applyRates(source, rates) {
 
   const touched = [];
 
+  // برخی منابع (Twelve Data) قیمت دلاری می‌دهند؛ برای نمایش تومانی به نرخ روز دلار نیاز است
+  let usdToman = 0;
+  if (Object.values(rates).some((rate) => rate?.usdQuoted)) {
+    const usd = await prisma.asset.findUnique({
+      where: { symbol: "USD" },
+      include: { rate: true },
+    });
+    usdToman = usd?.rate?.sell || 0;
+    if (!usdToman) {
+      log.warn(`[${source.key}] نرخ دلار موجود نیست، تبدیل تومانی رد شد`);
+    }
+  }
+
   for (const asset of assets) {
     const raw = rates[asset.sourceField] || rates[asset.sourceField?.toLowerCase()];
     if (!raw) continue;
 
-    const multiplier = asset.multiplier || 1;
+    // برای نرخ‌های دلاری، ضریب همان نرخ روز دلار است
+    const multiplier = raw.usdQuoted ? usdToman : asset.multiplier || 1;
+    if (raw.usdQuoted && !usdToman) continue;
+
     const sell = round(raw.sell * multiplier);
     const buy = round((raw.buy ?? raw.sell) * multiplier);
     if (!sell) continue;
@@ -147,6 +165,7 @@ export async function refreshCache() {
         nameFa: asset.nameFa,
         nameEn: asset.nameEn,
         category: asset.category,
+        tier: asset.tier,
         countryCode: asset.countryCode,
         mark: asset.mark,
         unit: asset.unit,

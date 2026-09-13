@@ -27,6 +27,7 @@ export async function getSnapshot(): Promise<MarketSnapshot> {
         nameFa: asset.nameFa,
         nameEn: asset.nameEn,
         category: asset.category,
+        tier: asset.tier,
         countryCode: asset.countryCode,
         mark: asset.mark,
         unit: asset.unit,
@@ -43,6 +44,34 @@ export async function getSnapshot(): Promise<MarketSnapshot> {
 
   await cacheSet(SNAPSHOT_KEY, snapshot, 30);
   return snapshot;
+}
+
+/**
+ * اسنپ‌شات را برای کاربری که اشتراک پلاس ندارد می‌پوشاند.
+ *
+ * ردیف حذف نمی‌شود — عمداً. کاربر باید ببیند چه چیزی هست که نمی‌بیند،
+ * وگرنه دلیلی برای خرید پیدا نمی‌کند. فقط اعداد صفر می‌شوند.
+ */
+export function maskSnapshot(snapshot: MarketSnapshot, hasPlus: boolean): MarketSnapshot {
+  if (hasPlus) return snapshot;
+
+  return {
+    ...snapshot,
+    assets: snapshot.assets.map((asset) =>
+      asset.tier === "PLUS"
+        ? {
+            ...asset,
+            buy: 0,
+            sell: 0,
+            changePercent: 0,
+            dayLow: null,
+            dayHigh: null,
+            globalPrice: null,
+            locked: true,
+          }
+        : asset,
+    ),
+  };
 }
 
 export async function getRate(symbol: string): Promise<RateView | null> {

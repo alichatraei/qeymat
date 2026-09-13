@@ -14,6 +14,45 @@ enum AssetCategory {
   CURRENCY
   GOLD
   CRYPTO
+  COMMODITY
+  STOCK
+  INDEX
+}
+
+/// سطح دسترسی هر دارایی: رایگان یا مخصوص مشترکان قیمت پلاس
+enum AssetTier {
+  FREE
+  PLUS
+}
+
+enum OtpPurpose {
+  LOGIN
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum GatewayStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+/// نوع چیزی که خریداری می‌شود
+enum ProductKind {
+  API_PLAN
+  PLUS_PLAN
 }
 
 enum UserRole {
@@ -72,6 +111,8 @@ model Asset {
   sourceField String
   /// ضریب تبدیل واحد منبع به تومان (ریال ← تومان = 0.1)
   multiplier  Float         @default(1)
+  /// FREE برای همه، PLUS فقط برای مشترکان قیمت پلاس
+  tier        AssetTier     @default(FREE)
   sortOrder   Int           @default(100)
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
@@ -81,7 +122,7 @@ model Asset {
   history RateHistory[]
   alerts  PriceAlert[]
 
-  @@index([category, sortOrder])
+  @@index([category, tier, sortOrder])
 }
 
 /// آخرین نرخ هر دارایی — همیشه یک ردیف به ازای هر دارایی
@@ -134,21 +175,121 @@ model Source {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         UserRole @default(USER)
-  isActive     Boolean  @default(true)
-  lastSeenAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id    String  @id @default(cuid())
+  /// شماره موبایل نرمال‌شده به فرم 09xxxxxxxxx — روش اصلی ورود
+  phone String? @unique
+  /// ایمیل اختیاری است؛ فقط برای حساب‌های قدیمی و مدیران
+  email String? @unique
+  name  String  @default("کاربر قیمت")
+  /// فقط برای مدیرانی که با ایمیل و گذرواژه وارد می‌شوند
+  passwordHash String?
+
+  role        UserRole  @default(USER)
+  isActive    Boolean   @default(true)
+  phoneVerifiedAt DateTime?
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   apiKeys           ApiKey[]
   subscriptions     Subscription[]
+  plusSubscriptions PlusSubscription[]
   payments          Payment[]
+  orders            GatewayOrder[]
+  tickets           Ticket[]
+  ticketMessages    TicketMessage[]
   pushSubscriptions PushSubscription[]
   aiOrders          AiOrder[]
+
+  @@index([phone])
+}
+
+/// کد یک‌بارمصرف ورود. فقط هش کد ذخیره می‌شود.
+model OtpCode {
+  id        String     @id @default(cuid())
+  phone     String
+  codeHash  String
+  purpose   OtpPurpose @default(LOGIN)
+  attempts  Int        @default(0)
+  consumedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+  ip        String?
+
+  @@index([phone, createdAt])
+}
+
+/// اشتراک «قیمت پلاس» — دسترسی به دارایی‌های سطح PLUS در سایت و اپ
+model PlusSubscription {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      String
+  status    SubscriptionStatus @default(ACTIVE)
+  startsAt  DateTime           @default(now())
+  expiresAt DateTime
+  /// سفارشی که این اشتراک را فعال کرده است
+  orderId   String?
+  createdAt DateTime           @default(now())
+
+  @@index([userId, status])
+}
+
+/// سفارش پرداخت از درگاه زرین‌پال — هم برای پلن API و هم قیمت پلاس
+model GatewayOrder {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      ProductKind
+  plan      String
+  /// مبلغ به ریال — واحدی که زرین‌پال می‌پذیرد
+  amountRial Int
+  status    GatewayStatus @default(PENDING)
+  /// شناسه‌ای که زرین‌پال هنگام درخواست پرداخت می‌دهد
+  authority String?       @unique
+  /// شماره پیگیری پس از تأیید موفق
+  refId     String?
+  cardPan   String?
+  failReason String?
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+model Ticket {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String         @default("عمومی")
+  priority  TicketPriority @default(NORMAL)
+  status    TicketStatus   @default(OPEN)
+  /// برای نشان‌دادن نشان «پاسخ تازه» در پنل کاربر
+  lastReplyAt DateTime     @default(now())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([userId, status])
+  @@index([status, lastReplyAt])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  /// پیام از سمت پشتیبانی است یا کاربر
+  fromStaff Boolean  @default(false)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model ApiKey {

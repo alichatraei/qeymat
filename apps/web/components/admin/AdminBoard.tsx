@@ -10,16 +10,20 @@ import {
   Check,
   ChevronLeft,
   Clock,
+  Crown,
   Globe,
   Loader2,
   Radio,
   RefreshCw,
   Rocket,
   ShoppingBag,
+  LifeBuoy,
+  Receipt,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
-import { fa, getPlan, jalali, timeAgo } from "@qeymat/shared";
+import { fa, getAnyPlan, getPlan, jalali, timeAgo } from "@qeymat/shared";
 import Brand from "@/components/layout/Brand";
 import type { SessionUser } from "@/lib/types";
 
@@ -57,17 +61,45 @@ type Order = {
   createdAt: string;
 };
 
+type GatewayOrderRow = {
+  id: string;
+  user: string;
+  contact: string;
+  kind: string;
+  plan: string;
+  amountToman: number;
+  status: string;
+  refId: string | null;
+  failReason: string | null;
+  createdAt: string;
+};
+
+type TicketRow = {
+  id: string;
+  subject: string;
+  category: string;
+  priority: string;
+  status: string;
+  user: string;
+  contact: string;
+  lastReplyAt: string;
+  createdAt: string;
+};
+
 type UserRow = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: "USER" | "ADMIN";
   createdAt: string;
   lastSeenAt: string | null;
 };
 
 const SECTIONS = [
-  { id: "payments", label: "پرداخت‌ها", icon: BarChart3, group: "مدیریت" },
+  { id: "gateway", label: "پرداخت‌های درگاه", icon: Receipt, group: "مدیریت" },
+  { id: "tickets", label: "تیکت‌ها", icon: LifeBuoy, group: "مدیریت" },
+  { id: "payments", label: "پرداخت تتری (قدیمی)", icon: BarChart3, group: "مدیریت" },
   { id: "orders", label: "سفارش هوش مصنوعی", icon: ShoppingBag, group: "مدیریت" },
   { id: "users", label: "کاربران", icon: Users, group: "مدیریت" },
   { id: "sources", label: "منابع نرخ", icon: Globe, group: "سامانه" },
@@ -85,16 +117,29 @@ export default function AdminBoard({
   sources,
   orders: initialOrders,
   users,
+  gatewayOrders,
+  tickets,
 }: {
   admin: SessionUser;
-  stats: { userCount: number; activeSubs: number; pending: number; todayUsage: number; subscribers: number };
+  stats: {
+    userCount: number;
+    activeSubs: number;
+    pending: number;
+    todayUsage: number;
+    subscribers: number;
+    plusCount: number;
+    openTickets: number;
+    monthRevenueToman: number;
+  };
   payments: Payment[];
   sources: Source[];
   orders: Order[];
   users: UserRow[];
+  gatewayOrders: GatewayOrderRow[];
+  tickets: TicketRow[];
 }) {
   const router = useRouter();
-  const [section, setSection] = useState<SectionId>("payments");
+  const [section, setSection] = useState<SectionId>("gateway");
   const [payments, setPayments] = useState(initialPayments);
   const [orders, setOrders] = useState(initialOrders);
   const [busy, setBusy] = useState("");
@@ -187,6 +232,11 @@ export default function AdminBoard({
                 >
                   <item.icon className="h-[15px] w-[15px] shrink-0" />
                   {item.label}
+                  {item.id === "tickets" && stats.openTickets ? (
+                    <b className="tabular mr-auto rounded-pill bg-green px-1.5 py-0.5 text-[10px] text-white">
+                      {fa(stats.openTickets)}
+                    </b>
+                  ) : null}
                   {item.id === "payments" && pendingCount ? (
                     <b className="tabular mr-auto rounded-pill bg-green px-1.5 py-0.5 text-[10px] text-white">
                       {fa(pendingCount)}
@@ -224,11 +274,130 @@ export default function AdminBoard({
 
         <div className="flex-1 space-y-5 p-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat icon={Users} tone="bg-green-soft text-green-dark" label="کاربران ثبت‌نام‌شده" value={fa(stats.userCount)} note={`${fa(stats.subscribers)} مرورگر مشترک اعلان`} />
-            <Stat icon={Rocket} tone="bg-[#e6eefa] text-blue" label="اشتراک فعال" value={fa(stats.activeSubs)} note="پلن‌های در جریان" />
-            <Stat icon={Clock} tone="bg-[#fdf3e2] text-amber" label="پرداخت در انتظار" value={fa(pendingCount)} note="نیازمند بررسی" />
-            <Stat icon={Activity} tone="bg-[#efe9fa] text-purple" label="درخواست API امروز" value={fa(stats.todayUsage)} note="از نیمه‌شب تاکنون" />
+            <Stat icon={Wallet} tone="bg-green-soft text-green-dark" label="درآمد این ماه" value={`${fa(stats.monthRevenueToman)}`} note="تومان، تراکنش‌های موفق" />
+            <Stat icon={Crown} tone="bg-[#fdf3e2] text-amber" label="مشترک قیمت پلاس" value={fa(stats.plusCount)} note={`${fa(stats.activeSubs)} اشتراک API فعال`} />
+            <Stat icon={Users} tone="bg-[#e6eefa] text-blue" label="کاربران" value={fa(stats.userCount)} note={`${fa(stats.subscribers)} مرورگر مشترک اعلان`} />
+            <Stat icon={Activity} tone="bg-[#efe9fa] text-purple" label="درخواست API امروز" value={fa(stats.todayUsage)} note={`${fa(stats.openTickets)} تیکت باز`} />
           </div>
+
+          {section === "gateway" ? (
+            <Panel title="پرداخت‌های درگاه زرین‌پال" note="اشتراک‌ها پس از تأیید درگاه خودکار فعال می‌شوند؛ اینجا فقط گزارش است.">
+              <div className="table-scroll">
+                <table className="w-full min-w-[860px] text-right text-[12px]">
+                  <thead className="text-xxs text-muted">
+                    <tr>
+                      <th className="pb-3 font-semibold">کاربر</th>
+                      <th className="pb-3 font-semibold">محصول</th>
+                      <th className="pb-3 font-semibold">مبلغ</th>
+                      <th className="pb-3 font-semibold">پیگیری</th>
+                      <th className="pb-3 font-semibold">زمان</th>
+                      <th className="pb-3 font-semibold">وضعیت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gatewayOrders.map((order) => (
+                      <tr key={order.id} className="border-t border-line align-top">
+                        <td className="py-3.5">
+                          <b className="block text-[12px]">{order.user}</b>
+                          <small dir="ltr" className="text-[10px] text-muted">{order.contact}</small>
+                        </td>
+                        <td className="py-3.5">
+                          <b className="block text-[12px]">
+                            {order.kind === "PLUS_PLAN" ? "قیمت پلاس" : "وب‌سرویس API"}
+                          </b>
+                          <small className="text-[10.5px] text-muted">
+                            {getAnyPlan(order.plan)?.label ?? order.plan}
+                          </small>
+                        </td>
+                        <td className="tabular py-3.5 font-bold">{fa(order.amountToman)}</td>
+                        <td className="py-3.5">
+                          {order.refId ? (
+                            <code dir="ltr" className="font-mono text-[10.5px]">{order.refId}</code>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 text-muted">{timeAgo(order.createdAt)}</td>
+                        <td className="py-3.5">
+                          <span
+                            className={
+                              order.status === "PAID"
+                                ? "state-approved"
+                                : order.status === "PENDING"
+                                  ? "state-pending"
+                                  : order.status === "FAILED"
+                                    ? "state-rejected"
+                                    : "chip bg-soft text-[#55616a]"
+                            }
+                          >
+                            {order.status === "PAID"
+                              ? "موفق"
+                              : order.status === "PENDING"
+                                ? "ناتمام"
+                                : order.status === "FAILED"
+                                  ? "ناموفق"
+                                  : "لغو"}
+                          </span>
+                          {order.failReason ? (
+                            <small className="mt-1 block max-w-[22ch] text-[10px] text-muted">
+                              {order.failReason}
+                            </small>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!gatewayOrders.length ? <Empty text="هنوز پرداختی از درگاه ثبت نشده است." /> : null}
+              </div>
+            </Panel>
+          ) : null}
+
+          {section === "tickets" ? (
+            <Panel title="تیکت‌های پشتیبانی" note="برای پاسخ روی هر تیکت بزنید.">
+              <div className="space-y-2">
+                {tickets.map((ticket) => (
+                  <Link
+                    key={ticket.id}
+                    href={`/panel/tickets/${ticket.id}`}
+                    className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-[#cbd6d1] hover:bg-[#f8fbf9]"
+                  >
+                    <span
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                        ticket.priority === "HIGH"
+                          ? "bg-[#fdeced] text-danger"
+                          : "bg-soft text-[#55616a]"
+                      }`}
+                    >
+                      <LifeBuoy className="h-4 w-4" />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <b className="truncate text-[12.5px]">{ticket.subject}</b>
+                      <small className="text-[10.5px] text-muted">
+                        {ticket.user} · {ticket.category} · {timeAgo(ticket.lastReplyAt)}
+                      </small>
+                    </span>
+                    <span
+                      className={
+                        ticket.status === "OPEN"
+                          ? "state-pending"
+                          : ticket.status === "ANSWERED"
+                            ? "state-approved"
+                            : "chip bg-soft text-[#55616a]"
+                      }
+                    >
+                      {ticket.status === "OPEN"
+                        ? "در انتظار پاسخ"
+                        : ticket.status === "ANSWERED"
+                          ? "پاسخ داده شد"
+                          : "بسته"}
+                    </span>
+                  </Link>
+                ))}
+                {!tickets.length ? <Empty text="تیکتی ثبت نشده است." /> : null}
+              </div>
+            </Panel>
+          ) : null}
 
           {section === "payments" ? (
             <Panel title="پرداخت‌های اخیر" note="هش‌های ارسال‌شده را بررسی و وضعیت اشتراک را تعیین کنید.">
@@ -390,7 +559,9 @@ export default function AdminBoard({
                       <tr key={item.id} className="border-t border-line">
                         <td className="py-3.5">
                           <b className="block text-[12px]">{item.name}</b>
-                          <small dir="ltr" className="text-[10px] text-muted">{item.email}</small>
+                          <small dir="ltr" className="text-[10px] text-muted">
+                            {item.phone ?? item.email ?? "—"}
+                          </small>
                         </td>
                         <td className="py-3.5">
                           <span className={item.role === "ADMIN" ? "state-approved" : "chip bg-soft text-[#55616a]"}>

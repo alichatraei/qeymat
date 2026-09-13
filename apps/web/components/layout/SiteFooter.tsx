@@ -20,6 +20,14 @@ const COLUMNS = [
     ],
   },
   {
+    title: "اشتراک",
+    links: [
+      { href: "/plus", label: "قیمت پلاس" },
+      { href: "/panel", label: "پنل کاربری" },
+      { href: "/panel/tickets", label: "پشتیبانی و تیکت" },
+    ],
+  },
+  {
     title: "خدمات ارزی",
     links: [
       { href: "/ai", label: "اکانت هوش مصنوعی" },
@@ -55,6 +63,40 @@ export default function SiteFooter() {
             </ul>
           </nav>
         ))}
+      </div>
+
+      {/* نمادها */}
+      <div className="border-t border-line bg-[#fbfcfb]">
+        <div className="content-width flex flex-wrap items-center gap-4 py-6">
+          <a
+            referrerPolicy="origin"
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://trustseal.enamad.ir/?id=7477924&Code=yg52kGatBDdaUjsJpSGAbZDEPCLPetJ1"
+            className="inline-flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-xl border border-line bg-white p-1.5"
+            aria-label="نماد اعتماد الکترونیکی"
+          >
+            {/*
+              اسکریپت اینماد اجباری است که تگ img با همان code باشد،
+              بنابراین از next/image استفاده نمی‌کنیم و تگ خام می‌ماند.
+            */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              referrerPolicy="origin"
+              src="https://trustseal.enamad.ir/logo.aspx?id=7477924&Code=yg52kGatBDdaUjsJpSGAbZDEPCLPetJ1"
+              alt="نماد اعتماد الکترونیکی"
+              style={{ cursor: "pointer" }}
+              {...{ code: "yg52kGatBDdaUjsJpSGAbZDEPCLPetJ1" }}
+              className="h-full w-full object-contain"
+              loading="lazy"
+            />
+          </a>
+
+          <p className="max-w-[46ch] text-[11px] leading-6 text-muted">
+            قیمت دارای نماد اعتماد الکترونیکی است. پرداخت‌ها از درگاه امن زرین‌پال انجام می‌شود و
+            اطلاعات کارت شما هرگز روی این سایت ذخیره نمی‌شود.
+          </p>
+        </div>
       </div>
 
       <div className="border-t border-line">

@@ -1,10 +1,15 @@
-export type AssetCategory = "CURRENCY" | "GOLD" | "CRYPTO";
+export type AssetCategory = "CURRENCY" | "GOLD" | "CRYPTO" | "COMMODITY" | "STOCK" | "INDEX";
+
+export type AssetTier = "FREE" | "PLUS";
 
 export type RateView = {
   symbol: string;
   nameFa: string;
   nameEn: string;
   category: AssetCategory;
+  tier: AssetTier;
+  /// وقتی true است، قیمت‌ها پنهان شده‌اند و کاربر باید قیمت پلاس بخرد
+  locked?: boolean;
   countryCode: string | null;
   mark: string | null;
   unit: string;
@@ -34,4 +39,17 @@ export type SessionUser = {
   email: string;
   name: string;
   role: "USER" | "ADMIN";
+};
+
+export type TicketStatus = "OPEN" | "ANSWERED" | "CLOSED";
+
+export type TicketView = {
+  id: string;
+  subject: string;
+  category: string;
+  priority: "LOW" | "NORMAL" | "HIGH";
+  status: TicketStatus;
+  lastReplyAt: string;
+  createdAt: string;
+  messageCount?: number;
 };

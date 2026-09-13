@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import ConverterBoard from "@/components/market/ConverterBoard";
-import { getSnapshot } from "@/lib/market";
+import { getSnapshot, maskSnapshot } from "@/lib/market";
+import { getSessionUser } from "@/lib/auth";
+import { hasPlusAccess } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,13 @@ export default async function ConverterPage({
 }: {
   searchParams: Promise<{ symbol?: string }>;
 }) {
-  const [snapshot, params] = await Promise.all([getSnapshot(), searchParams]);
+  const [raw, params] = await Promise.all([getSnapshot(), searchParams]);
+  const user = await getSessionUser();
+  // مبدل هم فقط دارایی‌های در دسترس کاربر را نشان می‌دهد
+  const snapshot = {
+    ...raw,
+    assets: maskSnapshot(raw, await hasPlusAccess(user?.id)).assets.filter((asset) => !asset.locked),
+  };
   const requested = String(params.symbol || "USD").toUpperCase();
   const exists = snapshot.assets.some((asset) => asset.symbol === requested);
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyApiKey, rateLimit, logUsage } from "@/lib/api-key";
 import { getSnapshot } from "@/lib/market";
+import { hasPlusAccess } from "@/lib/otp";
 import { CATEGORY_SLUGS } from "@qeymat/shared";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
   if (!check.ok) return fail(check.status, check.code, check.message);
 
   const snapshot = await getSnapshot();
+  // مشترکان API هم برای دارایی‌های پلاس به اشتراک پلاس نیاز دارند
+  const plus = await hasPlusAccess(check.userId);
   const category = request.nextUrl.searchParams.get("category");
   const mapped = category
     ? CATEGORY_SLUGS[category.toLowerCase() as keyof typeof CATEGORY_SLUGS]
@@ -26,6 +29,7 @@ export async function GET(request: NextRequest) {
 
   const data = snapshot.assets
     .filter((asset) => (mapped ? asset.category === mapped : true))
+    .filter((asset) => plus || asset.tier === "FREE")
     .map((asset) => ({
       symbol: asset.symbol,
       name_fa: asset.nameFa,
@@ -42,7 +46,15 @@ export async function GET(request: NextRequest) {
   logUsage(check.apiKeyId, "/v1/rates", 200, Date.now() - startedAt);
 
   return NextResponse.json(
-    { data, meta: { count: data.length, updated_at: snapshot.updatedAt } },
+    {
+      data,
+      meta: {
+        count: data.length,
+        updated_at: snapshot.updatedAt,
+        plus_access: plus,
+        ...(plus ? {} : { note: "دارایی‌های سطح پلاس نیاز به اشتراک قیمت پلاس دارند." }),
+      },
+    },
     {
       headers: {
         "X-RateLimit-Remaining": String(limit.remaining),

@@ -7,12 +7,29 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const user = (await getSessionUser())!;
 
-  const [userCount, activeSubs, pending, todayUsage, payments, sources, orders, users, subscribers] =
-    await Promise.all([
+  const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  const [
+    userCount,
+    activeSubs,
+    pending,
+    todayUsage,
+    payments,
+    sources,
+    orders,
+    users,
+    subscribers,
+    plusCount,
+    openTickets,
+    gatewayOrders,
+    tickets,
+    revenue,
+  ] = await Promise.all([
       prisma.user.count(),
       prisma.subscription.count({ where: { status: "ACTIVE", expiresAt: { gt: new Date() } } }),
       prisma.payment.count({ where: { status: "PENDING" } }),
-      prisma.usageLog.count({ where: { at: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } } }),
+      prisma.usageLog.count({ where: { at: { gte: startOfDay } } }),
       prisma.payment.findMany({
         orderBy: { createdAt: "desc" },
         take: 25,
@@ -27,15 +44,67 @@ export default async function AdminPage() {
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
         take: 20,
-        select: { id: true, name: true, email: true, role: true, createdAt: true, lastSeenAt: true },
+        select: {
+          id: true, name: true, email: true, phone: true,
+          role: true, createdAt: true, lastSeenAt: true,
+        },
       }),
       prisma.pushSubscription.count(),
+      prisma.plusSubscription.count({ where: { status: "ACTIVE", expiresAt: { gt: new Date() } } }),
+      prisma.ticket.count({ where: { status: { not: "CLOSED" } } }),
+      prisma.gatewayOrder.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        include: { user: { select: { name: true, phone: true, email: true } } },
+      }),
+      prisma.ticket.findMany({
+        orderBy: { lastReplyAt: "desc" },
+        take: 30,
+        include: { user: { select: { name: true, phone: true } } },
+      }),
+      // درآمد ماه جاری، فقط تراکنش‌های واقعاً پرداخت‌شده
+      prisma.gatewayOrder.aggregate({
+        where: { status: "PAID", paidAt: { gte: startOfMonth } },
+        _sum: { amountRial: true },
+      }),
     ]);
 
   return (
     <AdminBoard
       admin={user}
-      stats={{ userCount, activeSubs, pending, todayUsage, subscribers }}
+      stats={{
+        userCount,
+        activeSubs,
+        pending,
+        todayUsage,
+        subscribers,
+        plusCount,
+        openTickets,
+        monthRevenueToman: Math.round((revenue._sum.amountRial ?? 0) / 10),
+      }}
+      gatewayOrders={gatewayOrders.map((order) => ({
+        id: order.id,
+        user: order.user.name,
+        contact: order.user.phone ?? order.user.email ?? "—",
+        kind: order.kind,
+        plan: order.plan,
+        amountToman: Math.round(order.amountRial / 10),
+        status: order.status,
+        refId: order.refId,
+        failReason: order.failReason,
+        createdAt: order.createdAt.toISOString(),
+      }))}
+      tickets={tickets.map((ticket) => ({
+        id: ticket.id,
+        subject: ticket.subject,
+        category: ticket.category,
+        priority: ticket.priority,
+        status: ticket.status,
+        user: ticket.user.name,
+        contact: ticket.user.phone ?? "—",
+        lastReplyAt: ticket.lastReplyAt.toISOString(),
+        createdAt: ticket.createdAt.toISOString(),
+      }))}
       payments={payments.map((payment) => ({
         id: payment.id,
         user: payment.user.name,
@@ -70,7 +139,8 @@ export default async function AdminPage() {
       users={users.map((item) => ({
         id: item.id,
         name: item.name,
-        email: item.email,
+        email: item.email ?? null,
+        phone: item.phone ?? null,
         role: item.role,
         createdAt: item.createdAt.toISOString(),
         lastSeenAt: item.lastSeenAt?.toISOString() ?? null,

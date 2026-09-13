@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { ChevronLeft, RefreshCw, Repeat, Search, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Crown, Lock, RefreshCw, Repeat, Search, ShieldCheck } from "lucide-react";
 import { CATEGORY_TABS, fa, movement, parseNumber, timeAgo } from "@qeymat/shared";
 import RateIcon from "./RateIcon";
 import PriceChart from "./PriceChart";
@@ -16,24 +16,28 @@ export default function MarketBoard({
   initialSnapshot,
   initialHistory,
   initialCategory = "CURRENCY",
+  initialHasPlus = false,
 }: {
   initialSnapshot: MarketSnapshot;
   initialHistory: HistoryPoint[];
   initialCategory?: AssetCategory;
+  initialHasPlus?: boolean;
 }) {
   const [category, setCategory] = useState<AssetCategory>(initialCategory);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RateView | null>(null);
 
   // نرخ‌ها هر ۳۰ ثانیه تازه می‌شوند؛ داده‌ی اولیه از سرور می‌آید تا صفحه فوراً رندر شود
-  const { data, isValidating, mutate } = useSWR<MarketSnapshot>("/api/public/rates", fetcher, {
+  const { data, isValidating, mutate } = useSWR<MarketSnapshot & { hasPlus?: boolean }>("/api/public/rates", fetcher, {
     fallbackData: initialSnapshot,
     refreshInterval: 30000,
     revalidateOnFocus: true,
   });
 
   const snapshot = data ?? initialSnapshot;
+  const hasPlus = data?.hasPlus ?? initialHasPlus;
   const usd = snapshot.assets.find((asset) => asset.symbol === "USD") ?? snapshot.assets[0];
+  const lockedCount = snapshot.assets.filter((asset) => asset.locked).length;
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -115,7 +119,8 @@ export default function MarketBoard({
           </label>
         </div>
 
-        <div className="mt-6 inline-grid grid-cols-3 gap-1 rounded-xl bg-[#f0f4f2] p-1" role="tablist">
+        <div className="table-scroll mt-6">
+          <div className="inline-grid grid-flow-col gap-1 rounded-xl bg-[#f0f4f2] p-1" role="tablist">
           {CATEGORY_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -123,16 +128,36 @@ export default function MarketBoard({
               role="tab"
               aria-selected={category === tab.id}
               onClick={() => setCategory(tab.id as AssetCategory)}
-              className={`h-[38px] min-w-[100px] rounded-[9px] px-5 text-[12px] font-semibold transition-colors ${
+              className={`inline-flex h-[38px] min-w-[92px] items-center justify-center gap-1.5 rounded-[9px] px-4 text-[12px] font-semibold transition-colors ${
                 category === tab.id
                   ? "bg-green-soft text-green-dark shadow-[0_1px_3px_rgba(9,69,48,.06)]"
                   : "text-[#5d6870]"
               }`}
             >
+              {tab.plus && !hasPlus ? <Crown className="h-3.5 w-3.5 text-amber" /> : null}
               {tab.label}
             </button>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {lockedCount && !hasPlus ? (
+          <Link
+            href="/plus"
+            className="mt-4 flex items-center gap-3 rounded-card border border-[#f2e3c4] bg-[#fdf9ef] p-4 transition-colors hover:border-[#e8d3a6]"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fdf3e2] text-[#a8741a]">
+              <Crown className="h-5 w-5" />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <b className="text-[12.5px]">{fa(lockedCount)} دارایی قفل است</b>
+              <small className="text-[11px] text-muted">
+                نفت، طلای جهانی، سهام اپل و تسلا و شاخص‌های بورس آمریکا با قیمت پلاس باز می‌شود.
+              </small>
+            </span>
+            <span className="btn-solid h-9 min-h-0 shrink-0 !px-3 text-[11px]">مشاهده پلن‌ها</span>
+          </Link>
+        ) : null}
 
         <div className="table-scroll mt-4 border-y border-line">
           <div className="min-w-[850px]">
@@ -146,7 +171,35 @@ export default function MarketBoard({
             </div>
 
             {rows.length ? (
-              rows.map((rate) => (
+              rows.map((rate) =>
+                rate.locked ? (
+                  // ردیف قفل عمداً حذف نمی‌شود: کاربر باید ببیند چه چیزی را نمی‌بیند
+                  <Link
+                    key={rate.symbol}
+                    href="/plus"
+                    className="grid w-full grid-cols-[minmax(210px,1.35fr)_repeat(3,minmax(110px,.75fr))_minmax(130px,.8fr)_32px] items-center gap-x-3.5 border-t border-line bg-white py-4 text-right text-[12px] text-[#3f4c55] transition-colors hover:bg-[#fdf9ef]"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="opacity-45">
+                        <RateIcon rate={rate} />
+                      </span>
+                      <span className="flex flex-col text-right">
+                        <strong className="text-[13px] text-ink">{rate.nameFa}</strong>
+                        <small dir="ltr" className="text-[10.5px] text-muted">
+                          {rate.symbol}
+                        </small>
+                      </span>
+                    </span>
+                    <span className="col-span-3 flex items-center gap-2 text-[11.5px] text-[#a8741a]">
+                      <Lock className="h-3.5 w-3.5" />
+                      با قیمت پلاس باز می‌شود
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11.5px] text-muted">
+                      {rate.sourceLabel}
+                    </span>
+                    <Crown className="h-4 w-4 text-amber" />
+                  </Link>
+                ) : (
                 <button
                   key={rate.symbol}
                   type="button"
@@ -178,7 +231,8 @@ export default function MarketBoard({
                   </span>
                   <ChevronLeft className="h-4 w-4 text-[#a7b0b6]" />
                 </button>
-              ))
+                ),
+              )
             ) : (
               <div className="flex flex-col items-center gap-2 border-t border-line py-16 text-center">
                 <Search className="h-6 w-6 text-[#b6bfc4]" />

@@ -121,7 +121,7 @@
 
   /* خط زیر آیتم فعال منوی اصلی */
   .nav-link {
-    @apply relative h-10 rounded-[10px] px-[15px] text-[13px] font-semibold text-[#505b64] transition-colors;
+    @apply relative inline-flex h-10 items-center rounded-[10px] px-3 text-[12.5px] font-semibold text-[#505b64] transition-colors;
   }
   .nav-link:hover {
     @apply bg-[#f0f4f2] text-ink;
@@ -130,7 +130,7 @@
     @apply text-green-dark;
   }
   .nav-link[data-active="true"]::after {
-    @apply absolute inset-x-[15px] -bottom-[18px] h-[3px] rounded-t-pill bg-green content-[''];
+    @apply absolute inset-x-3 -bottom-4 h-[3px] rounded-t-pill bg-green content-[''];
   }
 
   .table-scroll {

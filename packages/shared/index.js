@@ -3,13 +3,17 @@
  * بدون وابستگی خارجی تا در هر دو محیط قابل استفاده باشد.
  */
 
+/**
+ * پلن‌های وب‌سرویس API. قیمت‌ها به **تومان** هستند و پرداخت از
+ * درگاه زرین‌پال انجام می‌شود؛ تبدیل به ریال فقط در لایه‌ی درگاه.
+ */
 export const PLANS = [
   {
     id: "monthly",
     label: "ماهانه",
     months: "۱ ماه",
     monthCount: 1,
-    price: 15,
+    price: 300000,
     limit: 30000,
     requests: "۳۰٬۰۰۰",
     note: "برای شروع و تست محصول",
@@ -19,7 +23,7 @@ export const PLANS = [
     label: "سه‌ماهه",
     months: "۳ ماه",
     monthCount: 3,
-    price: 39,
+    price: 790000,
     limit: 100000,
     requests: "۱۰۰٬۰۰۰",
     note: "مناسب تیم‌های کوچک",
@@ -30,7 +34,7 @@ export const PLANS = [
     label: "شش‌ماهه",
     months: "۶ ماه",
     monthCount: 6,
-    price: 72,
+    price: 1450000,
     limit: 250000,
     requests: "۲۵۰٬۰۰۰",
     note: "برای محصولات در حال رشد",
@@ -40,23 +44,78 @@ export const PLANS = [
     label: "سالانه",
     months: "۱۲ ماه",
     monthCount: 12,
-    price: 120,
+    price: 2590000,
     limit: 600000,
     requests: "۶۰۰٬۰۰۰",
     note: "بهترین ارزش خرید",
   },
 ];
 
+/** پلن‌های «قیمت پلاس» — دسترسی به دارایی‌های سطح PLUS. قیمت به تومان. */
+export const PLUS_PLANS = [
+  {
+    id: "plus-monthly",
+    label: "ماهانه",
+    months: "۱ ماه",
+    monthCount: 1,
+    price: 99000,
+    note: "برای امتحان کردن",
+  },
+  {
+    id: "plus-quarterly",
+    label: "سه‌ماهه",
+    months: "۳ ماه",
+    monthCount: 3,
+    price: 249000,
+    note: "۱۶٪ ارزان‌تر از ماهانه",
+    popular: true,
+  },
+  {
+    id: "plus-annual",
+    label: "سالانه",
+    months: "۱۲ ماه",
+    monthCount: 12,
+    price: 790000,
+    note: "۳۳٪ ارزان‌تر از ماهانه",
+  },
+];
+
+/** مزیت‌هایی که در صفحه‌ی فروش قیمت پلاس فهرست می‌شوند. */
+export const PLUS_FEATURES = [
+  "نفت برنت و WTI، طلا و نقره‌ی جهانی، مس",
+  "سهام اپل، تسلا، انویدیا، مایکروسافت و گوگل",
+  "شاخص‌های S&P 500 و نزدک",
+  "همه‌ی ارزها و رمزارزهای فرعی",
+  "تاریخچه‌ی قیمت تا یک سال",
+  "هشدار قیمت نامحدود",
+  "بدون تبلیغ",
+];
+
+export function getPlusPlan(id) {
+  return PLUS_PLANS.find((plan) => plan.id === id) || null;
+}
+
+/** هر پلنی، چه API چه پلاس. */
+export function getAnyPlan(id) {
+  return getPlan(id) || getPlusPlan(id);
+}
+
 export const CATEGORY_TABS = [
   { id: "CURRENCY", label: "ارز" },
   { id: "GOLD", label: "طلا و سکه" },
   { id: "CRYPTO", label: "رمزارز" },
+  { id: "COMMODITY", label: "کالا و انرژی", plus: true },
+  { id: "STOCK", label: "سهام جهانی", plus: true },
+  { id: "INDEX", label: "شاخص‌ها", plus: true },
 ];
 
 export const CATEGORY_SLUGS = {
   currency: "CURRENCY",
   gold: "GOLD",
   crypto: "CRYPTO",
+  commodity: "COMMODITY",
+  stock: "STOCK",
+  index: "INDEX",
 };
 
 export function getPlan(id) {
