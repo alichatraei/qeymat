@@ -1,0 +1,131 @@
+name: qeymat
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-qeymat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD لازم است}
+      POSTGRES_DB: ${POSTGRES_DB:-qeymat}
+      TZ: Asia/Tehran
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qeymat} -d ${POSTGRES_DB:-qeymat}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [qeymat]
+    # پورت بیرون داده نمی‌شود؛ فقط شبکه داخلی
+    expose: ["5432"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [qeymat]
+    expose: ["6379"]
+
+  # کانتینر یک‌بارمصرف: migration و seed
+  migrate:
+    image: ${IMAGE_WORKER:-ghcr.io/OWNER/qeymat-worker:latest}
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    working_dir: /app
+    entrypoint: ["/bin/sh", "/app/docker/entrypoint-migrate.sh"]
+    volumes:
+      - ./entrypoint-migrate.sh:/app/docker/entrypoint-migrate.sh:ro
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@qeymat.online}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      USDT_WALLET_ADDRESS: ${USDT_WALLET_ADDRESS:-}
+      ASAPAY_URL: ${ASAPAY_URL:-https://asapay.pro}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [qeymat]
+    restart: "no"
+
+  web:
+    image: ${IMAGE_WEB:-ghcr.io/OWNER/qeymat-web:latest}
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET لازم است}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://qeymat.online}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:support@qeymat.online}
+      WORKER_URL: http://worker:4001
+      WORKER_TOKEN: ${WORKER_TOKEN}
+      TZ: Asia/Tehran
+    # فقط روی لوپ‌بک؛ nginx میزبان جلوی آن می‌ایستد
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [qeymat]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  worker:
+    image: ${IMAGE_WORKER:-ghcr.io/OWNER/qeymat-worker:latest}
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      WORKER_PORT: 4001
+      WORKER_TOKEN: ${WORKER_TOKEN}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:support@qeymat.online}
+      HISTORY_INTERVAL_MINUTES: ${HISTORY_INTERVAL_MINUTES:-15}
+      HISTORY_RETENTION_DAYS: ${HISTORY_RETENTION_DAYS:-400}
+      CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-}
+      TZ: Asia/Tehran
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [qeymat]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  postgres-data:
+
+networks:
+  qeymat:
+    driver: bridge

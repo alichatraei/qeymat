@@ -1,0 +1,39 @@
+# وابستگی‌ها
+node_modules/
+.pnp
+.pnp.js
+
+# خروجی بیلد
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+packages/db/generated/
+
+# محیط
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# لاگ
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# سیستم‌عامل و ادیتور
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# آزمون و کش
+coverage/
+.turbo/
+.cache/

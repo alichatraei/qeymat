@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="قیمت">
+  <title>قیمت</title>
+  <defs>
+    <linearGradient id="qeymatMark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12a873" />
+      <stop offset="1" stop-color="#07734d" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#qeymatMark)" />
+  <rect x="15" y="38" width="8" height="11" rx="4" fill="#fff" fill-opacity=".55" />
+  <rect x="28" y="31" width="8" height="18" rx="4" fill="#fff" fill-opacity=".78" />
+  <rect x="41" y="24" width="8" height="25" rx="4" fill="#fff" />
+  <circle cx="45" cy="13" r="4.3" fill="#fff" />
+  <circle cx="45" cy="13" r="8.2" fill="none" stroke="#fff" stroke-opacity=".41" stroke-width="2.1" />
+</svg>

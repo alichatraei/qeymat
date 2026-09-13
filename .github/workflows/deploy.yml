@@ -1,0 +1,137 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_WEB: ghcr.io/${{ github.repository }}-web
+  IMAGE_WORKER: ghcr.io/${{ github.repository }}-worker
+
+jobs:
+  # ------------------------------------------------------------------
+  # بررسی کیفیت پیش از ساخت تصویر
+  # ------------------------------------------------------------------
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+
+      - name: ساخت کلاینت Prisma
+        run: npx prisma generate --schema packages/db/prisma/schema.prisma
+
+      - name: بررسی تایپ‌ها
+        run: npx tsc --noEmit --project apps/web/tsconfig.json
+
+      - name: Lint
+        run: npm run lint --workspace=@qeymat/web
+
+  # ------------------------------------------------------------------
+  # ساخت و انتشار تصاویر در GHCR
+  # ------------------------------------------------------------------
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: web
+            dockerfile: docker/web.Dockerfile
+          - name: worker
+            dockerfile: docker/worker.Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: ورود به GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: برچسب‌های تصویر
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: ساخت و push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  # ------------------------------------------------------------------
+  # استقرار روی سرور از طریق SSH
+  # ------------------------------------------------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: اجرای استقرار روی سرور
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "→ دریافت آخرین کد"
+            git fetch --all
+            git reset --hard origin/main
+
+            echo "→ ورود به GHCR"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u ${{ github.actor }} --password-stdin
+
+            echo "→ کشیدن تصاویر تازه"
+            export IMAGE_WEB=ghcr.io/${{ github.repository }}-web:latest
+            export IMAGE_WORKER=ghcr.io/${{ github.repository }}-worker:latest
+            docker compose -f docker/docker-compose.yml --env-file .env pull web worker migrate
+
+            echo "→ migration و seed"
+            docker compose -f docker/docker-compose.yml --env-file .env run --rm migrate
+
+            echo "→ بالا آوردن سرویس‌ها"
+            docker compose -f docker/docker-compose.yml --env-file .env up -d web worker
+
+            echo "→ پاک‌سازی تصاویر قدیمی"
+            docker image prune -f
+
+            echo "→ بررسی سلامت"
+            sleep 12
+            curl -fsS http://127.0.0.1:3000/api/push/key > /dev/null \
+              && echo "✓ وب بالا است" \
+              || (docker compose -f docker/docker-compose.yml logs --tail=50 web && exit 1)

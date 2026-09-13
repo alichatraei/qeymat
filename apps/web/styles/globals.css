@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-page text-ink font-sans antialiased;
+    min-width: 320px;
+    text-rendering: optimizeLegibility;
+    font-synthesis: none;
+  }
+
+  /* اعداد لاتین داخل بلوک‌های کد و مبالغ ارزی */
+  code,
+  pre,
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgba(11, 143, 97, 0.22);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8e2dd;
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c2d0ca;
+    background-clip: content-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .content-width {
+    width: min(1180px, calc(100% - 48px));
+    @apply mx-auto;
+  }
+
+  /* دکمه‌ها — دقیقاً هندسه‌ی پروتوتایپ */
+  .btn {
+    @apply inline-flex min-h-[42px] items-center justify-center gap-2 rounded-control px-4 text-[12.5px] font-bold transition-[transform,background-color,border-color] duration-150;
+  }
+  .btn-solid {
+    @apply btn border border-green bg-green text-white shadow-solid;
+  }
+  .btn-solid:hover:not(:disabled) {
+    @apply -translate-y-px border-green-dark bg-green-dark;
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-white text-[#46525b];
+  }
+  .btn-ghost:hover:not(:disabled) {
+    @apply border-[#cbd6d1] bg-[#f7f9f8];
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+  .btn svg {
+    @apply h-[17px] w-[17px];
+  }
+
+  .field {
+    @apply h-[46px] w-full rounded-control border border-line bg-[#fbfcfb] px-3.5 text-[13px] text-ink outline-none transition-colors;
+  }
+  .field:focus {
+    @apply border-[#bcd5c9] bg-white;
+  }
+
+  .card {
+    @apply rounded-card border border-line bg-white;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[10.5px] font-bold;
+  }
+
+  .state-pending {
+    @apply chip bg-[#fdf3e2] text-[#a8741a];
+  }
+  .state-approved {
+    @apply chip bg-green-soft text-green-dark;
+  }
+  .state-rejected {
+    @apply chip bg-[#fdeced] text-[#c4484c];
+  }
+
+  /* خط زیر آیتم فعال منوی اصلی */
+  .nav-link {
+    @apply relative h-10 rounded-[10px] px-[15px] text-[13px] font-semibold text-[#505b64] transition-colors;
+  }
+  .nav-link:hover {
+    @apply bg-[#f0f4f2] text-ink;
+  }
+  .nav-link[data-active="true"] {
+    @apply text-green-dark;
+  }
+  .nav-link[data-active="true"]::after {
+    @apply absolute inset-x-[15px] -bottom-[18px] h-[3px] rounded-t-pill bg-green content-[''];
+  }
+
+  .table-scroll {
+    @apply overflow-x-auto;
+    scrollbar-width: thin;
+  }
+}
+
+@layer utilities {
+  /* نمودارها همیشه چپ‌چین‌اند */
+  .chart-lt {
+    direction: ltr;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
