@@ -1,0 +1,46 @@
+name: qeymat-dev
+
+# ---------------------------------------------------------------
+# فقط برای توسعه‌ی محلی.
+# Postgres و Redis را روی لوپ‌بک هاست باز می‌کند تا `npm run dev`
+# که بیرون داکر اجرا می‌شود بتواند به آن‌ها وصل شود.
+#
+#   docker compose -f docker/docker-compose.dev.yml up -d
+#
+# روی سرور این فایل استفاده نمی‌شود؛ آنجا docker-compose.yml است
+# که هیچ پورتی از دیتابیس به بیرون نمی‌دهد.
+# ---------------------------------------------------------------
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qeymat
+      POSTGRES_PASSWORD: qeymat
+      POSTGRES_DB: qeymat
+      TZ: Asia/Tehran
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - qeymat-dev-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qeymat -d qeymat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  qeymat-dev-db:
