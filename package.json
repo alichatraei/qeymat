@@ -17,6 +17,7 @@
     "lint": "npm run lint --workspace=@qeymat/web",
     "db:generate": "npm run generate --workspace=@qeymat/db",
     "db:migrate": "npm run migrate --workspace=@qeymat/db",
+    
     "db:push": "npm run push --workspace=@qeymat/db",
     "db:seed": "npm run seed --workspace=@qeymat/db",
     "vapid:generate": "node scripts/generate-vapid.mjs",
