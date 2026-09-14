@@ -117,8 +117,10 @@ jobs:
               -u ${{ github.actor }} --password-stdin
 
             echo "→ کشیدن تصاویر تازه"
-            export IMAGE_WEB=ghcr.io/${{ github.repository }}-web:latest
-            export IMAGE_WORKER=ghcr.io/${{ github.repository }}-worker:latest
+            REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            export IMAGE_WEB=ghcr.io/${REPO_LC}-web:latest
+            export IMAGE_WORKER=ghcr.io/${REPO_LC}-worker:latest
+            echo "→ تصاویر: $IMAGE_WEB و $IMAGE_WORKER"
             export WEB_PORT=$(grep -E '^WEB_PORT=' .env | cut -d= -f2 | tr -d ' ')
             docker compose -f docker/docker-compose.yml --env-file .env pull web worker migrate
 
