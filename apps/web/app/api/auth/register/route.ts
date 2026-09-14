@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  await createSession({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const sessionName = user.name ?? parsed.data.name.trim();
+  await createSession({ id: user.id, email, name: sessionName, role: user.role });
   return NextResponse.json({ ok: true });
 }

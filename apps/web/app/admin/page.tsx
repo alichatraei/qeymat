@@ -108,7 +108,7 @@ export default async function AdminPage() {
       payments={payments.map((payment) => ({
         id: payment.id,
         user: payment.user.name,
-        email: payment.user.email,
+        email: payment.user.email ?? "—",
         plan: payment.plan,
         amountUsdt: payment.amountUsdt,
         txHash: payment.txHash,
