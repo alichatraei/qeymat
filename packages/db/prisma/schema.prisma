@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/client"
+  provider      = "prisma-client-js"
+  output        = "../generated/client"
   // تصویر production روی alpine اجرا می‌شود، پس موتور musl هم لازم است
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
@@ -117,10 +117,10 @@ model Asset {
   isActive    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-
-  rate    Rate?
-  history RateHistory[]
-  alerts  PriceAlert[]
+  quotes      SourceQuote[]
+  rate        Rate?
+  history     RateHistory[]
+  alerts      PriceAlert[]
 
   @@index([category, tier, sortOrder])
 }
@@ -140,6 +140,24 @@ model Rate {
   source        String
   fetchedAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  /// میزان توافق منابع روی این نرخ، بین ۰ تا ۱
+  confidence    Float    @default(0)
+  /// چند منبع در محاسبه‌ی این نرخ شرکت کرده‌اند
+  sourceCount   Int      @default(0)
+}
+
+/// نقل‌قول خام هر منبع برای هر دارایی — ورودی موتور اجماع
+model SourceQuote {
+  id        String   @id @default(cuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  sourceKey String
+  buy       Float?
+  sell      Float
+  at        DateTime @default(now())
+
+  @@unique([assetId, sourceKey])
+  @@index([assetId, at])
 }
 
 /// تاریخچه قیمت برای نمودارها
@@ -172,24 +190,26 @@ model Source {
   config        Json         @default("{}")
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  /// وزن این منبع در اجماع؛ منبع معتبرتر عدد بزرگ‌تر
+  weight        Float        @default(1)
 }
 
 model User {
-  id    String  @id @default(cuid())
+  id           String  @id @default(cuid())
   /// شماره موبایل نرمال‌شده به فرم 09xxxxxxxxx — روش اصلی ورود
-  phone String? @unique
+  phone        String? @unique
   /// ایمیل اختیاری است؛ فقط برای حساب‌های قدیمی و مدیران
-  email String? @unique
-  name  String  @default("کاربر قیمت")
+  email        String? @unique
+  name         String  @default("کاربر قیمت")
   /// فقط برای مدیرانی که با ایمیل و گذرواژه وارد می‌شوند
   passwordHash String?
 
-  role        UserRole  @default(USER)
-  isActive    Boolean   @default(true)
+  role            UserRole  @default(USER)
+  isActive        Boolean   @default(true)
   phoneVerifiedAt DateTime?
-  lastSeenAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  lastSeenAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   apiKeys           ApiKey[]
   subscriptions     Subscription[]
@@ -206,15 +226,15 @@ model User {
 
 /// کد یک‌بارمصرف ورود. فقط هش کد ذخیره می‌شود.
 model OtpCode {
-  id        String     @id @default(cuid())
-  phone     String
-  codeHash  String
-  purpose   OtpPurpose @default(LOGIN)
-  attempts  Int        @default(0)
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    OtpPurpose @default(LOGIN)
+  attempts   Int        @default(0)
   consumedAt DateTime?
-  expiresAt DateTime
-  createdAt DateTime   @default(now())
-  ip        String?
+  expiresAt  DateTime
+  createdAt  DateTime   @default(now())
+  ip         String?
 
   @@index([phone, createdAt])
 }
@@ -237,40 +257,40 @@ model PlusSubscription {
 
 /// سفارش پرداخت از درگاه زرین‌پال — هم برای پلن API و هم قیمت پلاس
 model GatewayOrder {
-  id        String        @id @default(cuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind      ProductKind
-  plan      String
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       ProductKind
+  plan       String
   /// مبلغ به ریال — واحدی که زرین‌پال می‌پذیرد
   amountRial Int
-  status    GatewayStatus @default(PENDING)
+  status     GatewayStatus @default(PENDING)
   /// شناسه‌ای که زرین‌پال هنگام درخواست پرداخت می‌دهد
-  authority String?       @unique
+  authority  String?       @unique
   /// شماره پیگیری پس از تأیید موفق
-  refId     String?
-  cardPan   String?
+  refId      String?
+  cardPan    String?
   failReason String?
-  paidAt    DateTime?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  paidAt     DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   @@index([userId, status])
   @@index([status, createdAt])
 }
 
 model Ticket {
-  id        String         @id @default(cuid())
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject   String
-  category  String         @default("عمومی")
-  priority  TicketPriority @default(NORMAL)
-  status    TicketStatus   @default(OPEN)
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     String
+  category    String         @default("عمومی")
+  priority    TicketPriority @default(NORMAL)
+  status      TicketStatus   @default(OPEN)
   /// برای نشان‌دادن نشان «پاسخ تازه» در پنل کاربر
-  lastReplyAt DateTime     @default(now())
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  lastReplyAt DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   messages TicketMessage[]
 

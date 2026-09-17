@@ -4,7 +4,9 @@ import { fetchAlanchand } from "./adapters/alanchand.js";
 import { fetchBonbast } from "./adapters/bonbast.js";
 import { fetchTgju } from "./adapters/tgju.js";
 import { fetchTwelveData } from "./adapters/twelvedata.js";
+import { fetchTelegram } from "./adapters/telegram.js";
 import { fetchCustomJson } from "./adapters/custom-json.js";
+import { aggregateAll } from "./aggregate.js";
 import { cache, publish } from "./lib/cache.js";
 import { checkAlerts } from "./alerts.js";
 import { log } from "./lib/log.js";
@@ -18,16 +20,17 @@ const ADAPTERS = {
   bonbast: fetchBonbast,
   tgju: fetchTgju,
   twelvedata: fetchTwelveData,
+  telegram: fetchTelegram,
   "custom-json": fetchCustomJson,
 };
 
-/** آخرین زمان ثبت تاریخچه برای هر دارایی (برای جلوگیری از رشد بی‌رویه جدول) */
-const HISTORY_INTERVAL_MS = Number(process.env.HISTORY_INTERVAL_MINUTES || 15) * 60 * 1000;
+const HISTORY_INTERVAL_MS =
+  Number(process.env.HISTORY_INTERVAL_MINUTES || 15) * 60 * 1000;
 const lastHistoryAt = new Map();
 
 /**
- * یک منبع را اجرا می‌کند: داده می‌گیرد، روی دارایی‌های مربوطه می‌نشاند
- * و وضعیت سلامت منبع را به‌روز می‌کند.
+ * یک منبع را اجرا می‌کند و نقل‌قول‌هایش را ثبت می‌کند.
+ * نرخ نهایی اینجا ساخته نمی‌شود — آن کارِ موتور اجماع است.
  */
 export async function runSource(sourceKey) {
   const source = await prisma.source.findUnique({ where: { key: sourceKey } });
@@ -41,7 +44,7 @@ export async function runSource(sourceKey) {
   try {
     const rates = await adapter(source);
     const latencyMs = Date.now() - startedAt;
-    const updated = await applyRates(source, rates);
+    const stored = await storeQuotes(source, rates);
 
     await prisma.source.update({
       where: { id: source.id },
@@ -53,8 +56,8 @@ export async function runSource(sourceKey) {
       },
     });
 
-    log.info(`[${source.key}] ${updated} نرخ در ${latencyMs}ms`);
-    return { updated, latencyMs };
+    log.info(`[${source.key}] ${stored} نقل‌قول در ${latencyMs}ms`);
+    return { stored, latencyMs };
   } catch (error) {
     await prisma.source.update({
       where: { id: source.id },
@@ -69,16 +72,20 @@ export async function runSource(sourceKey) {
   }
 }
 
-/** نرخ‌های خام یک منبع را روی دارایی‌های فعال آن منبع می‌نشاند. */
-async function applyRates(source, rates) {
+/** نقل‌قول‌های خام یک منبع را ثبت می‌کند */
+async function storeQuotes(source, rates) {
   const assets = await prisma.asset.findMany({
-    where: { sourceKey: source.key, isActive: true },
-    include: { rate: true },
+    where: { isActive: true },
+    select: {
+      id: true,
+      symbol: true,
+      sourceField: true,
+      multiplier: true,
+      sourceKey: true,
+    },
   });
 
-  const touched = [];
-
-  // برخی منابع (Twelve Data) قیمت دلاری می‌دهند؛ برای نمایش تومانی به نرخ روز دلار نیاز است
+  // برخی منابع قیمت دلاری می‌دهند و باید در نرخ روز دلار ضرب شوند
   let usdToman = 0;
   if (Object.values(rates).some((rate) => rate?.usdQuoted)) {
     const usd = await prisma.asset.findUnique({
@@ -86,61 +93,77 @@ async function applyRates(source, rates) {
       include: { rate: true },
     });
     usdToman = usd?.rate?.sell || 0;
-    if (!usdToman) {
+    if (!usdToman)
       log.warn(`[${source.key}] نرخ دلار موجود نیست، تبدیل تومانی رد شد`);
-    }
   }
 
-  for (const asset of assets) {
-    const raw = rates[asset.sourceField] || rates[asset.sourceField?.toLowerCase()];
-    if (!raw) continue;
+  let stored = 0;
 
-    // برای نرخ‌های دلاری، ضریب همان نرخ روز دلار است
+  for (const asset of assets) {
+    // یک منبع می‌تواند نماد را با کلید خودش یا با نماد استاندارد بدهد
+    const raw =
+      rates[asset.sourceField] ||
+      rates[asset.sourceField?.toLowerCase()] ||
+      rates[asset.symbol.toLowerCase()];
+    if (!raw?.sell) continue;
+
     const multiplier = raw.usdQuoted ? usdToman : asset.multiplier || 1;
     if (raw.usdQuoted && !usdToman) continue;
 
-    const sell = round(raw.sell * multiplier);
-    const buy = round((raw.buy ?? raw.sell) * multiplier);
+    const sell = Math.round(raw.sell * multiplier);
+    const buy = raw.buy ? Math.round(raw.buy * multiplier) : null;
     if (!sell) continue;
 
-    const previous = asset.rate;
-    // اگر منبع درصد تغییر نداد، از اختلاف با نرخ قبلی محاسبه می‌کنیم
-    const changePercent =
-      Number.isFinite(raw.changePercent) && raw.changePercent !== 0
-        ? Number(raw.changePercent)
-        : previous?.sell
-          ? round(((sell - previous.sell) / previous.sell) * 100, 2)
-          : 0;
-
-    const data = {
-      buy,
-      sell,
-      changePercent,
-      dayLow: raw.dayLow ? round(raw.dayLow * multiplier) : previous?.dayLow ?? null,
-      dayHigh: raw.dayHigh ? round(raw.dayHigh * multiplier) : previous?.dayHigh ?? null,
-      globalPrice: raw.globalPrice ?? previous?.globalPrice ?? null,
-      source: asset.sourceLabel,
-      fetchedAt: new Date(),
-    };
-
-    await prisma.rate.upsert({
-      where: { assetId: asset.id },
-      update: data,
-      create: { assetId: asset.id, ...data },
+    await prisma.sourceQuote.upsert({
+      where: {
+        assetId_sourceKey: { assetId: asset.id, sourceKey: source.key },
+      },
+      update: { buy, sell, at: new Date() },
+      create: { assetId: asset.id, sourceKey: source.key, buy, sell },
     });
-
-    // تاریخچه فقط هر چند دقیقه یک‌بار
-    const last = lastHistoryAt.get(asset.id) || 0;
-    if (Date.now() - last > HISTORY_INTERVAL_MS) {
-      await prisma.rateHistory.create({ data: { assetId: asset.id, buy, sell } });
-      lastHistoryAt.set(asset.id, Date.now());
-    }
-
-    touched.push({ asset, sell, previousSell: previous?.sell ?? null });
+    stored += 1;
   }
 
+  return stored;
+}
+
+/**
+ * چرخه‌ی کامل: اجماع، تاریخچه، کش و هشدارها.
+ * بعد از هر دور منابع صدا زده می‌شود.
+ */
+export async function settle() {
+  const before = await prisma.rate.findMany({
+    select: { assetId: true, sell: true },
+  });
+  const previousByAsset = new Map(before.map((row) => [row.assetId, row.sell]));
+
+  await aggregateAll();
+
+  const assets = await prisma.asset.findMany({
+    where: { isActive: true },
+    include: { rate: true },
+  });
+
+  const touched = [];
+  for (const asset of assets) {
+    if (!asset.rate) continue;
+
+    const previousSell = previousByAsset.get(asset.id) ?? null;
+    if (previousSell !== asset.rate.sell) {
+      touched.push({ asset, sell: asset.rate.sell, previousSell });
+    }
+
+    const last = lastHistoryAt.get(asset.id) || 0;
+    if (Date.now() - last > HISTORY_INTERVAL_MS) {
+      await prisma.rateHistory.create({
+        data: { assetId: asset.id, buy: asset.rate.buy, sell: asset.rate.sell },
+      });
+      lastHistoryAt.set(asset.id, Date.now());
+    }
+  }
+
+  await refreshCache();
   if (touched.length) {
-    await refreshCache();
     await checkAlerts(touched);
     await publish("qeymat:rates", { at: Date.now(), count: touched.length });
   }
@@ -148,7 +171,7 @@ async function applyRates(source, rates) {
   return touched.length;
 }
 
-/** یک اسنپ‌شات کامل از بازار را در Redis می‌گذارد تا وب بدون کوئری سنگین بخواند. */
+/** اسنپ‌شات کامل بازار در Redis */
 export async function refreshCache() {
   const assets = await prisma.asset.findMany({
     where: { isActive: true },
@@ -176,6 +199,8 @@ export async function refreshCache() {
         dayLow: asset.rate.dayLow,
         dayHigh: asset.rate.dayHigh,
         globalPrice: asset.rate.globalPrice,
+        confidence: asset.rate.confidence,
+        sourceCount: asset.rate.sourceCount,
         fetchedAt: asset.rate.fetchedAt,
       })),
   };
@@ -184,10 +209,11 @@ export async function refreshCache() {
   return snapshot;
 }
 
-/** همه منابع فعال را یک‌بار اجرا می‌کند (برای اجرای دستی و اولین بوت). */
+/** همه‌ی منابع را یک‌بار اجرا می‌کند و بعد اجماع می‌گیرد */
 export async function runAll() {
   const sources = await prisma.source.findMany({ where: { isActive: true } });
   const results = [];
+
   for (const source of sources) {
     try {
       results.push({ key: source.key, ...(await runSource(source.key)) });
@@ -195,11 +221,7 @@ export async function runAll() {
       results.push({ key: source.key, error: String(error?.message || error) });
     }
   }
-  await refreshCache();
-  return results;
-}
 
-function round(value, digits = 0) {
-  const factor = 10 ** digits;
-  return Math.round(Number(value) * factor) / factor;
+  const changed = await settle();
+  return { sources: results, changed };
 }

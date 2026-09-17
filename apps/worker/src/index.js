@@ -1,7 +1,7 @@
 import http from "node:http";
 import { createRequire } from "node:module";
 import cron from "node-cron";
-import { runSource, runAll, refreshCache } from "./crawler.js";
+import { runSource, runAll, refreshCache, settle } from "./crawler.js";
 import { closeCache } from "./lib/cache.js";
 import { log } from "./lib/log.js";
 
@@ -18,6 +18,8 @@ async function tick(key) {
   running.add(key);
   try {
     await runSource(key);
+    // نرخ نهایی بعد از هر منبع تازه دوباره محاسبه می‌شود
+    await settle();
   } catch {
     /* خطا داخل runSource لاگ و ثبت شده است */
   } finally {
@@ -33,7 +35,10 @@ async function schedule() {
   const sources = await prisma.source.findMany({ where: { isActive: true } });
   for (const source of sources) {
     const intervalMs = Math.max(15, source.intervalSec) * 1000;
-    timers.set(source.key, setInterval(() => tick(source.key), intervalMs));
+    timers.set(
+      source.key,
+      setInterval(() => tick(source.key), intervalMs),
+    );
     log.info(`زمان‌بندی ${source.key} هر ${source.intervalSec} ثانیه`);
   }
 }
@@ -44,11 +49,19 @@ async function cleanup() {
   const usageDays = Number(process.env.USAGE_RETENTION_DAYS || 90);
   const cutoff = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [history, usage] = await Promise.all([
-    prisma.rateHistory.deleteMany({ where: { at: { lt: cutoff(historyDays) } } }),
+  const [history, usage, quotes] = await Promise.all([
+    prisma.rateHistory.deleteMany({
+      where: { at: { lt: cutoff(historyDays) } },
+    }),
     prisma.usageLog.deleteMany({ where: { at: { lt: cutoff(usageDays) } } }),
+    // نقل‌قول‌ها فقط ورودی موقت اجماع‌اند و ارزش نگهداری بلندمدت ندارند
+    prisma.sourceQuote.deleteMany({
+      where: { at: { lt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) } },
+    }),
   ]);
-  log.info(`پاک‌سازی: ${history.count} تاریخچه، ${usage.count} لاگ مصرف`);
+  log.info(
+    `پاک‌سازی: ${history.count} تاریخچه، ${usage.count} لاگ مصرف، ${quotes.count} نقل‌قول`,
+  );
 }
 
 /** بازنشانی شمارنده‌ی مصرف اشتراک‌های منقضی‌شده */
@@ -64,16 +77,26 @@ async function main() {
   log.info("کرالر قیمت در حال راه‌اندازی…");
 
   await prisma.$connect();
-  await runAll().then((results) => log.info("اجرای اولیه:", JSON.stringify(results)));
+  await runAll().then((results) =>
+    log.info("اجرای اولیه:", JSON.stringify(results)),
+  );
   await schedule();
 
   // هر ۱۰ دقیقه زمان‌بندی را با تنظیمات پنل مدیریت همگام می‌کند
-  cron.schedule("*/10 * * * *", () => schedule().catch((error) => log.error(error)));
+  cron.schedule("*/10 * * * *", () =>
+    schedule().catch((error) => log.error(error)),
+  );
   // نگهداشت شبانه، ۴ بامداد تهران
-  cron.schedule("0 4 * * *", () => cleanup().catch((error) => log.error(error)), {
-    timezone: "Asia/Tehran",
-  });
-  cron.schedule("*/30 * * * *", () => expireSubscriptions().catch((error) => log.error(error)));
+  cron.schedule(
+    "0 4 * * *",
+    () => cleanup().catch((error) => log.error(error)),
+    {
+      timezone: "Asia/Tehran",
+    },
+  );
+  cron.schedule("*/30 * * * *", () =>
+    expireSubscriptions().catch((error) => log.error(error)),
+  );
 
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://localhost:${PORT}`);
@@ -81,7 +104,13 @@ async function main() {
 
     if (url.pathname === "/health") {
       const sources = await prisma.source.findMany({
-        select: { key: true, status: true, lastFetchedAt: true, lastLatencyMs: true, lastError: true },
+        select: {
+          key: true,
+          status: true,
+          lastFetchedAt: true,
+          lastLatencyMs: true,
+          lastError: true,
+        },
       });
       const healthy = sources.some((source) => source.status !== "DOWN");
       response.writeHead(healthy ? 200 : 503);
@@ -104,7 +133,9 @@ async function main() {
         response.end(JSON.stringify({ ok: true, result }));
       } catch (error) {
         response.writeHead(500);
-        response.end(JSON.stringify({ ok: false, error: String(error?.message || error) }));
+        response.end(
+          JSON.stringify({ ok: false, error: String(error?.message || error) }),
+        );
       }
       return;
     }
