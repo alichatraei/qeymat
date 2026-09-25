@@ -120,6 +120,7 @@ model Asset {
   quotes      SourceQuote[]
   rate        Rate?
   history     RateHistory[]
+  daily       RateDaily[]
   alerts      PriceAlert[]
 
   @@index([category, tier, sortOrder])
@@ -172,6 +173,25 @@ model RateHistory {
   @@index([assetId, at])
 }
 
+/// کندل روزانه — پایه‌ی نمودارهای بلندمدت (تا ۱۰ سال).
+/// از سه راه پر می‌شود: جمع‌بندی نرخ زنده (live)، بک‌فیل تاریخچه‌ی TGJU (tgju)
+/// و درون‌ریزی فایل CSV (csv). برخلاف RateHistory هرگز پاک نمی‌شود.
+model RateDaily {
+  id      String   @id @default(cuid())
+  assetId String
+  asset   Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  /// روز تقویمی تهران
+  day     DateTime @db.Date
+  open    Float
+  high    Float
+  low     Float
+  close   Float
+  source  String   @default("live")
+
+  @@unique([assetId, day])
+  @@index([assetId, day])
+}
+
 /// منابع داده و وضعیت سلامتشان — از پنل مدیریت قابل تنظیم است
 model Source {
   id            String       @id @default(cuid())
@@ -192,6 +212,9 @@ model Source {
   updatedAt     DateTime     @updatedAt
   /// وزن این منبع در اجماع؛ منبع معتبرتر عدد بزرگ‌تر
   weight        Float        @default(1)
+  /// کیفیت یادگرفته‌شده‌ی منبع (۰ تا ۱): هرچه نقل‌قول‌هایش به نرخ نهایی
+  /// نزدیک‌تر باشد بالاتر می‌رود. در وزن اجماع ضرب می‌شود.
+  quality       Float        @default(1)
 }
 
 model User {
@@ -220,6 +243,7 @@ model User {
   ticketMessages    TicketMessage[]
   pushSubscriptions PushSubscription[]
   aiOrders          AiOrder[]
+  alerts            PriceAlert[]
 
   @@index([phone])
 }
@@ -388,20 +412,29 @@ model PushSubscription {
   alerts PriceAlert[]
 }
 
-/// هشدار قیمت روی یک دارایی
+/// هشدار قیمت روی یک دارایی — فقط برای کاربر واردشده (با شماره موبایل)
 model PriceAlert {
-  id        String           @id @default(cuid())
-  subId     String
-  sub       PushSubscription @relation(fields: [subId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  /// صاحب هشدار؛ هشدارهای نسخه‌ی قدیم ممکن است کاربر نداشته باشند
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// اشتراک پوش نسخه‌ی قدیم؛ در نسخه‌ی ۲ اعلان به همه‌ی دستگاه‌های کاربر می‌رود
+  subId     String?
+  sub       PushSubscription? @relation(fields: [subId], references: [id], onDelete: Cascade)
   assetId   String
-  asset     Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  asset     Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
   direction AlertDirection
   threshold Float
-  isActive  Boolean          @default(true)
+  /// اعلان مرورگر — برای همه‌ی کاربران واردشده
+  push      Boolean           @default(true)
+  /// پیامک — فقط برای مشترکان قیمت پلاس، تا سقف پلن
+  sms       Boolean           @default(false)
+  isActive  Boolean           @default(true)
   firedAt   DateTime?
-  createdAt DateTime         @default(now())
+  createdAt DateTime          @default(now())
 
   @@index([assetId, isActive])
+  @@index([userId, isActive])
 }
 
 /// محصولات اکانت هوش مصنوعی و پرداخت ارزی (واسط آساپی)

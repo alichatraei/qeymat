@@ -87,31 +87,30 @@ const sources = [
     adapter: "tgju",
     endpoint: "https://call5.tgju.org/ajax.json",
     intervalSec: 60,
-    config: {},
+    // TGJU برای بازار تعطیل نرخ روز قبل را می‌دهد؛ کهنه‌تر از این نادیده گرفته می‌شود
+    config: { maxAgeHours: 36, timeoutMs: 15000 },
   },
   {
     key: "telegram",
     title: "کانال‌های تلگرام",
     adapter: "telegram",
     endpoint: "https://t.me/s",
-    intervalSec: 180,
-    weight: 0.7,
+    intervalSec: 120,
+    weight: 0.8,
     config: {
-      // t.me از ایران فیلتر است؛ این آدرس به Worker کلادفلر اشاره می‌کند
-      baseUrl: process.env.TELEGRAM_RELAY_URL || "https://t.me/s",
-      headers: process.env.TELEGRAM_RELAY_TOKEN
-        ? { "x-relay-token": process.env.TELEGRAM_RELAY_TOKEN }
-        : {},
-      maxPosts: 25,
-      maxAgeMinutes: 120,
+      // آدرس و توکن رله‌ی Cloudflare در زمان اجرا از TELEGRAM_RELAY_URL و
+      // TELEGRAM_RELAY_TOKEN خوانده می‌شود؛ توکن در دیتابیس نمی‌ماند.
+      maxPosts: 20,
+      maxAgeMinutes: 180,
       channels: [
         // وزن‌ها بر اساس اینکه کانال چقدر ساخت‌یافته و مرتب پست می‌گذارد
         { name: "Price33", weight: 1 },
         { name: "dolaretehran20", weight: 0.9 },
-        { name: "Qeymatabshodeh", weight: 0.9 },
+        // پست‌های این کانال برچسب ندارند: «103,300,000⏳باحواله🔵خرید»
+        { name: "Qeymatabshodeh", weight: 0.9, defaultSymbol: "ABSHODEH" },
         { name: "abshdanaghdy", weight: 0.8 },
-        { name: "Narkuab", weight: 0.7 },
-        { name: "Herat_Tomen", weight: 0.5 },
+        { name: "Narkuab", weight: 0.8 },
+        { name: "Herat_Tomen", weight: 0.7, only: ["USD_HERAT"] },
       ],
     },
   },
@@ -135,6 +134,30 @@ const assets = [
     tier: "FREE",
   },
   {
+    symbol: "USD_FARDA",
+    nameFa: "دلار فردایی تهران",
+    nameEn: "Tehran Dollar (T+1)",
+    category: "CURRENCY",
+    countryCode: "US",
+    sourceLabel: "معاملات فردایی",
+    sourceKey: "telegram",
+    sourceField: "usd_farda",
+    sortOrder: 2,
+    tier: "FREE",
+  },
+  {
+    symbol: "USD_HERAT",
+    nameFa: "دلار هرات",
+    nameEn: "Herat Dollar",
+    category: "CURRENCY",
+    countryCode: "US",
+    sourceLabel: "بازار هرات",
+    sourceKey: "telegram",
+    sourceField: "usd_herat",
+    sortOrder: 3,
+    tier: "FREE",
+  },
+  {
     symbol: "EUR",
     nameFa: "یورو",
     nameEn: "Euro",
@@ -142,7 +165,7 @@ const assets = [
     countryCode: "EU",
     sourceKey: "alanchand",
     sourceField: "eur",
-    sortOrder: 2,
+    sortOrder: 4,
     tier: "FREE",
   },
   {
@@ -153,7 +176,7 @@ const assets = [
     countryCode: "AE",
     sourceKey: "alanchand",
     sourceField: "aed",
-    sortOrder: 3,
+    sortOrder: 5,
     tier: "FREE",
   },
   {
@@ -164,7 +187,7 @@ const assets = [
     countryCode: "TR",
     sourceKey: "alanchand",
     sourceField: "try",
-    sortOrder: 4,
+    sortOrder: 6,
     tier: "FREE",
   },
   {
@@ -175,7 +198,7 @@ const assets = [
     countryCode: "GB",
     sourceKey: "alanchand",
     sourceField: "gbp",
-    sortOrder: 5,
+    sortOrder: 7,
     tier: "FREE",
   },
   {
@@ -186,8 +209,8 @@ const assets = [
     countryCode: "CA",
     sourceKey: "alanchand",
     sourceField: "cad",
-    sortOrder: 6,
-    tier: "PLUS",
+    sortOrder: 8,
+    tier: "FREE",
   },
   {
     symbol: "JPY",
@@ -197,8 +220,8 @@ const assets = [
     countryCode: "JP",
     sourceKey: "alanchand",
     sourceField: "jpy",
-    sortOrder: 7,
-    tier: "PLUS",
+    sortOrder: 9,
+    tier: "FREE",
   },
   {
     symbol: "CNY",
@@ -208,8 +231,8 @@ const assets = [
     countryCode: "CN",
     sourceKey: "alanchand",
     sourceField: "cny",
-    sortOrder: 8,
-    tier: "PLUS",
+    sortOrder: 10,
+    tier: "FREE",
   },
   {
     symbol: "RUB",
@@ -219,8 +242,19 @@ const assets = [
     countryCode: "RU",
     sourceKey: "alanchand",
     sourceField: "rub",
-    sortOrder: 9,
-    tier: "PLUS",
+    sortOrder: 11,
+    tier: "FREE",
+  },
+  {
+    symbol: "KWD",
+    nameFa: "دینار کویت",
+    nameEn: "Kuwaiti Dinar",
+    category: "CURRENCY",
+    countryCode: "KW",
+    sourceKey: "tgju",
+    sourceField: "kwd",
+    sortOrder: 12,
+    tier: "FREE",
   },
   {
     symbol: "IQD",
@@ -230,8 +264,8 @@ const assets = [
     countryCode: "IQ",
     sourceKey: "alanchand",
     sourceField: "iqd",
-    sortOrder: 10,
-    tier: "PLUS",
+    sortOrder: 13,
+    tier: "FREE",
   },
 
   // طلا و سکه — TGJU
@@ -243,7 +277,7 @@ const assets = [
     mark: "Au",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "geram18",
+    sourceField: "gold18",
     sortOrder: 1,
     tier: "FREE",
   },
@@ -255,7 +289,7 @@ const assets = [
     mark: "Au",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "geram24",
+    sourceField: "gold24",
     sortOrder: 2,
     tier: "FREE",
   },
@@ -267,7 +301,7 @@ const assets = [
     mark: "س",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "sekee",
+    sourceField: "emami",
     sortOrder: 3,
     tier: "FREE",
   },
@@ -279,7 +313,7 @@ const assets = [
     mark: "ب",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "sekeb",
+    sourceField: "bahar",
     sortOrder: 4,
     tier: "FREE",
   },
@@ -291,9 +325,9 @@ const assets = [
     mark: "½",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "nim",
+    sourceField: "half",
     sortOrder: 5,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "QUARTER",
@@ -303,9 +337,9 @@ const assets = [
     mark: "¼",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "rob",
+    sourceField: "quarter",
     sortOrder: 6,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "GRAMI",
@@ -315,9 +349,9 @@ const assets = [
     mark: "گ",
     sourceLabel: "بازار طلا",
     sourceKey: "tgju",
-    sourceField: "gerami",
+    sourceField: "grami",
     sortOrder: 7,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "OUNCE",
@@ -326,10 +360,11 @@ const assets = [
     category: "GOLD",
     mark: "oz",
     sourceLabel: "بازار جهانی",
+    unit: "USD",
     sourceKey: "tgju",
-    sourceField: "ons",
+    sourceField: "ounce",
     sortOrder: 8,
-    tier: "PLUS",
+    tier: "FREE",
   },
 
   // رمزارز — نوبیتکس (نرخ ریالی ← تومان)
@@ -383,7 +418,7 @@ const assets = [
     sourceField: "sol",
     multiplier: 0.1,
     sortOrder: 4,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "TON",
@@ -396,7 +431,7 @@ const assets = [
     sourceField: "ton",
     multiplier: 0.1,
     sortOrder: 5,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "XRP",
@@ -409,7 +444,7 @@ const assets = [
     sourceField: "xrp",
     multiplier: 0.1,
     sortOrder: 6,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "DOGE",
@@ -422,7 +457,7 @@ const assets = [
     sourceField: "doge",
     multiplier: 0.1,
     sortOrder: 7,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "BNB",
@@ -435,7 +470,7 @@ const assets = [
     sourceField: "bnb",
     multiplier: 0.1,
     sortOrder: 8,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "TRX",
@@ -448,7 +483,7 @@ const assets = [
     sourceField: "trx",
     multiplier: 0.1,
     sortOrder: 9,
-    tier: "PLUS",
+    tier: "FREE",
   },
   // ---- پلاس: کالا، انرژی، سهام و شاخص ----
   {
@@ -460,7 +495,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "brentoil",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 1,
   },
   {
@@ -472,7 +507,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "wti",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 2,
   },
   {
@@ -484,7 +519,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "xau",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 3,
   },
   {
@@ -496,7 +531,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "xag",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 4,
   },
   {
@@ -508,7 +543,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "xcu",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 5,
   },
 
@@ -521,7 +556,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "aapl",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 1,
   },
   {
@@ -533,7 +568,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "tsla",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 2,
   },
   {
@@ -545,7 +580,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "nvda",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 3,
   },
   {
@@ -557,7 +592,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "msft",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 4,
   },
   {
@@ -569,7 +604,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "googl",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 5,
   },
   {
@@ -581,7 +616,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "amzn",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 6,
   },
   {
@@ -593,7 +628,7 @@ const assets = [
     sourceLabel: "نزدک",
     sourceKey: "twelvedata",
     sourceField: "meta",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 7,
   },
 
@@ -606,7 +641,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "spx",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 1,
   },
   {
@@ -618,7 +653,7 @@ const assets = [
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
     sourceField: "ixic",
-    tier: "PLUS",
+    tier: "FREE",
     sortOrder: 2,
   },
 
@@ -633,7 +668,7 @@ const assets = [
     sourceField: "ada",
     multiplier: 0.1,
     sortOrder: 10,
-    tier: "PLUS",
+    tier: "FREE",
   },
   {
     symbol: "ABSHODEH",
@@ -646,97 +681,6 @@ const assets = [
     sourceField: "abshodeh",
     tier: "FREE",
     sortOrder: 9,
-  },
-];
-
-/* ------------------------------------------------------------------ *
- * محصولات هوش مصنوعی و پرداخت ارزی (آساپی)
- * ------------------------------------------------------------------ */
-const aiProducts = [
-  {
-    slug: "chatgpt-plus",
-    title: "ChatGPT Plus",
-    subtitle: "اشتراک ماهانه روی ایمیل خودتان",
-    description:
-      "دسترسی به GPT پیشرفته، تحلیل فایل و تولید تصویر. فعال‌سازی روی حساب شخصی شما انجام می‌شود.",
-    icon: "Sparkles",
-    priceUsd: 20,
-    period: "ماهانه",
-    badge: "پرفروش",
-    features: [
-      "فعال‌سازی روی ایمیل خودتان",
-      "تحویل کمتر از ۲ ساعت",
-      "پشتیبانی تا پایان دوره",
-    ],
-    sortOrder: 1,
-  },
-  {
-    slug: "claude-pro",
-    title: "Claude Pro",
-    subtitle: "اشتراک ماهانه Anthropic",
-    description:
-      "محدودیت پیام بالاتر، پروژه‌ها و دسترسی زودهنگام به مدل‌های تازه.",
-    icon: "Bot",
-    priceUsd: 20,
-    period: "ماهانه",
-    features: [
-      "فعال‌سازی روی ایمیل خودتان",
-      "مناسب کار حرفه‌ای",
-      "پشتیبانی تا پایان دوره",
-    ],
-    sortOrder: 2,
-  },
-  {
-    slug: "cursor-pro",
-    title: "Cursor Pro",
-    subtitle: "ادیتور کدنویسی با هوش مصنوعی",
-    description:
-      "برای توسعه‌دهنده‌هایی که روزانه با کد سر و کار دارند؛ کامل‌ترین حالت تکمیل خودکار کد.",
-    icon: "Code2",
-    priceUsd: 20,
-    period: "ماهانه",
-    features: [
-      "فعال‌سازی روی حساب شما",
-      "مناسب تیم‌های توسعه",
-      "راهنمای نصب فارسی",
-    ],
-    sortOrder: 3,
-  },
-  {
-    slug: "openai-api-credit",
-    title: "اعتبار OpenAI API",
-    subtitle: "شارژ کیف پول توسعه‌دهنده",
-    description:
-      "شارژ اعتبار API روی حساب OpenAI شما، با نرخ روز دلار و بدون نیاز به کارت بین‌المللی.",
-    icon: "Wallet",
-    priceUsd: 10,
-    period: "هر ۱۰ دلار",
-    badge: "برای توسعه‌دهنده‌ها",
-    features: ["حداقل ۱۰ دلار", "ثبت فاکتور رسمی", "تحویل همان روز"],
-    sortOrder: 4,
-  },
-  {
-    slug: "global-payment",
-    title: "پرداخت ارزی دلخواه",
-    subtitle: "پرداخت هر صورتحساب بین‌المللی",
-    description:
-      "هزینه سرور، دامنه، درگاه یا هر سرویس خارجی را با ریال بپردازید؛ پرداخت از طرف شما انجام می‌شود.",
-    icon: "Globe",
-    priceUsd: 0,
-    period: "بر اساس صورتحساب",
-    features: ["سرور، دامنه و ابزار توسعه", "ارسال رسید پرداخت", "کارمزد شفاف"],
-    sortOrder: 5,
-  },
-  {
-    slug: "gift-card",
-    title: "گیفت‌کارت‌های بین‌المللی",
-    subtitle: "اپل، گوگل‌پلی، استیم و …",
-    description: "گیفت‌کارت اورجینال با کد معتبر و ضمانت فعال‌سازی.",
-    icon: "Gift",
-    priceUsd: 25,
-    period: "از ۲۵ دلار",
-    features: ["کد اورجینال", "تحویل آنی", "ضمانت فعال‌سازی"],
-    sortOrder: 6,
   },
 ];
 
@@ -774,7 +718,8 @@ async function main() {
         sourceKey: asset.sourceKey,
         sourceField: asset.sourceField,
         multiplier: asset.multiplier ?? 1,
-        tier: asset.tier ?? "FREE",
+        unit: asset.unit ?? "TOMAN",
+        tier: "FREE",
         sortOrder: asset.sortOrder,
       },
       create: {
@@ -786,14 +731,8 @@ async function main() {
     });
   }
 
-  console.log("→ محصولات هوش مصنوعی");
-  for (const product of aiProducts) {
-    await prisma.aiProduct.upsert({
-      where: { slug: product.slug },
-      update: product,
-      create: product,
-    });
-  }
+  // خرید اکانت هوش مصنوعی و پرداخت ارزی به آساپی منتقل شد
+  await prisma.aiProduct.updateMany({ data: { isActive: false } });
 
   console.log("→ تنظیمات پایه");
   const settings = [
@@ -854,7 +793,7 @@ async function main() {
       HALF: 84600000,
       QUARTER: 49800000,
       GRAMI: 27400000,
-      OUNCE: 41120000,
+      OUNCE: 4200,
       USDT: 230850,
       BTC: 17712836281,
       ETH: 571735960,

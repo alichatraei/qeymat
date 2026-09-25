@@ -51,10 +51,33 @@ export const PLANS = [
   },
 ];
 
-/** پلن‌های «قیمت پلاس» — دسترسی به دارایی‌های سطح PLUS. قیمت به تومان. */
+/**
+ * پلن‌های «قیمت پلاس». قیمت به تومان.
+ *
+ * همه‌ی قیمت‌ها برای همه رایگان است؛ پلاس «تحلیل قیمت» و «هشدار پیامکی»
+ * را باز می‌کند. سطح پلن تعیین می‌کند روی چند شاخص می‌شود هشدار پیامکی
+ * گذاشت: پلاس تا ۱۰ شاخص، حرفه‌ای تا ۵۰ شاخص.
+ */
+export const PLUS_TIERS = [
+  {
+    id: "plus",
+    label: "پلاس",
+    smsAlerts: 10,
+    note: "تحلیل قیمت و هشدار پیامکی برای ۱۰ شاخص",
+  },
+  {
+    id: "pro",
+    label: "پلاس حرفه‌ای",
+    smsAlerts: 50,
+    note: "برای معامله‌گرها — هشدار پیامکی برای ۵۰ شاخص",
+  },
+];
+
 export const PLUS_PLANS = [
   {
     id: "plus-monthly",
+    tier: "plus",
+    smsAlerts: 10,
     label: "ماهانه",
     months: "۱ ماه",
     monthCount: 1,
@@ -63,6 +86,8 @@ export const PLUS_PLANS = [
   },
   {
     id: "plus-quarterly",
+    tier: "plus",
+    smsAlerts: 10,
     label: "سه‌ماهه",
     months: "۳ ماه",
     monthCount: 3,
@@ -72,24 +97,60 @@ export const PLUS_PLANS = [
   },
   {
     id: "plus-annual",
+    tier: "plus",
+    smsAlerts: 10,
     label: "سالانه",
     months: "۱۲ ماه",
     monthCount: 12,
     price: 790000,
     note: "۳۳٪ ارزان‌تر از ماهانه",
   },
+  {
+    id: "pro-monthly",
+    tier: "pro",
+    smsAlerts: 50,
+    label: "ماهانه",
+    months: "۱ ماه",
+    monthCount: 1,
+    price: 249000,
+    note: "هشدار پیامکی برای ۵۰ شاخص",
+  },
+  {
+    id: "pro-quarterly",
+    tier: "pro",
+    smsAlerts: 50,
+    label: "سه‌ماهه",
+    months: "۳ ماه",
+    monthCount: 3,
+    price: 649000,
+    note: "۱۳٪ ارزان‌تر از ماهانه",
+    popular: true,
+  },
+  {
+    id: "pro-annual",
+    tier: "pro",
+    smsAlerts: 50,
+    label: "سالانه",
+    months: "۱۲ ماه",
+    monthCount: 12,
+    price: 1990000,
+    note: "۳۳٪ ارزان‌تر از ماهانه",
+  },
 ];
 
 /** مزیت‌هایی که در صفحه‌ی فروش قیمت پلاس فهرست می‌شوند. */
 export const PLUS_FEATURES = [
-  "نفت برنت و WTI، طلا و نقره‌ی جهانی، مس",
-  "سهام اپل، تسلا، انویدیا، مایکروسافت و گوگل",
-  "شاخص‌های S&P 500 و نزدک",
-  "همه‌ی ارزها و رمزارزهای فرعی",
-  "تاریخچه‌ی قیمت تا یک سال",
-  "هشدار قیمت نامحدود",
-  "بدون تبلیغ",
+  "تحلیل تکنیکال هر دارایی: روند، RSI، میانگین‌های متحرک، نوسان",
+  "حباب سکه و فاصله‌ی دلار و تتر، به‌روز در هر دقیقه",
+  "هشدار قیمت با پیامک، حتی وقتی مرورگر بسته است",
+  "سطوح حمایت و مقاومت و بیشترین و کمترین ۵۲ هفته",
+  "مقایسه‌ی بازدهی دارایی‌ها تا ۱۰ سال",
 ];
+
+/** سقف هشدار پیامکی یک پلن؛ صفر یعنی پلن پلاس نیست. */
+export function smsAlertLimit(planId) {
+  return getPlusPlan(planId)?.smsAlerts ?? 0;
+}
 
 export function getPlusPlan(id) {
   return PLUS_PLANS.find((plan) => plan.id === id) || null;
@@ -104,10 +165,42 @@ export const CATEGORY_TABS = [
   { id: "CURRENCY", label: "ارز" },
   { id: "GOLD", label: "طلا و سکه" },
   { id: "CRYPTO", label: "رمزارز" },
-  { id: "COMMODITY", label: "کالا و انرژی", plus: true },
-  { id: "STOCK", label: "سهام جهانی", plus: true },
-  { id: "INDEX", label: "شاخص‌ها", plus: true },
+  { id: "COMMODITY", label: "کالا و انرژی" },
+  { id: "STOCK", label: "سهام جهانی" },
+  { id: "INDEX", label: "شاخص‌ها" },
 ];
+
+/** نمادهای «خانواده‌ی دلار» که در بالای صفحه جدا از بقیه‌ی ارزها نشان داده می‌شوند. */
+export const DOLLAR_SYMBOLS = ["USD", "USD_FARDA", "USD_HERAT", "USDT"];
+
+/**
+ * بازه‌های نمودار. `days` صفر یعنی «همه‌ی تاریخچه‌ی موجود» که سقفش ۱۰ سال است.
+ * `interval` پیش‌فرض دانه‌بندی مناسب همان بازه است.
+ */
+export const CHART_RANGES = [
+  { id: "1d", label: "۱ روز", days: 1, interval: "raw" },
+  { id: "1w", label: "۱ هفته", days: 7, interval: "day" },
+  { id: "1m", label: "۱ ماه", days: 31, interval: "day" },
+  { id: "3m", label: "۳ ماه", days: 92, interval: "day" },
+  { id: "1y", label: "۱ سال", days: 366, interval: "day" },
+  { id: "3y", label: "۳ سال", days: 3 * 366, interval: "month" },
+  { id: "5y", label: "۵ سال", days: 5 * 366, interval: "month" },
+  { id: "10y", label: "۱۰ سال", days: 10 * 366, interval: "month" },
+];
+
+export const CHART_INTERVALS = [
+  { id: "day", label: "روزانه" },
+  { id: "month", label: "ماهانه" },
+  { id: "year", label: "سالانه" },
+];
+
+/** حداکثر عمق تاریخچه‌ی نمودار */
+export const MAX_HISTORY_YEARS = 10;
+
+/** برچسب واحد قیمت */
+export function unitLabel(unit) {
+  return unit === "USD" ? "دلار" : "تومان";
+}
 
 export const CATEGORY_SLUGS = {
   currency: "CURRENCY",
