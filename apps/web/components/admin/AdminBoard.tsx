@@ -213,21 +213,21 @@ export default function AdminBoard({
 
   return (
     <div className="flex min-h-screen" dir="rtl">
-      <aside className="hidden w-[240px] shrink-0 flex-col border-l border-line bg-white lg:flex">
+      <aside className="hidden w-[240px] shrink-0 flex-col border-l border-line bg-surface lg:flex">
         <div className="border-b border-line px-5 py-5">
           <Brand sub="پنل مدیریت" />
         </div>
         <nav className="flex-1 space-y-4 p-4">
           {["مدیریت", "سامانه"].map((group) => (
             <div key={group}>
-              <small className="mb-1.5 block px-2 text-2xs font-semibold text-[#a2acb2]">{group}</small>
+              <small className="mb-1.5 block px-2 text-2xs font-semibold text-faint">{group}</small>
               {SECTIONS.filter((item) => item.group === group).map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setSection(item.id)}
                   className={`flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-right text-[12px] font-semibold transition-colors ${
-                    section === item.id ? "bg-green-soft text-green-dark" : "text-[#525d66] hover:bg-soft"
+                    section === item.id ? "bg-green-soft text-green-dark" : "text-sub hover:bg-soft"
                   }`}
                 >
                   <item.icon className="h-[15px] w-[15px] shrink-0" />
@@ -256,7 +256,7 @@ export default function AdminBoard({
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-white px-6 py-4">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-6 py-4">
           <div>
             <h1 className="text-[19px] font-extrabold tracking-[-.5px]">
               {SECTIONS.find((item) => item.id === section)?.label}
@@ -264,7 +264,7 @@ export default function AdminBoard({
             <p className="mt-0.5 text-[11.5px] text-muted">{jalali()}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-[11.5px] text-muted sm:block">{admin.email}</span>
+            <span className="hidden text-[11.5px] text-muted sm:block">{admin.email ?? admin.phone}</span>
             <button type="button" className="btn-ghost" onClick={() => runSource()} disabled={busy === "all"}>
               {busy === "all" ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               اجرای همه منابع
@@ -275,9 +275,9 @@ export default function AdminBoard({
         <div className="flex-1 space-y-5 p-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Stat icon={Wallet} tone="bg-green-soft text-green-dark" label="درآمد این ماه" value={`${fa(stats.monthRevenueToman)}`} note="تومان، تراکنش‌های موفق" />
-            <Stat icon={Crown} tone="bg-[#fdf3e2] text-amber" label="مشترک قیمت پلاس" value={fa(stats.plusCount)} note={`${fa(stats.activeSubs)} اشتراک API فعال`} />
-            <Stat icon={Users} tone="bg-[#e6eefa] text-blue" label="کاربران" value={fa(stats.userCount)} note={`${fa(stats.subscribers)} مرورگر مشترک اعلان`} />
-            <Stat icon={Activity} tone="bg-[#efe9fa] text-purple" label="درخواست API امروز" value={fa(stats.todayUsage)} note={`${fa(stats.openTickets)} تیکت باز`} />
+            <Stat icon={Crown} tone="bg-amber-soft text-amber" label="مشترک قیمت پلاس" value={fa(stats.plusCount)} note={`${fa(stats.activeSubs)} اشتراک API فعال`} />
+            <Stat icon={Users} tone="bg-blue/10 text-blue" label="کاربران" value={fa(stats.userCount)} note={`${fa(stats.subscribers)} مرورگر مشترک اعلان`} />
+            <Stat icon={Activity} tone="bg-purple/10 text-purple" label="درخواست API امروز" value={fa(stats.todayUsage)} note={`${fa(stats.openTickets)} تیکت باز`} />
           </div>
 
           {section === "gateway" ? (
@@ -327,7 +327,7 @@ export default function AdminBoard({
                                   ? "state-pending"
                                   : order.status === "FAILED"
                                     ? "state-rejected"
-                                    : "chip bg-soft text-[#55616a]"
+                                    : "chip bg-soft text-sub"
                             }
                           >
                             {order.status === "PAID"
@@ -360,13 +360,13 @@ export default function AdminBoard({
                   <Link
                     key={ticket.id}
                     href={`/panel/tickets/${ticket.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-[#cbd6d1] hover:bg-[#f8fbf9]"
+                    className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-line-strong hover:bg-hover"
                   >
                     <span
                       className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
                         ticket.priority === "HIGH"
-                          ? "bg-[#fdeced] text-danger"
-                          : "bg-soft text-[#55616a]"
+                          ? "bg-danger-soft text-danger"
+                          : "bg-soft text-sub"
                       }`}
                     >
                       <LifeBuoy className="h-4 w-4" />
@@ -383,7 +383,7 @@ export default function AdminBoard({
                           ? "state-pending"
                           : ticket.status === "ANSWERED"
                             ? "state-approved"
-                            : "chip bg-soft text-[#55616a]"
+                            : "chip bg-soft text-sub"
                       }
                     >
                       {ticket.status === "OPEN"
@@ -473,7 +473,7 @@ export default function AdminBoard({
                                 type="button"
                                 onClick={() => reviewPayment(payment.id, "reject")}
                                 disabled={busy === payment.id}
-                                className="grid h-8 w-8 place-items-center rounded-[9px] border border-line text-danger hover:bg-[#fdeced]"
+                                className="grid h-8 w-8 place-items-center rounded-[9px] border border-line text-danger hover:bg-danger-soft"
                                 aria-label="رد پرداخت"
                               >
                                 <X className="h-3.5 w-3.5" />
@@ -521,7 +521,7 @@ export default function AdminBoard({
                         <td className="py-3.5 text-muted">{timeAgo(order.createdAt)}</td>
                         <td className="py-3.5">
                           <select
-                            className="h-9 rounded-[9px] border border-line bg-white px-2 text-[11px]"
+                            className="h-9 rounded-[9px] border border-line bg-surface px-2 text-[11px]"
                             value={order.status}
                             disabled={busy === order.id}
                             onChange={(event) => updateOrder(order.id, event.target.value as Order["status"])}
@@ -564,7 +564,7 @@ export default function AdminBoard({
                           </small>
                         </td>
                         <td className="py-3.5">
-                          <span className={item.role === "ADMIN" ? "state-approved" : "chip bg-soft text-[#55616a]"}>
+                          <span className={item.role === "ADMIN" ? "state-approved" : "chip bg-soft text-sub"}>
                             {item.role === "ADMIN" ? "مدیر" : "کاربر"}
                           </span>
                         </td>
@@ -592,7 +592,7 @@ export default function AdminBoard({
                       <i
                         className={`h-2 w-2 shrink-0 rounded-full ${
                           !source.isActive
-                            ? "bg-[#c3cbd0]"
+                            ? "bg-faint/40"
                             : source.status === "ONLINE"
                               ? "bg-green-dot"
                               : source.status === "SLOW"
@@ -633,7 +633,7 @@ export default function AdminBoard({
                       اجرای دستی
                     </button>
                     {source.lastError ? (
-                      <p className="w-full rounded-lg bg-[#fdeced] px-3 py-2 text-[10.5px] text-[#b8474b]">
+                      <p className="w-full rounded-lg bg-danger-soft px-3 py-2 text-[10.5px] text-danger-ink">
                         {source.lastError}
                       </p>
                     ) : null}
@@ -737,7 +737,7 @@ function Broadcast({ onDone }: { onDone: (text: string) => void }) {
     <Panel title="اعلان همگانی" note="پیام کوتاهی به همه‌ی مرورگرهایی که اعلان را روشن کرده‌اند بفرستید.">
       <div className="grid max-w-[560px] gap-3">
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">عنوان</span>
+          <span className="mb-1.5 block text-xxs text-sub">عنوان</span>
           <input
             className="field"
             value={form.title}
@@ -746,7 +746,7 @@ function Broadcast({ onDone }: { onDone: (text: string) => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">متن</span>
+          <span className="mb-1.5 block text-xxs text-sub">متن</span>
           <textarea
             className="field h-24 resize-none py-2.5"
             value={form.body}
@@ -754,7 +754,7 @@ function Broadcast({ onDone }: { onDone: (text: string) => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">مقصد کلیک</span>
+          <span className="mb-1.5 block text-xxs text-sub">مقصد کلیک</span>
           <input
             className="field"
             dir="ltr"

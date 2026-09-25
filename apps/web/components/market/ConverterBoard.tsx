@@ -53,19 +53,19 @@ export default function ConverterBoard({
         <div className="mt-9 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,.8fr)]">
           <div className="card p-6 shadow-card">
             <label className="block">
-              <span className="mb-2 block text-xxs text-[#68747c]">مبلغ</span>
+              <span className="mb-2 block text-xxs text-sub">مبلغ</span>
               <input
                 value={amount}
                 inputMode="decimal"
                 onChange={(event) => setAmount(event.target.value)}
-                className="tabular h-[62px] w-full rounded-xl border border-[#dce4e1] bg-[#fbfcfb] px-4 text-[26px] font-bold outline-none focus:border-[#bcd5c9] focus:bg-white"
+                className="tabular h-[62px] w-full rounded-xl border border-line-strong bg-field px-4 text-[26px] font-bold outline-none focus:border-line-strong focus:bg-surface"
                 aria-label="مبلغ"
               />
             </label>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
               <label className="block">
-                <span className="mb-2 block text-xxs text-[#68747c]">
+                <span className="mb-2 block text-xxs text-sub">
                   {direction === "to-toman" ? "ارز مبدأ" : "ارز مقصد"}
                 </span>
                 <select
@@ -92,7 +92,7 @@ export default function ConverterBoard({
               </button>
             </div>
 
-            <div className="mt-5 rounded-xl border border-line bg-[#fbfcfb] p-5">
+            <div className="mt-5 rounded-xl border border-line bg-field p-5">
               <span className="block text-xxs text-muted">
                 {direction === "to-toman" ? "معادل بر اساس نرخ فروش" : `معادل به ${rate?.symbol ?? ""}`}
               </span>
@@ -114,7 +114,7 @@ export default function ConverterBoard({
                   key={quick}
                   type="button"
                   onClick={() => setAmount(fa(quick))}
-                  className="rounded-[10px] border border-line bg-white px-3 py-2 text-[11.5px] font-semibold text-[#4c5760] hover:border-[#cbd6d1] hover:bg-soft"
+                  className="rounded-[10px] border border-line bg-surface px-3 py-2 text-[11.5px] font-semibold text-sub hover:border-line-strong hover:bg-soft"
                 >
                   {fa(quick)} {direction === "to-toman" ? rate?.symbol : "تومان"}
                 </button>

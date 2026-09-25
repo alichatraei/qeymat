@@ -81,13 +81,15 @@ async function activate(order: {
     const plan = getPlusPlan(order.plan);
     if (!plan) return;
 
-    // اگر اشتراک فعالی هست، از انتهای آن تمدید می‌شود نه از امروز
+    // تمدید هم‌سطح از انتهای اشتراک فعلی حساب می‌شود نه از امروز؛
+    // ارتقا از پلاس به حرفه‌ای همین حالا شروع می‌شود.
     const current = await prisma.plusSubscription.findFirst({
       where: { userId: order.userId, status: "ACTIVE", expiresAt: { gt: new Date() } },
       orderBy: { expiresAt: "desc" },
     });
+    const sameTier = current && getPlusPlan(current.plan)?.tier === plan.tier;
 
-    const startsAt = current ? current.expiresAt : new Date();
+    const startsAt = current && sameTier ? current.expiresAt : new Date();
     const expiresAt = new Date(startsAt);
     expiresAt.setMonth(expiresAt.getMonth() + plan.monthCount);
 
@@ -97,7 +99,7 @@ async function activate(order: {
 
     await notifyUser(order.userId, {
       title: "قیمت پلاس فعال شد",
-      body: `اشتراک ${plan.label} شما فعال است. حالا نفت، سهام و شاخص‌های جهانی را می‌بینید.`,
+      body: `اشتراک ${plan.tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label} فعال است: تحلیل قیمت و هشدار پیامکی برای ${plan.smsAlerts} شاخص.`,
       url: "/panel",
     });
     return;

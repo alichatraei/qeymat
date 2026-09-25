@@ -6,14 +6,15 @@ import { useEffect, useState } from "react";
 import { Crown, Menu, Settings, User, X } from "lucide-react";
 import { clock } from "@qeymat/shared";
 import Brand from "./Brand";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import type { SessionUser } from "@/lib/types";
 
 const NAV = [
   { href: "/", label: "بازار" },
-  { href: "/plus", label: "قیمت پلاس", accent: true },
+  { href: "/chart", label: "نمودار و مقایسه" },
   { href: "/converter", label: "مبدل" },
+  { href: "/plus", label: "قیمت پلاس", accent: true },
   { href: "/developers", label: "API" },
-  { href: "/ai", label: "هوش مصنوعی" },
   { href: "/docs", label: "مستندات" },
 ];
 
@@ -49,7 +50,7 @@ export default function SiteHeader({
   const accountHref = user ? (user.role === "ADMIN" ? "/admin" : "/panel") : "/login";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[rgba(220,228,224,.9)] bg-[rgba(250,252,251,.96)] backdrop-blur-[18px]">
+    <header className="sticky top-0 z-40 border-b border-line/90 bg-page/90 backdrop-blur-[18px]">
       {/*
         چیدمان سه‌ستونی با grid به‌جای flex:
         ستون میانی منو را دقیقاً وسط نگه می‌دارد و ستون‌های کناری اجازه‌ی
@@ -80,17 +81,17 @@ export default function SiteHeader({
         <div className="flex min-w-0 items-center justify-end gap-2">
           {/* ساعت فقط جایی که واقعاً جا هست */}
           <div className="hidden items-center gap-2 border-l border-line pl-3 2xl:flex">
-            <span className="h-2 w-2 shrink-0 rounded-full bg-green-dot shadow-[0_0_0_4px_rgba(23,185,121,.11)]" />
+            <span className="h-2 w-2 shrink-0 animate-pulse-dot rounded-full bg-green-dot" />
             <span className="flex flex-col leading-tight">
-              <strong className="whitespace-nowrap text-[10.5px] font-semibold text-[#44515a]">
+              <strong className="whitespace-nowrap text-[10.5px] font-semibold text-sub">
                 بازار زنده
               </strong>
-              <small className="text-2xs text-[#929ba1]">{now || "—"}</small>
+              <small className="text-2xs text-faint">{now || "—"}</small>
             </span>
           </div>
 
           {hasPlus ? (
-            <span className="hidden items-center gap-1.5 rounded-pill bg-[#fdf3e2] px-2.5 py-1.5 text-[10.5px] font-bold text-[#a8741a] sm:inline-flex">
+            <span className="hidden items-center gap-1.5 rounded-pill bg-amber-soft px-2.5 py-1.5 text-[10.5px] font-bold text-amber-ink sm:inline-flex">
               <Crown className="h-3.5 w-3.5" />
               پلاس
             </span>
@@ -106,6 +107,8 @@ export default function SiteHeader({
             </Link>
           ) : null}
 
+          <ThemeToggle />
+
           <Link href={accountHref} className="btn-solid hidden h-10 min-h-0 sm:inline-flex">
             <User />
             <span className="whitespace-nowrap">{user ? "حساب من" : "ورود"}</span>
@@ -113,7 +116,7 @@ export default function SiteHeader({
 
           <button
             type="button"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-control border border-line bg-white xl:hidden"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-control border border-line bg-surface text-sub xl:hidden"
             onClick={() => setOpen((value) => !value)}
             aria-label={open ? "بستن منو" : "نمایش منو"}
             aria-expanded={open}
@@ -127,13 +130,13 @@ export default function SiteHeader({
         <>
           <button
             type="button"
-            className="fixed inset-0 top-16 z-10 animate-fade-in bg-[rgba(7,26,19,.28)] xl:hidden"
+            className="fixed inset-0 top-16 z-10 animate-fade-in bg-overlay/30 xl:hidden"
             onClick={() => setOpen(false)}
             aria-label="بستن منو"
             tabIndex={-1}
           />
           <nav
-            className="relative z-20 max-h-[calc(100vh-4rem)] animate-fade-in overflow-y-auto border-t border-line bg-white px-4 py-3 xl:hidden"
+            className="relative z-20 max-h-[calc(100vh-4rem)] animate-fade-in overflow-y-auto border-t border-line bg-surface px-4 py-3 xl:hidden"
             aria-label="منوی موبایل"
           >
             {NAV.map((item) => (
@@ -141,7 +144,7 @@ export default function SiteHeader({
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-2 rounded-[10px] px-3 py-3 text-[13px] font-semibold ${
-                  isActive(item.href) ? "bg-green-soft text-green-dark" : "text-[#505b64]"
+                  isActive(item.href) ? "bg-green-soft text-green-dark" : "text-sub"
                 }`}
               >
                 {item.accent ? <Crown className="h-4 w-4 text-amber" /> : null}

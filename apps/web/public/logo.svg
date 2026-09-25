@@ -1,15 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="قیمت">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="قیمت">
   <title>قیمت</title>
   <defs>
-    <linearGradient id="qeymatMark" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#12a873" />
-      <stop offset="1" stop-color="#07734d" />
+    <linearGradient id="qb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11443a"/><stop offset="1" stop-color="#072019"/>
+    </linearGradient>
+    <radialGradient id="qg" cx=".78" cy=".14" r=".75">
+      <stop offset="0" stop-color="#8fd8b8" stop-opacity=".28"/><stop offset="1" stop-color="#8fd8b8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="qc" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="49">
+      <stop offset="0" stop-color="#fbf8f0"/><stop offset="1" stop-color="#e9e3d3"/>
+    </linearGradient>
+    <linearGradient id="qm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#aef0cf"/><stop offset="1" stop-color="#6fc9a0"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="url(#qeymatMark)" />
-  <rect x="15" y="38" width="8" height="11" rx="4" fill="#fff" fill-opacity=".55" />
-  <rect x="28" y="31" width="8" height="18" rx="4" fill="#fff" fill-opacity=".78" />
-  <rect x="41" y="24" width="8" height="25" rx="4" fill="#fff" />
-  <circle cx="45" cy="13" r="4.3" fill="#fff" />
-  <circle cx="45" cy="13" r="8.2" fill="none" stroke="#fff" stroke-opacity=".41" stroke-width="2.1" />
+  <rect width="64" height="64" rx="15" fill="url(#qb)"/>
+  <rect width="64" height="64" rx="15" fill="url(#qg)"/>
+  <path d="M45.86 37.90 A17.5 17.5 0 1 0 29.39 47.99 L29.65 40.49 A10 10 0 1 1 39.06 34.73 Z" fill="url(#qc)"/>
+  <path d="M28.39 47.88 L28.39 34.30 L29.39 33.70 L35.79 28.90 L35.79 47.01 A17.5 17.5 0 0 1 28.39 47.88 Z" fill="url(#qc)"/>
+  <rect x="41.2" y="43.2" width="6.2" height="6.2" rx="1.3" fill="url(#qm)"/>
 </svg>

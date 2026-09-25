@@ -47,15 +47,15 @@ export default async function DevelopersPage() {
         </div>
 
         <div dir="ltr" className="card overflow-hidden shadow-card">
-          <div className="flex items-center gap-3 border-b border-line bg-[#fbfcfb] px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-line bg-field px-4 py-3">
             <span className="flex gap-1.5">
-              <i className="h-2.5 w-2.5 rounded-full bg-[#f0c2c2]" />
-              <i className="h-2.5 w-2.5 rounded-full bg-[#f2ddb4]" />
-              <i className="h-2.5 w-2.5 rounded-full bg-[#bfe2d1]" />
+              <i className="h-2.5 w-2.5 rounded-full bg-danger/30" />
+              <i className="h-2.5 w-2.5 rounded-full bg-amber-line" />
+              <i className="h-2.5 w-2.5 rounded-full bg-green/25" />
             </span>
             <code className="font-mono text-[11px] text-muted">api.qeymat.online</code>
           </div>
-          <pre className="overflow-x-auto p-5 font-mono text-[11.5px] leading-6 text-[#3f4c55]">{`GET /v1/rates/USD
+          <pre className="overflow-x-auto p-5 font-mono text-[11.5px] leading-6 text-sub">{`GET /v1/rates/USD
 
 {
   "symbol": "USD",
@@ -71,11 +71,11 @@ export default async function DevelopersPage() {
         </div>
       </section>
 
-      <section className="mt-14 border-y border-line bg-[#fbfcfb] py-7">
+      <section className="mt-14 border-y border-line bg-field py-7">
         <div className="content-width grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {BENEFITS.map((benefit) => (
             <div key={benefit.title} className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-green shadow-[0_0_0_1px_rgba(7,19,31,.06)]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface text-green shadow-[0_0_0_1px_rgba(7,19,31,.06)]">
                 <benefit.icon className="h-[18px] w-[18px]" />
               </span>
               <span className="flex flex-col">

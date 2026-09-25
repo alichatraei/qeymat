@@ -3,8 +3,79 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * پالت رنگ به شکل «R G B» تا Tailwind بتواند شفافیت بدهد (bg-green/20).
+   * حالت تیره با کلاس .dark روی <html> فعال می‌شود؛ اسکریپت کوچکی در
+   * layout ریشه پیش از رندر، انتخاب کاربر یا تنظیم سیستم را اعمال می‌کند.
+   */
   :root {
     color-scheme: light;
+    --c-page: 250 252 251;
+    --c-surface: 255 255 255;
+    --c-soft: 244 247 245;
+    --c-field: 251 252 251;
+    --c-tab: 240 244 242;
+    --c-hover: 247 250 248;
+    --c-line: 228 234 231;
+    --c-line-strong: 203 214 209;
+    --c-ink: 7 19 31;
+    --c-sub: 80 92 100;
+    --c-muted: 116 128 137;
+    --c-faint: 145 155 161;
+    --c-overlay: 7 26 19;
+    --c-brand: 12 51 42;
+    --c-brand-deep: 7 33 27;
+    --c-brand-mint: 143 216 184;
+    --c-brand-cream: 243 239 229;
+    --c-green: 11 143 97;
+    --c-green-dark: 8 118 79;
+    --c-green-soft: 231 245 238;
+    --c-green-dot: 23 185 121;
+    --c-danger: 238 93 97;
+    --c-danger-soft: 253 236 237;
+    --c-danger-ink: 184 71 75;
+    --c-amber: 216 148 34;
+    --c-amber-soft: 253 243 226;
+    --c-amber-ink: 168 116 26;
+    --c-amber-line: 242 227 196;
+    --c-blue: 57 117 198;
+    --c-purple: 122 92 198;
+    --shadow: 18 61 45;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --c-page: 7 14 12;
+    --c-surface: 13 22 19;
+    --c-soft: 19 30 26;
+    --c-field: 16 26 22;
+    --c-tab: 21 33 28;
+    --c-hover: 19 31 26;
+    --c-line: 31 45 39;
+    --c-line-strong: 49 67 59;
+    --c-ink: 230 238 234;
+    --c-sub: 170 184 178;
+    --c-muted: 132 147 140;
+    --c-faint: 98 113 106;
+    --c-overlay: 0 0 0;
+    --c-brand: 16 64 52;
+    --c-brand-deep: 9 38 31;
+    --c-brand-mint: 143 216 184;
+    --c-brand-cream: 243 239 229;
+    --c-green: 30 177 122;
+    --c-green-dark: 88 214 164;
+    --c-green-soft: 17 51 39;
+    --c-green-dot: 46 212 145;
+    --c-danger: 245 108 112;
+    --c-danger-soft: 58 23 26;
+    --c-danger-ink: 250 152 155;
+    --c-amber: 234 170 64;
+    --c-amber-soft: 50 38 17;
+    --c-amber-ink: 238 190 104;
+    --c-amber-line: 84 64 30;
+    --c-blue: 110 160 230;
+    --c-purple: 160 136 230;
+    --shadow: 0 0 0;
   }
 
   html {
@@ -34,8 +105,17 @@
   }
 
   :focus-visible {
-    outline: 3px solid rgba(11, 143, 97, 0.22);
+    outline: 3px solid rgb(var(--c-green) / 0.28);
     outline-offset: 2px;
+  }
+
+  /* جابه‌جایی نرم بین حالت روشن و تیره */
+  html.theme-transition,
+  html.theme-transition * {
+    transition:
+      background-color 220ms ease,
+      border-color 220ms ease,
+      color 220ms ease !important;
   }
 
   ::-webkit-scrollbar {
@@ -43,13 +123,13 @@
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    background: #d8e2dd;
+    background: rgb(var(--c-line-strong));
     border-radius: 999px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #c2d0ca;
+    background: rgb(var(--c-faint));
     background-clip: content-box;
   }
 
@@ -82,10 +162,16 @@
     @apply -translate-y-px border-green-dark bg-green-dark;
   }
   .btn-ghost {
-    @apply btn border border-line bg-white text-[#46525b];
+    @apply btn border border-line bg-surface text-sub;
   }
   .btn-ghost:hover:not(:disabled) {
-    @apply border-[#cbd6d1] bg-[#f7f9f8];
+    @apply border-line-strong bg-hover text-ink;
+  }
+  .btn-brand {
+    @apply btn border border-brand bg-brand text-brand-cream shadow-glow;
+  }
+  .btn-brand:hover:not(:disabled) {
+    @apply -translate-y-px bg-brand-deep;
   }
   .btn:disabled {
     @apply cursor-not-allowed opacity-60;
@@ -95,14 +181,30 @@
   }
 
   .field {
-    @apply h-[46px] w-full rounded-control border border-line bg-[#fbfcfb] px-3.5 text-[13px] text-ink outline-none transition-colors;
+    @apply h-[46px] w-full rounded-control border border-line bg-field px-3.5 text-[13px] text-ink outline-none transition-colors placeholder:text-faint;
   }
   .field:focus {
-    @apply border-[#bcd5c9] bg-white;
+    @apply border-green/40 bg-surface;
   }
 
   .card {
-    @apply rounded-card border border-line bg-white;
+    @apply rounded-card border border-line bg-surface;
+  }
+
+  /* کارت شیشه‌ای روی پس‌زمینه‌ی تیره‌ی برند */
+  .glass {
+    @apply rounded-card border border-white/10 bg-white/[.06] backdrop-blur-md;
+  }
+
+  .segmented {
+    @apply inline-grid grid-flow-col gap-1 rounded-xl bg-tab p-1;
+  }
+  .segmented > button,
+  .segmented > a {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] px-3 text-[11.5px] font-semibold text-sub transition-colors;
+  }
+  .segmented > [data-active="true"] {
+    @apply bg-surface text-green-dark shadow-[0_1px_3px_rgb(var(--shadow)/.08)];
   }
 
   .chip {
@@ -110,21 +212,21 @@
   }
 
   .state-pending {
-    @apply chip bg-[#fdf3e2] text-[#a8741a];
+    @apply chip bg-amber-soft text-amber-ink;
   }
   .state-approved {
     @apply chip bg-green-soft text-green-dark;
   }
   .state-rejected {
-    @apply chip bg-[#fdeced] text-[#c4484c];
+    @apply chip bg-danger-soft text-danger-ink;
   }
 
   /* خط زیر آیتم فعال منوی اصلی */
   .nav-link {
-    @apply relative inline-flex h-10 items-center rounded-[10px] px-3 text-[12.5px] font-semibold text-[#505b64] transition-colors;
+    @apply relative inline-flex h-10 items-center rounded-[10px] px-3 text-[12.5px] font-semibold text-sub transition-colors;
   }
   .nav-link:hover {
-    @apply bg-[#f0f4f2] text-ink;
+    @apply bg-tab text-ink;
   }
   .nav-link[data-active="true"] {
     @apply text-green-dark;
@@ -146,5 +248,19 @@
   }
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+  /* پس‌زمینه‌ی بخش قهرمان: گرادیان برند با نقش شبکه‌ای ملایم */
+  .hero-bg {
+    background:
+      radial-gradient(900px 420px at 85% -10%, rgb(var(--c-brand-mint) / 0.22), transparent 60%),
+      radial-gradient(700px 380px at 0% 110%, rgb(var(--c-green) / 0.25), transparent 60%),
+      linear-gradient(160deg, rgb(var(--c-brand)) 0%, rgb(var(--c-brand-deep)) 100%);
+  }
+  .hero-grid {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
   }
 }

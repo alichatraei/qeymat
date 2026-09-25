@@ -5,9 +5,10 @@ const COLUMNS = [
   {
     title: "بازار",
     links: [
-      { href: "/", label: "نرخ ارز" },
+      { href: "/", label: "قیمت دلار و ارز" },
       { href: "/?category=GOLD", label: "طلا و سکه" },
       { href: "/?category=CRYPTO", label: "رمزارز" },
+      { href: "/chart", label: "نمودار ۱۰ ساله" },
       { href: "/converter", label: "مبدل تومان" },
     ],
   },
@@ -23,30 +24,31 @@ const COLUMNS = [
     title: "اشتراک",
     links: [
       { href: "/plus", label: "قیمت پلاس" },
+      { href: "/panel#alerts", label: "هشدارهای قیمت" },
       { href: "/panel", label: "پنل کاربری" },
       { href: "/panel/tickets", label: "پشتیبانی و تیکت" },
-    ],
-  },
-  {
-    title: "خدمات ارزی",
-    links: [
-      { href: "/ai", label: "اکانت هوش مصنوعی" },
-      { href: "/ai#global-payment", label: "پرداخت ارزی" },
-      { href: "/ai#gift-card", label: "گیفت‌کارت" },
     ],
   },
 ];
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="border-t border-line bg-surface">
       <div className="content-width grid gap-10 py-12 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>
           <Brand />
           <p className="mt-4 max-w-[34ch] text-[12px] leading-6 text-muted">
-            مرجع ساده و شفاف نرخ بازار ایران. ارز، طلا، سکه و رمزارز از منابع مشخص، با زمان دقیق
-            به‌روزرسانی.
+            مرجع ساده و شفاف نرخ بازار ایران. نرخ هر دارایی را موتور تحلیل قیمت از الان‌چند، TGJU،
+            کانال‌های معاملاتی و صرافی‌ها می‌سازد.
           </p>
+          <a
+            href="https://asapay.pro"
+            target="_blank"
+            rel="noopener"
+            className="mt-4 inline-flex items-center gap-2 rounded-control border border-line bg-field px-3 py-2 text-[11px] font-semibold text-sub transition-colors hover:border-line-strong hover:text-ink"
+          >
+            خرید ارز، اکانت هوش مصنوعی و پرداخت ارزی در آساپی ←
+          </a>
         </div>
 
         {COLUMNS.map((column) => (
@@ -66,14 +68,14 @@ export default function SiteFooter() {
       </div>
 
       {/* نمادها */}
-      <div className="border-t border-line bg-[#fbfcfb]">
+      <div className="border-t border-line bg-field">
         <div className="content-width flex flex-wrap items-center gap-4 py-6">
           <a
             referrerPolicy="origin"
             target="_blank"
             rel="noopener noreferrer"
             href="https://trustseal.enamad.ir/?id=7477924&Code=yg52kGatBDdaUjsJpSGAbZDEPCLPetJ1"
-            className="inline-flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-xl border border-line bg-white p-1.5"
+            className="inline-flex h-[92px] w-[92px] items-center justify-center overflow-hidden rounded-xl border border-line bg-surface p-1.5"
             aria-label="نماد اعتماد الکترونیکی"
           >
             {/*
@@ -104,7 +106,7 @@ export default function SiteFooter() {
           <p>تمام قیمت‌ها صرفاً جهت اطلاع‌رسانی هستند و مبنای معامله نیستند.</p>
           <p>
             طراحی و توسعه:{" "}
-            <span className="font-semibold text-[#5c6971]">علی چترایی — تیم برنامه‌نویسی آ</span>
+            <span className="font-semibold text-sub">علی چترایی — تیم برنامه‌نویسی آ</span>
           </p>
         </div>
       </div>

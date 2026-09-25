@@ -54,7 +54,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         <div className="mt-6 space-y-3">
           {!isLogin ? (
             <label className="block">
-              <span className="mb-1.5 block text-xxs text-[#68747c]">نام و نام خانوادگی</span>
+              <span className="mb-1.5 block text-xxs text-sub">نام و نام خانوادگی</span>
               <input
                 className="field"
                 value={form.name}
@@ -65,7 +65,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
           ) : null}
 
           <label className="block">
-            <span className="mb-1.5 block text-xxs text-[#68747c]">ایمیل</span>
+            <span className="mb-1.5 block text-xxs text-sub">ایمیل</span>
             <input
               className="field"
               dir="ltr"
@@ -77,7 +77,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-xxs text-[#68747c]">گذرواژه</span>
+            <span className="mb-1.5 block text-xxs text-sub">گذرواژه</span>
             <input
               className="field"
               dir="ltr"

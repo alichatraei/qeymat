@@ -8,10 +8,14 @@ import { fa } from "@qeymat/shared";
 
 type Step = "phone" | "code";
 
+const PHONE_KEY = "qeymat-phone";
+
 export default function OtpLogin() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/panel";
+  // فقط مسیر داخلی پذیرفته می‌شود تا لینک ورود به سایت دیگری هدایت نکند
+  const rawNext = params.get("next") || "/panel";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/panel";
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -22,6 +26,16 @@ export default function OtpLogin() {
   const [error, setError] = useState("");
 
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
+
+  // شماره‌ای که قبلاً روی این دستگاه وارد شده، از پیش پر می‌شود
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PHONE_KEY);
+      if (saved) setPhone((current) => current || saved);
+    } catch {
+      /* حالت خصوصی مرورگر */
+    }
+  }, []);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -79,6 +93,11 @@ export default function OtpLogin() {
         return;
       }
 
+      try {
+        localStorage.setItem(PHONE_KEY, phone);
+      } catch {
+        /* نادیده */
+      }
       router.push(payload.role === "ADMIN" ? "/admin" : next);
       router.refresh();
     } catch {
@@ -126,7 +145,7 @@ export default function OtpLogin() {
             </p>
 
             <label className="mt-6 block">
-              <span className="mb-1.5 block text-xxs text-[#68747c]">شماره موبایل</span>
+              <span className="mb-1.5 block text-xxs text-sub">شماره موبایل</span>
               <input
                 className="field tabular text-center text-[16px] tracking-[2px]"
                 dir="ltr"
@@ -154,9 +173,12 @@ export default function OtpLogin() {
               دریافت کد تأیید
             </button>
 
-            <p className="mt-5 flex items-center justify-center gap-1.5 text-2xs text-[#758078]">
+            <p className="mt-5 flex items-center justify-center gap-1.5 text-2xs text-sub">
               <ShieldCheck className="h-3.5 w-3.5 text-green" />
               شماره شما فقط برای ورود و اطلاع‌رسانی استفاده می‌شود
+            </p>
+            <p className="mt-1.5 text-center text-2xs text-muted">
+              ورود شما ۳۰ روز روی همین دستگاه می‌ماند.
             </p>
 
             <p className="mt-5 border-t border-line pt-4 text-center text-[11px] text-muted">
@@ -193,7 +215,7 @@ export default function OtpLogin() {
                   ref={(element) => {
                     boxes.current[index] = element;
                   }}
-                  className="tabular h-[54px] w-[48px] rounded-control border border-line bg-[#fbfcfb] text-center text-[20px] font-bold outline-none focus:border-[#bcd5c9] focus:bg-white"
+                  className="tabular h-[54px] w-[48px] rounded-control border border-line bg-field text-center text-[20px] font-bold outline-none focus:border-line-strong focus:bg-surface"
                   inputMode="numeric"
                   maxLength={5}
                   value={digit}

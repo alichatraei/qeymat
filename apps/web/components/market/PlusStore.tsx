@@ -1,57 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Check, Crown, Loader2, ShieldCheck, TrendingUp } from "lucide-react";
-import { PLUS_PLANS, PLUS_FEATURES, fa, jalali } from "@qeymat/shared";
-
-type PremiumAsset = {
-  symbol: string;
-  nameFa: string;
-  category: string;
-  mark: string | null;
-  countryCode: string | null;
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  COMMODITY: "کالا و انرژی",
-  STOCK: "سهام جهانی",
-  INDEX: "شاخص‌ها",
-  CURRENCY: "ارزهای بیشتر",
-  CRYPTO: "رمزارزهای بیشتر",
-  GOLD: "طلای بیشتر",
-};
+import { BarChart3, Bell, Check, Crown, Loader2, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
+import { PLUS_PLANS, PLUS_FEATURES, PLUS_TIERS, fa, jalali } from "@qeymat/shared";
 
 const PERKS = [
-  { icon: TrendingUp, title: "بازارهای جهانی", note: "نفت، فلزات، سهام و شاخص‌ها" },
-  { icon: BarChart3, title: "تاریخچه‌ی یک‌ساله", note: "به‌جای ۷ روز در نسخه رایگان" },
-  { icon: Bell, title: "هشدار نامحدود", note: "روی هر دارایی، بدون سقف" },
+  { icon: Sparkles, title: "تحلیل قیمت", note: "روند، RSI، میانگین‌ها، حمایت و مقاومت، حباب سکه" },
+  { icon: MessageSquareText, title: "هشدار پیامکی", note: "پلاس ۱۰ شاخص، حرفه‌ای ۵۰ شاخص" },
+  { icon: BarChart3, title: "بازدهی تا ۱۰ سال", note: "مقایسه‌ی دارایی‌ها در یک نگاه" },
+  { icon: Bell, title: "اعلان مرورگر", note: "برای همه‌ی کاربران واردشده رایگان است" },
 ];
 
 export default function PlusStore({
   isLoggedIn,
   hasPlus,
   expiresAt,
-  assets,
+  currentTier,
 }: {
   isLoggedIn: boolean;
   hasPlus: boolean;
   expiresAt: string | null;
-  assets: PremiumAsset[];
+  currentTier: "plus" | "pro" | null;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState("plus-quarterly");
+  const [tier, setTier] = useState<"plus" | "pro">(currentTier === "pro" ? "pro" : "plus");
+  const [selected, setSelected] = useState(currentTier === "pro" ? "pro-quarterly" : "plus-quarterly");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const plan = PLUS_PLANS.find((item) => item.id === selected) ?? PLUS_PLANS[1];
-  const monthly = PLUS_PLANS[0].price;
+  const plans = PLUS_PLANS.filter((item) => item.tier === tier);
+  const plan = plans.find((item) => item.id === selected) ?? plans[1] ?? plans[0];
+  const monthly = plans[0].price;
 
-  const groups = assets.reduce<Record<string, PremiumAsset[]>>((accumulator, asset) => {
-    (accumulator[asset.category] ||= []).push(asset);
-    return accumulator;
-  }, {});
+  // لینک مستقیم به پلن حرفه‌ای: /plus#pro
+  useEffect(() => {
+    if (window.location.hash === "#pro") {
+      setTier("pro");
+      setSelected("pro-quarterly");
+    }
+  }, []);
 
   const buy = async () => {
     if (!isLoggedIn) {
@@ -65,7 +54,7 @@ export default function PlusStore({
       const response = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "PLUS_PLAN", plan: selected }),
+        body: JSON.stringify({ kind: "PLUS_PLAN", plan: plan.id }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message);
@@ -80,17 +69,17 @@ export default function PlusStore({
     <main className="pb-20 pt-12">
       <section className="content-width grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(300px,.72fr)] lg:items-center">
         <div className="max-w-[54ch]">
-          <span className="inline-flex items-center gap-1.5 rounded-pill bg-[#fdf3e2] px-3 py-1.5 text-[11px] font-bold text-[#a8741a]">
+          <span className="inline-flex items-center gap-1.5 rounded-pill bg-amber-soft px-3 py-1.5 text-[11px] font-bold text-amber-ink">
             <Crown className="h-3.5 w-3.5" />
             قیمت پلاس
           </span>
           <h1 className="mt-4 text-[34px] font-extrabold leading-[1.25] tracking-[-1.2px]">
-            بازارهای جهانی را هم ببینید
+            قیمت را ببینید، <span className="text-green">بازار را بفهمید</span>
           </h1>
           <p className="mt-4 text-[13px] leading-7 text-muted">
-            نرخ ارز و طلا و رمزارزهای اصلی همیشه رایگان می‌ماند. قیمت پلاس دری است به نفت، فلزات
-            جهانی، سهام شرکت‌های بزرگ و شاخص‌های بورس آمریکا — همان‌جایی که بازار ایران را از دور
-            هدایت می‌کند.
+            همه‌ی قیمت‌ها در «قیمت» رایگان است و رایگان می‌ماند. قیمت پلاس تحلیل هر دارایی را کنارش
+            می‌گذارد — روند، مومنتوم، حباب سکه، حمایت و مقاومت — و وقتی قیمت به هدفتان رسید، حتی
+            اگر مرورگر بسته باشد، پیامک می‌فرستد.
           </p>
 
           {hasPlus ? (
@@ -107,7 +96,7 @@ export default function PlusStore({
           ) : null}
         </div>
 
-        <div className="card grid gap-4 p-6 shadow-card">
+        <div className="card grid gap-4 p-6 shadow-card sm:grid-cols-2 lg:grid-cols-1">
           {PERKS.map((perk) => (
             <div key={perk.title} className="flex items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-green-soft text-green">
@@ -122,35 +111,13 @@ export default function PlusStore({
         </div>
       </section>
 
-      {/* آنچه باز می‌شود */}
-      <section className="mt-14 border-y border-line bg-[#fbfcfb] py-10">
+      {/* آنچه می‌گیرید */}
+      <section className="mt-14 border-y border-line bg-field py-10">
         <div className="content-width">
-          <h2 className="text-[20px] font-bold tracking-[-.5px]">
-            {fa(assets.length)} دارایی که با پلاس باز می‌شود
-          </h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(groups).map(([category, items]) => (
-              <div key={category}>
-                <h3 className="text-[12px] font-bold text-green-dark">
-                  {CATEGORY_LABEL[category] ?? category}
-                </h3>
-                <ul className="mt-2.5 flex flex-wrap gap-1.5">
-                  {items.map((asset) => (
-                    <li
-                      key={asset.symbol}
-                      className="rounded-[9px] border border-line bg-white px-2.5 py-1.5 text-[11px] text-[#4c5760]"
-                    >
-                      {asset.nameFa}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <ul className="mt-8 grid gap-2.5 border-t border-line pt-6 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-[20px] font-bold tracking-[-.5px]">با قیمت پلاس چه می‌گیرید</h2>
+          <ul className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {PLUS_FEATURES.map((feature) => (
-              <li key={feature} className="flex items-center gap-2 text-[12px] text-[#4c5760]">
+              <li key={feature} className="flex items-center gap-2 text-[12px] text-sub">
                 <Check className="h-4 w-4 shrink-0 text-green" />
                 {feature}
               </li>
@@ -162,15 +129,44 @@ export default function PlusStore({
       {/* پلن‌ها */}
       <section className="content-width pt-14">
         <div className="mx-auto max-w-[44ch] text-center">
-          <h2 className="text-[26px] font-extrabold tracking-[-.8px]">یک اشتراک، همه‌ی بازارها</h2>
+          <h2 className="text-[26px] font-extrabold tracking-[-.8px]">پلن خود را انتخاب کنید</h2>
           <p className="mt-3 text-[12.5px] leading-6 text-muted">
-            پرداخت امن از درگاه زرین‌پال. هر زمان خواستید می‌توانید تمدید نکنید.
+            تفاوت دو سطح فقط در تعداد شاخص‌هایی است که می‌توانید رویشان هشدار پیامکی بگذارید.
           </p>
         </div>
 
-        <div className="mx-auto mt-9 grid max-w-[900px] gap-4 md:grid-cols-3">
-          {PLUS_PLANS.map((item) => {
-            const isSelected = selected === item.id;
+        <div id="pro" className="mx-auto mt-7 grid max-w-[620px] gap-3 sm:grid-cols-2">
+          {PLUS_TIERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setTier(item.id);
+                setSelected(`${item.id}-quarterly`);
+              }}
+              aria-pressed={tier === item.id}
+              className={`flex flex-col items-start rounded-card border p-4 text-right transition-all ${
+                tier === item.id
+                  ? item.id === "pro"
+                    ? "border-brand bg-brand text-brand-cream shadow-glow"
+                    : "border-green bg-green-soft"
+                  : "border-line bg-surface hover:border-line-strong"
+              }`}
+            >
+              <span className="flex items-center gap-1.5 text-[14px] font-bold">
+                <Crown className={`h-4 w-4 ${item.id === "pro" ? "text-brand-mint" : "text-amber"}`} />
+                {item.label}
+              </span>
+              <span className={`mt-1 text-[11.5px] ${tier === item.id && item.id === "pro" ? "text-brand-cream/80" : "text-muted"}`}>
+                هشدار پیامکی برای {fa(item.smsAlerts)} شاخص
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mx-auto mt-6 grid max-w-[900px] gap-4 md:grid-cols-3">
+          {plans.map((item) => {
+            const isSelected = plan.id === item.id;
             const perMonth = Math.round(item.price / item.monthCount);
             const saving = Math.round(((monthly - perMonth) / monthly) * 100);
 
@@ -182,8 +178,8 @@ export default function PlusStore({
                 aria-pressed={isSelected}
                 className={`relative flex flex-col rounded-card border p-6 text-right transition-all ${
                   isSelected
-                    ? "border-green bg-white shadow-card ring-1 ring-green/25"
-                    : "border-line bg-white hover:border-[#cbd6d1]"
+                    ? "border-green bg-surface shadow-card ring-1 ring-green/25"
+                    : "border-line bg-surface hover:border-line-strong"
                 }`}
               >
                 {item.popular ? (
@@ -202,6 +198,7 @@ export default function PlusStore({
 
                 <h3 className="text-[17px] font-bold">{item.label}</h3>
                 <p className="mt-1 text-[11px] text-muted">{item.note}</p>
+                <p className="mt-1 text-[11px] text-sub">پیامک برای {fa(item.smsAlerts)} شاخص</p>
 
                 <div className="mt-5 flex items-baseline gap-1.5">
                   <strong className="tabular text-[26px] font-extrabold tracking-[-1px]">
@@ -231,7 +228,11 @@ export default function PlusStore({
           disabled={loading}
         >
           {loading ? <Loader2 className="animate-spin" /> : <Crown />}
-          {hasPlus ? `تمدید — ${fa(plan.price)} تومان` : `خرید اشتراک ${plan.label}`}
+          {hasPlus
+            ? currentTier === "plus" && tier === "pro"
+              ? `ارتقا به حرفه‌ای — ${fa(plan.price)} تومان`
+              : `تمدید — ${fa(plan.price)} تومان`
+            : `خرید ${tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label}`}
         </button>
 
         <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted">

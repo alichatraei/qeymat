@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
   Crown,
   KeyRound,
   LifeBuoy,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { fa, getAnyPlan, jalali, timeAgo } from "@qeymat/shared";
 import PushToggle from "@/components/pwa/PushToggle";
+import AlertsManager from "./AlertsManager";
 import type { SessionUser, TicketView } from "@/lib/types";
 
 type Order = {
@@ -32,14 +34,14 @@ const ORDER_STATUS: Record<string, { label: string; className: string }> = {
   PENDING: { label: "در انتظار پرداخت", className: "state-pending" },
   PAID: { label: "پرداخت‌شده", className: "state-approved" },
   FAILED: { label: "ناموفق", className: "state-rejected" },
-  CANCELLED: { label: "لغو‌شده", className: "chip bg-soft text-[#55616a]" },
-  REFUNDED: { label: "بازگشت‌خورده", className: "chip bg-soft text-[#55616a]" },
+  CANCELLED: { label: "لغو‌شده", className: "chip bg-soft text-sub" },
+  REFUNDED: { label: "بازگشت‌خورده", className: "chip bg-soft text-sub" },
 };
 
 const TICKET_STATUS: Record<string, { label: string; className: string }> = {
   OPEN: { label: "در انتظار پاسخ", className: "state-pending" },
   ANSWERED: { label: "پاسخ داده شد", className: "state-approved" },
-  CLOSED: { label: "بسته", className: "chip bg-soft text-[#55616a]" },
+  CLOSED: { label: "بسته", className: "chip bg-soft text-sub" },
 };
 
 /** روزهای باقی‌مانده تا تاریخ انقضا */
@@ -63,7 +65,12 @@ export default function UserPanel({
   tickets: TicketView[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"overview" | "orders" | "tickets">("overview");
+  const [tab, setTab] = useState<"overview" | "alerts" | "orders" | "tickets">("overview");
+
+  // لینک مستقیم به بخش هشدارها: /panel#alerts
+  useEffect(() => {
+    if (window.location.hash === "#alerts") setTab("alerts");
+  }, []);
   const [tickets] = useState(initialTickets);
   const [composing, setComposing] = useState(false);
 
@@ -95,7 +102,7 @@ export default function UserPanel({
             </div>
 
             {plus ? (
-              <span className="mt-4 flex items-center justify-center gap-1.5 rounded-pill bg-[#fdf3e2] py-2 text-[11px] font-bold text-[#a8741a]">
+              <span className="mt-4 flex items-center justify-center gap-1.5 rounded-pill bg-amber-soft py-2 text-[11px] font-bold text-amber-ink">
                 <Crown className="h-3.5 w-3.5" />
                 عضو قیمت پلاس
               </span>
@@ -110,6 +117,7 @@ export default function UserPanel({
               {(
                 [
                   { id: "overview", label: "خلاصه حساب", icon: UserIcon },
+                  { id: "alerts", label: "هشدارهای قیمت", icon: Bell },
                   { id: "orders", label: "سفارش‌ها و پرداخت", icon: Receipt },
                   { id: "tickets", label: "پشتیبانی", icon: LifeBuoy, badge: openTickets },
                 ] as const
@@ -119,7 +127,7 @@ export default function UserPanel({
                   type="button"
                   onClick={() => setTab(item.id)}
                   className={`flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2.5 text-right transition-colors ${
-                    tab === item.id ? "bg-green-soft text-green-dark" : "text-[#525d66] hover:bg-soft"
+                    tab === item.id ? "bg-green-soft text-green-dark" : "text-sub hover:bg-soft"
                   }`}
                 >
                   <item.icon className="h-[15px] w-[15px] shrink-0" />
@@ -135,7 +143,7 @@ export default function UserPanel({
               {apiSub ? (
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-2 rounded-[10px] px-2.5 py-2.5 text-[#525d66] hover:bg-soft"
+                  className="flex items-center gap-2 rounded-[10px] px-2.5 py-2.5 text-sub hover:bg-soft"
                 >
                   <KeyRound className="h-[15px] w-[15px]" />
                   پنل توسعه‌دهنده
@@ -145,7 +153,7 @@ export default function UserPanel({
               <button
                 type="button"
                 onClick={logout}
-                className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2.5 text-right text-danger hover:bg-[#fdeced]"
+                className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2.5 text-right text-danger hover:bg-danger-soft"
               >
                 <LogOut className="h-[15px] w-[15px]" />
                 خروج
@@ -179,7 +187,7 @@ export default function UserPanel({
               <section className="card p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#fdf3e2] text-[#a8741a]">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-soft text-amber-ink">
                       <Crown className="h-5 w-5" />
                     </span>
                     <div>
@@ -189,7 +197,7 @@ export default function UserPanel({
                       </p>
                     </div>
                   </div>
-                  <span className={plus ? "state-approved" : "chip bg-soft text-[#55616a]"}>
+                  <span className={plus ? "state-approved" : "chip bg-soft text-sub"}>
                     {plus ? "فعال" : "غیرفعال"}
                   </span>
                 </div>
@@ -207,7 +215,7 @@ export default function UserPanel({
                     </div>
 
                     <div className="mt-4">
-                      <div className="h-2 overflow-hidden rounded-pill bg-[#eef3f0]">
+                      <div className="h-2 overflow-hidden rounded-pill bg-tab">
                         <div
                           className={`h-full rounded-pill ${
                             daysLeft(plus.expiresAt) <= 7 ? "bg-danger" : "bg-green"
@@ -276,7 +284,7 @@ export default function UserPanel({
                         {fa(apiSub.requestLimit - apiSub.requestsUsed)} باقی‌مانده
                       </small>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-pill bg-[#eef3f0]">
+                    <div className="mt-2 h-2 overflow-hidden rounded-pill bg-tab">
                       <div
                         className="h-full rounded-pill bg-green"
                         style={{
@@ -300,6 +308,8 @@ export default function UserPanel({
               </section>
             </div>
           ) : null}
+
+          {tab === "alerts" ? <AlertsManager /> : null}
 
           {tab === "orders" ? (
             <section className="card mt-6 p-6">
@@ -390,9 +400,9 @@ export default function UserPanel({
                       <Link
                         key={ticket.id}
                         href={`/panel/tickets/${ticket.id}`}
-                        className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-[#cbd6d1] hover:bg-[#f8fbf9]"
+                        className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-line-strong hover:bg-hover"
                       >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-[#55616a]">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-sub">
                           <MessageSquare className="h-4 w-4" />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col">
@@ -429,7 +439,7 @@ function Cell({
   tone?: "normal" | "danger";
 }) {
   return (
-    <div className="rounded-xl border border-line bg-[#fbfcfb] p-3.5">
+    <div className="rounded-xl border border-line bg-field p-3.5">
       <span className="block text-2xs text-muted">{label}</span>
       <strong
         dir={ltr ? "ltr" : undefined}
@@ -477,10 +487,10 @@ function NewTicket({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="mt-5 rounded-xl border border-line bg-[#fbfcfb] p-5">
+    <div className="mt-5 rounded-xl border border-line bg-field p-5">
       <div className="grid gap-3 sm:grid-cols-[1fr_150px_130px]">
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">موضوع</span>
+          <span className="mb-1.5 block text-xxs text-sub">موضوع</span>
           <input
             className="field"
             value={form.subject}
@@ -488,7 +498,7 @@ function NewTicket({ onDone }: { onDone: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">دسته</span>
+          <span className="mb-1.5 block text-xxs text-sub">دسته</span>
           <select
             className="field"
             value={form.category}
@@ -502,7 +512,7 @@ function NewTicket({ onDone }: { onDone: () => void }) {
           </select>
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xxs text-[#68747c]">اولویت</span>
+          <span className="mb-1.5 block text-xxs text-sub">اولویت</span>
           <select
             className="field"
             value={form.priority}
@@ -516,7 +526,7 @@ function NewTicket({ onDone }: { onDone: () => void }) {
       </div>
 
       <label className="mt-3 block">
-        <span className="mb-1.5 block text-xxs text-[#68747c]">شرح</span>
+        <span className="mb-1.5 block text-xxs text-sub">شرح</span>
         <textarea
           className="field h-28 resize-none py-2.5"
           value={form.body}

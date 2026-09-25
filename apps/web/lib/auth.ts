@@ -6,6 +6,7 @@ import { prisma } from "@qeymat/db";
 import type { SessionUser } from "./types";
 
 const COOKIE_NAME = "qeymat_session";
+/** هر ورود ۳۰ روز روی همان دستگاه می‌ماند */
 const MAX_AGE = 60 * 60 * 24 * 30; // ۳۰ روز
 
 function secret() {
@@ -26,7 +27,7 @@ export async function verifyPassword(password: string, hash: string) {
 
 export async function createSession(user: SessionUser) {
   const token = await new SignJWT({
-    email: user.email,
+    phone: user.phone,
     name: user.name,
     role: user.role,
   })
@@ -58,14 +59,22 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const { payload } = await jwtVerify(token, secret());
     if (!payload.sub) return null;
 
-    // نقش را از دیتابیس می‌خوانیم تا تغییر دسترسی فوراً اعمال شود
+    // نقش را از دیتابیس می‌خوانیم تا تغییر دسترسی فوراً اعمال شود.
+    // کاربر عادی فقط شماره موبایل دارد و ایمیل ندارد — نسخه‌ی قبل همین‌جا
+    // نشست کاربران موبایلی را باطل می‌کرد و ورود هرگز ماندگار نمی‌شد.
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, role: true, isActive: true },
+      select: { id: true, email: true, phone: true, name: true, role: true, isActive: true },
     });
-    if (!user || !user.isActive || !user.email || !user.name) return null;
+    if (!user || !user.isActive) return null;
 
-    return { id: user.id, email: user.email, name: user.name, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      name: user.name,
+      role: user.role,
+    };
   } catch {
     return null;
   }

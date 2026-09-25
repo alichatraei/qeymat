@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSnapshot, maskSnapshot } from "@/lib/market";
+import { getSnapshot } from "@/lib/market";
 import { getSessionUser } from "@/lib/auth";
 import { hasPlusAccess } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
 
 /**
- * نرخ‌های سایت خودمان.
- * دارایی‌های سطح PLUS برای کاربر بدون اشتراک پوشانده می‌شوند —
- * ردیف می‌ماند ولی عدد صفر است، تا کاربر بداند چه چیزی را نمی‌بیند.
+ * نرخ‌های سایت خودمان. همه‌ی قیمت‌ها برای همه قابل مشاهده است؛
+ * hasPlus فقط برای نمایش بخش تحلیل و هشدار پیامکی برگردانده می‌شود.
  */
 export async function GET() {
   const user = await getSessionUser();
   const plus = await hasPlusAccess(user?.id);
 
-  const snapshot = maskSnapshot(await getSnapshot(), plus);
+  const snapshot = await getSnapshot();
 
   return NextResponse.json(
     { ...snapshot, hasPlus: plus },

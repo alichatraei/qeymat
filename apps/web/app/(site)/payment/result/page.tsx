@@ -18,7 +18,7 @@ const STATES: Record<
   },
   cancelled: {
     icon: AlertCircle,
-    tone: "bg-[#fdf3e2] text-amber",
+    tone: "bg-amber-soft text-amber",
     title: "پرداخت لغو شد",
     note: "تراکنشی ثبت نشد و مبلغی از حساب شما کم نشده است.",
     href: "/plus",
@@ -26,7 +26,7 @@ const STATES: Record<
   },
   failed: {
     icon: XCircle,
-    tone: "bg-[#fdeced] text-danger",
+    tone: "bg-danger-soft text-danger",
     title: "پرداخت ناموفق بود",
     note: "اگر مبلغ از حساب شما کم شده، طی ۷۲ ساعت به‌صورت خودکار برمی‌گردد.",
     href: "/panel/tickets",
@@ -59,7 +59,7 @@ export default async function PaymentResultPage({
         <p className="mt-3 text-[12.5px] leading-7 text-muted">{params.message || state.note}</p>
 
         {params.ref ? (
-          <div className="mt-5 rounded-xl border border-line bg-[#fbfcfb] p-4">
+          <div className="mt-5 rounded-xl border border-line bg-field p-4">
             <span className="block text-2xs text-muted">شماره پیگیری</span>
             <code dir="ltr" className="mt-1 block font-mono text-[14px] font-bold">
               {params.ref}

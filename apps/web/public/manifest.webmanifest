@@ -2,27 +2,89 @@
   "id": "/",
   "name": "قیمت — نرخ لحظه‌ای بازار ایران",
   "short_name": "قیمت",
-  "description": "نرخ لحظه‌ای ارز، طلا، سکه و رمزارز با مبدل تومان، هشدار قیمت و API.",
+  "description": "نرخ لحظه‌ای ارز، طلا، سکه و رمزارز با نمودار ۱۰ ساله، مبدل تومان و هشدار قیمت.",
   "lang": "fa-IR",
   "dir": "rtl",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait-primary",
   "background_color": "#fafcfb",
-  "theme_color": "#0b8f61",
-  "categories": ["finance", "business", "utilities"],
+  "theme_color": "#0c332a",
+  "categories": [
+    "finance",
+    "business",
+    "utilities"
+  ],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "مبدل ارز", "short_name": "مبدل", "url": "/converter", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "اکانت هوش مصنوعی", "short_name": "هوش مصنوعی", "url": "/ai", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "API قیمت", "short_name": "API", "url": "/developers", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+    {
+      "name": "نمودار و مقایسه",
+      "short_name": "نمودار",
+      "url": "/chart",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "مبدل ارز",
+      "short_name": "مبدل",
+      "url": "/converter",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "هشدارهای قیمت",
+      "short_name": "هشدارها",
+      "url": "/panel#alerts",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

@@ -98,15 +98,19 @@ const TOPICS: Topic[] = [
     icon: FileText,
     group: "نرخ‌ها",
     title: "تاریخچه قیمت",
-    intro: "سری زمانی قیمت یک دارایی برای رسم نمودار.",
+    intro: "سری زمانی قیمت یک دارایی برای رسم نمودار — تا ۱۰ سال گذشته.",
     sections: [
       {
         heading: "مسیر",
-        code: { lang: "HTTP", value: `GET ${BASE}/rates/USD/history?range=30` },
+        code: { lang: "HTTP", value: `GET ${BASE}/rates/USD/history?range=5y&interval=month` },
       },
       {
         heading: "بازه‌ها",
-        body: "range بر حسب روز است و مقدار مجاز آن بین ۱ تا ۳۶۵ است. پیش‌فرض ۷ روز است.",
+        body: "range یکی از 1d، 1w، 1m، 3m، 1y، 3y، 5y و 10y است (عدد روز هم برای سازگاری پذیرفته می‌شود). اگر تاریخچه‌ی دارایی کوتاه‌تر باشد، سری از اولین روز موجود شروع می‌شود و meta.years_available آن را اعلام می‌کند.",
+      },
+      {
+        heading: "دانه‌بندی",
+        body: "interval یکی از day، month و year است؛ ماه و سال بر اساس تقویم شمسی جمع می‌شوند. هر نقطه open، high، low و price (پایانی) دارد.",
       },
     ],
   },
@@ -192,14 +196,14 @@ export default function DocsBoard() {
           <nav className="mt-3 space-y-4">
             {groups.map((group) => (
               <div key={group}>
-                <small className="mb-1.5 block text-2xs font-semibold text-[#a2acb2]">{group}</small>
+                <small className="mb-1.5 block text-2xs font-semibold text-faint">{group}</small>
                 {TOPICS.filter((item) => item.group === group).map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setActive(item.id)}
                     className={`flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[12px] font-semibold transition-colors ${
-                      active === item.id ? "bg-green-soft text-green-dark" : "text-[#525d66] hover:bg-soft"
+                      active === item.id ? "bg-green-soft text-green-dark" : "text-sub hover:bg-soft"
                     }`}
                   >
                     <item.icon className="h-[15px] w-[15px] shrink-0" />
@@ -237,13 +241,13 @@ export default function DocsBoard() {
                 <p className="mt-2 max-w-[66ch] text-[12.5px] leading-7 text-muted">{section.body}</p>
               ) : null}
               {section.code ? (
-                <div dir="ltr" className="mt-3 overflow-hidden rounded-xl border border-line bg-[#fbfcfb]">
+                <div dir="ltr" className="mt-3 overflow-hidden rounded-xl border border-line bg-field">
                   <div className="flex items-center justify-between border-b border-line px-4 py-2">
                     <span className="font-mono text-[10.5px] text-muted">{section.code.lang}</span>
                     <button
                       type="button"
                       onClick={() => copy(section.code!.value, `${topic.id}-${index}`)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10.5px] font-semibold text-[#55616a] hover:bg-soft"
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10.5px] font-semibold text-sub hover:bg-soft"
                     >
                       {copied === `${topic.id}-${index}` ? (
                         <Check className="h-3.5 w-3.5" />
@@ -253,7 +257,7 @@ export default function DocsBoard() {
                       {copied === `${topic.id}-${index}` ? "کپی شد" : "کپی"}
                     </button>
                   </div>
-                  <pre className="overflow-x-auto p-4 font-mono text-[11.5px] leading-6 text-[#3f4c55]">
+                  <pre className="overflow-x-auto p-4 font-mono text-[11.5px] leading-6 text-sub">
                     {section.code.value}
                   </pre>
                 </div>
@@ -266,7 +270,7 @@ export default function DocsBoard() {
           <span className="block text-[11px] font-bold text-muted">در این صفحه</span>
           <ul className="mt-3 space-y-2">
             {topic.sections.map((section) => (
-              <li key={section.heading} className="text-[11.5px] text-[#6b757c]">
+              <li key={section.heading} className="text-[11.5px] text-sub">
                 {section.heading}
               </li>
             ))}

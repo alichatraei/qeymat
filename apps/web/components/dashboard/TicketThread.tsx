@@ -25,7 +25,7 @@ type Ticket = {
 const STATUS: Record<string, { label: string; className: string }> = {
   OPEN: { label: "در انتظار پاسخ", className: "state-pending" },
   ANSWERED: { label: "پاسخ داده شد", className: "state-approved" },
-  CLOSED: { label: "بسته", className: "chip bg-soft text-[#55616a]" },
+  CLOSED: { label: "بسته", className: "chip bg-soft text-sub" },
 };
 
 const PRIORITY: Record<string, string> = { LOW: "کم", NORMAL: "عادی", HIGH: "زیاد" };
@@ -129,7 +129,7 @@ export default function TicketThread({
               >
                 <span
                   className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
-                    message.fromStaff ? "bg-green-soft text-green-dark" : "bg-soft text-[#55616a]"
+                    message.fromStaff ? "bg-green-soft text-green-dark" : "bg-soft text-sub"
                   }`}
                 >
                   {message.fromStaff ? (
@@ -143,7 +143,7 @@ export default function TicketThread({
                   className={`min-w-0 max-w-[80%] rounded-2xl px-4 py-3 ${
                     message.fromStaff
                       ? "rounded-tr-md bg-green-soft/70"
-                      : "rounded-tl-md border border-line bg-[#fbfcfb]"
+                      : "rounded-tl-md border border-line bg-field"
                   }`}
                 >
                   <div className="flex items-center gap-2 text-[10.5px] text-muted">
@@ -152,7 +152,7 @@ export default function TicketThread({
                     </b>
                     {timeAgo(message.createdAt)}
                   </div>
-                  <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-7 text-[#3f4c55]">
+                  <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-7 text-sub">
                     {message.body}
                   </p>
                 </div>
@@ -161,14 +161,14 @@ export default function TicketThread({
           </div>
 
           {status === "CLOSED" ? (
-            <div className="mt-6 flex items-center gap-2.5 rounded-xl border border-line bg-[#fbfcfb] p-4 text-[12px] text-muted">
+            <div className="mt-6 flex items-center gap-2.5 rounded-xl border border-line bg-field p-4 text-[12px] text-muted">
               <Lock className="h-4 w-4 shrink-0" />
               این تیکت بسته شده است. برای موضوع تازه، تیکت جدیدی ثبت کنید.
             </div>
           ) : (
             <div className="mt-6 border-t border-line pt-5">
               <label className="block">
-                <span className="mb-1.5 block text-xxs text-[#68747c]">پاسخ شما</span>
+                <span className="mb-1.5 block text-xxs text-sub">پاسخ شما</span>
                 <textarea
                   className="field h-28 resize-none py-2.5"
                   value={body}

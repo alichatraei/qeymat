@@ -136,31 +136,31 @@ export default function DashboardBoard({
               <span className="flex min-w-0 flex-col">
                 <strong className="truncate text-[13px]">{user.name}</strong>
                 <small dir="ltr" className="truncate text-[10.5px] text-muted">
-                  {user.email}
+                  {user.phone ?? user.email}
                 </small>
               </span>
             </div>
             <nav className="mt-4 space-y-1 border-t border-line pt-4 text-[12px] font-semibold">
-              <a href="#key" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-[#525d66] hover:bg-soft">
+              <a href="#key" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-sub hover:bg-soft">
                 <KeyRound className="h-[15px] w-[15px]" />
                 کلید API
               </a>
-              <a href="#usage" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-[#525d66] hover:bg-soft">
+              <a href="#usage" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-sub hover:bg-soft">
                 <BarChart3 className="h-[15px] w-[15px]" />
                 گزارش مصرف
               </a>
-              <a href="#payments" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-[#525d66] hover:bg-soft">
+              <a href="#payments" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-sub hover:bg-soft">
                 <FileText className="h-[15px] w-[15px]" />
                 پرداخت‌ها
               </a>
-              <Link href="/docs" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-[#525d66] hover:bg-soft">
+              <Link href="/docs" className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-sub hover:bg-soft">
                 <FileText className="h-[15px] w-[15px]" />
                 مستندات
               </Link>
               <button
                 type="button"
                 onClick={logout}
-                className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-danger hover:bg-[#fdeced]"
+                className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-danger hover:bg-danger-soft"
               >
                 <LogOut className="h-[15px] w-[15px]" />
                 خروج
@@ -195,7 +195,7 @@ export default function DashboardBoard({
               className={`mt-5 rounded-xl border p-3.5 text-[12px] ${
                 message.tone === "ok"
                   ? "border-green-soft bg-green-soft text-green-dark"
-                  : "border-[#f7d7d8] bg-[#fdeced] text-[#b8474b]"
+                  : "border-danger-soft bg-danger-soft text-danger-ink"
               }`}
             >
               {message.text}
@@ -253,7 +253,7 @@ export default function DashboardBoard({
               </span>
             </div>
 
-            <div dir="ltr" className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-[#fbfcfb] px-4 py-3">
+            <div dir="ltr" className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-field px-4 py-3">
               <code className="flex-1 truncate font-mono text-[12.5px]">
                 {revealed ?? (apiKeyPrefix ? `${apiKeyPrefix}••••••••••••` : "کلیدی صادر نشده است")}
               </code>
@@ -277,7 +277,7 @@ export default function DashboardBoard({
                   </button>
                 </>
               ) : (
-                <Eye className="h-4 w-4 text-[#b6bfc4]" />
+                <Eye className="h-4 w-4 text-faint" />
               )}
             </div>
 
@@ -289,7 +289,7 @@ export default function DashboardBoard({
                     {fa(subscription.requestLimit - subscription.requestsUsed)} درخواست باقی‌مانده
                   </small>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-pill bg-[#eef3f0]">
+                <div className="mt-2 h-2 overflow-hidden rounded-pill bg-tab">
                   <div
                     className={`h-full rounded-pill ${usedPercent > 85 ? "bg-danger" : "bg-green"}`}
                     style={{ width: `${usedPercent}%` }}
@@ -317,12 +317,12 @@ export default function DashboardBoard({
                   مبلغ پلن را به آدرس زیر بفرستید و هش تراکنش را ثبت کنید.
                 </p>
               </div>
-              <span className="chip bg-soft text-[#55616a]">{network}</span>
+              <span className="chip bg-soft text-sub">{network}</span>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-xxs text-[#68747c]">پلن</span>
+                <span className="mb-1.5 block text-xxs text-sub">پلن</span>
                 <select className="field" value={plan} onChange={(event) => setPlan(event.target.value)}>
                   {PLANS.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -338,8 +338,8 @@ export default function DashboardBoard({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-xxs text-[#68747c]">آدرس کیف پول</span>
-                <span className="flex h-[46px] items-center gap-2 rounded-control border border-line bg-[#fbfcfb] px-3">
+                <span className="mb-1.5 block text-xxs text-sub">آدرس کیف پول</span>
+                <span className="flex h-[46px] items-center gap-2 rounded-control border border-line bg-field px-3">
                   <code dir="ltr" className="flex-1 truncate font-mono text-[11.5px]">
                     {wallet || "آدرس هنوز در تنظیمات ثبت نشده"}
                   </code>
@@ -362,7 +362,7 @@ export default function DashboardBoard({
             </div>
 
             <label className="mt-3 block">
-              <span className="mb-1.5 block text-xxs text-[#68747c]">هش تراکنش</span>
+              <span className="mb-1.5 block text-xxs text-sub">هش تراکنش</span>
               <input
                 className="field"
                 dir="ltr"
@@ -431,12 +431,12 @@ export default function DashboardBoard({
                     return (
                       <div key={row.endpoint}>
                         <div className="flex items-center justify-between text-[11.5px]">
-                          <code dir="ltr" className="font-mono text-[11px] text-[#4c5760]">
+                          <code dir="ltr" className="font-mono text-[11px] text-sub">
                             {row.endpoint}
                           </code>
                           <b className="tabular">{fa(row.count)}</b>
                         </div>
-                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-pill bg-[#eef3f0]">
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-pill bg-tab">
                           <div
                             className="h-full rounded-pill bg-green"
                             style={{ width: `${Math.round((row.count / max) * 100)}%` }}

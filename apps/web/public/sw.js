@@ -1,6 +1,6 @@
 /* سرویس‌ورکر «قیمت» — کش پوسته‌ی اپ، حالت آفلاین و اعلان وب‌پوش. */
 
-const VERSION = "qeymat-v1";
+const VERSION = "qeymat-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -54,7 +54,8 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/admin") ||
-    url.pathname.startsWith("/dashboard")
+    url.pathname.startsWith("/dashboard") ||
+    url.pathname.startsWith("/panel")
   ) {
     return;
   }

@@ -30,8 +30,8 @@ export default function PlanPicker() {
               aria-pressed={isSelected}
               className={`relative flex flex-col rounded-card border p-6 text-right transition-all ${
                 isSelected
-                  ? "border-green bg-white shadow-card ring-1 ring-green/25"
-                  : "border-line bg-white hover:border-[#cbd6d1]"
+                  ? "border-green bg-surface shadow-card ring-1 ring-green/25"
+                  : "border-line bg-surface hover:border-line-strong"
               }`}
             >
               {item.popular ? (
@@ -63,7 +63,7 @@ export default function PlanPicker() {
                 <small className="mt-1 text-[11px] text-muted">≈ {fa(item.price * usdt)} تومان</small>
               ) : null}
 
-              <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-[11.5px] text-[#4c5760]">
+              <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-[11.5px] text-sub">
                 <li className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 shrink-0 text-green" />
                   {item.requests} درخواست در {item.months}

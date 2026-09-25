@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "@/styles/globals.css";
 import ServiceWorkerBridge from "@/components/pwa/ServiceWorkerBridge";
+import { themeInitScript } from "@/components/theme/theme";
 
 const vazirmatn = localFont({
   src: [
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | قیمت",
   },
   description:
-    "نرخ لحظه‌ای ارز، طلا، سکه و رمزارز بازار ایران با منابع شفاف، مبدل تومان و API آماده برای توسعه‌دهندگان.",
+    "نرخ لحظه‌ای دلار، ارز، طلا، سکه و رمزارز بازار ایران، نمودار و مقایسه تا ۱۰ سال، مبدل تومان و هشدار قیمت.",
   keywords: [
     "قیمت دلار",
     "نرخ ارز",
@@ -46,13 +47,13 @@ export const metadata: Metadata = {
     siteName: "قیمت",
     title: "قیمت — نرخ لحظه‌ای بازار ایران",
     description: "ارز، طلا، سکه و رمزارز در یک نگاه، با API و اعلان قیمت.",
-    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "قیمت" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "قیمت" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "قیمت — نرخ لحظه‌ای بازار ایران",
     description: "ارز، طلا، سکه و رمزارز در یک نگاه.",
-    images: ["/icon-512.png"],
+    images: ["/og.png"],
   },
   icons: {
     icon: [
@@ -74,7 +75,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b8f61",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0c332a" },
+    { media: "(prefers-color-scheme: dark)", color: "#070e0c" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -83,8 +87,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
-      <body className="min-h-screen bg-page">
+    <html lang="fa" dir="rtl" className={vazirmatn.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-screen bg-page text-ink">
         {children}
         <ServiceWorkerBridge />
       </body>
