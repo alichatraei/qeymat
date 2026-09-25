@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { fetchText } from "../lib/http.js";
 import {
   isSane,
+  isSummaryLine,
   sideFor,
   stripNoise,
   symbolFor,
@@ -13,67 +14,80 @@ import {
  *
  * این مسیر نه حساب می‌خواهد نه ربات، فقط HTML عمومی کانال است.
  *
- * مهم: t.me از داخل ایران فیلتر است. برای سرور داخل ایران باید در کانفیگ
- * منبع، `baseUrl` را روی یک رله یا میرور تنظیم کنید؛ مثلاً:
- *   { "baseUrl": "https://relay.example.com/tg" }
- * رله باید مسیر /<channel> را بگیرد و HTML خام t.me/s/<channel> را برگرداند.
+ * t.me از داخل ایران فیلتر است، پس درخواست‌ها از رله‌ی Cloudflare Worker
+ * (مثلاً https://tg.qeymat.online/<channel>) می‌گذرند. آدرس و توکن رله در
+ * زمان اجرا از متغیرهای محیطی TELEGRAM_RELAY_URL و TELEGRAM_RELAY_TOKEN
+ * خوانده می‌شوند و بر کانفیگ دیتابیس مقدم‌اند — توکن هرگز در دیتابیس
+ * ذخیره نمی‌شود.
  *
  * config نمونه:
  * {
- *   "baseUrl": "https://t.me/s",
+ *   "maxPosts": 20,
+ *   "maxAgeMinutes": 180,
  *   "channels": [
  *     { "name": "Price33", "weight": 1 },
- *     { "name": "Qeymatabshodeh", "weight": 0.9 }
- *   ],
- *   "maxPosts": 25,
- *   "maxAgeMinutes": 120
+ *     // کانالی که پست‌هایش برچسب ندارد: «103,300,000⏳باحواله🔵خرید»
+ *     { "name": "Qeymatabshodeh", "weight": 0.9, "defaultSymbol": "ABSHODEH" }
+ *   ]
  * }
  */
 export async function fetchTelegram(source) {
   const config = source.config || {};
-  const baseUrl = (config.baseUrl || "https://t.me/s").replace(/\/+$/, "");
+  const baseUrl = (
+    process.env.TELEGRAM_RELAY_URL ||
+    config.baseUrl ||
+    "https://t.me/s"
+  ).replace(/\/+$/, "");
+  const token = process.env.TELEGRAM_RELAY_TOKEN || config.relayToken || "";
   const channels = config.channels?.length ? config.channels : [];
-  const maxPosts = config.maxPosts || 25;
-  const maxAgeMs = (config.maxAgeMinutes || 120) * 60 * 1000;
+  const maxPosts = config.maxPosts || 20;
+  const maxAgeMs = (config.maxAgeMinutes || 180) * 60 * 1000;
 
   if (!channels.length) throw new Error("هیچ کانالی در کانفیگ تعریف نشده است");
 
-  /** @type {Record<string, {values: number[], weights: number[], side: object}>} */
+  /** @type {Record<string, {buy: {value:number, weight:number}[], sell: {value:number, weight:number}[]}>} */
   const collected = {};
   const errors = [];
   let postsSeen = 0;
 
-  for (const channel of channels) {
-    const name = typeof channel === "string" ? channel : channel.name;
-    const weight = typeof channel === "string" ? 1 : (channel.weight ?? 1);
-
-    try {
-      const html = await fetchText(`${baseUrl}/${encodeURIComponent(name)}`, {
+  const results = await Promise.allSettled(
+    channels.map(async (channel) => {
+      const spec = typeof channel === "string" ? { name: channel } : channel;
+      const html = await fetchText(`${baseUrl}/${encodeURIComponent(spec.name)}`, {
         timeoutMs: config.timeoutMs || 15000,
+        retries: 1,
         headers: {
           "Accept-Language": "fa-IR,fa;q=0.9",
+          ...(token ? { "x-relay-token": token } : {}),
           ...(config.headers || {}),
         },
       });
+      return { spec, posts: extractPosts(html, maxPosts, maxAgeMs) };
+    }),
+  );
 
-      const posts = extractPosts(html, maxPosts, maxAgeMs);
-      postsSeen += posts.length;
-
-      for (const post of posts) {
-        for (const [symbol, reading] of Object.entries(parsePost(post.text))) {
-          const bucket = (collected[symbol] ||= { buy: [], sell: [] });
-          // پست‌های تازه‌تر وزن بیشتری می‌گیرند
-          const recency = Math.max(0.3, 1 - (Date.now() - post.at) / maxAgeMs);
-          if (reading.sell)
-            bucket.sell.push({ value: reading.sell, weight: weight * recency });
-          if (reading.buy)
-            bucket.buy.push({ value: reading.buy, weight: weight * recency });
-        }
-      }
-    } catch (error) {
-      errors.push(`${name}: ${error?.message || error}`);
+  results.forEach((result, index) => {
+    const channel = channels[index];
+    const name = typeof channel === "string" ? channel : channel.name;
+    if (result.status === "rejected") {
+      errors.push(`${name}: ${result.reason?.message || result.reason}`);
+      return;
     }
-  }
+
+    const { spec, posts } = result.value;
+    const weight = spec.weight ?? 1;
+    postsSeen += posts.length;
+
+    for (const post of posts) {
+      // پست‌های تازه‌تر وزن بیشتری می‌گیرند
+      const recency = Math.max(0.25, 1 - (Date.now() - post.at) / maxAgeMs);
+      for (const [symbol, reading] of Object.entries(parsePost(post.text, spec))) {
+        const bucket = (collected[symbol] ||= { buy: [], sell: [] });
+        if (reading.sell) bucket.sell.push({ value: reading.sell, weight: weight * recency });
+        if (reading.buy) bucket.buy.push({ value: reading.buy, weight: weight * recency });
+      }
+    }
+  });
 
   const rates = {};
   for (const [symbol, bucket] of Object.entries(collected)) {
@@ -81,11 +95,12 @@ export async function fetchTelegram(source) {
     const buy = weightedMedian(bucket.buy);
     if (!sell && !buy) continue;
 
-    const final = sell || buy;
+    // فقط «خرید» اعلام شده؟ فروش کمی بالاتر است، نه برابر
     rates[symbol.toLowerCase()] = {
-      buy: buy || Math.round(final * 0.995),
-      sell: sell || final,
-      changePercent: 0, // کانال‌ها درصد تغییر نمی‌دهند؛ از نرخ قبلی محاسبه می‌شود
+      buy: buy || Math.round(sell * 0.995),
+      sell: sell || Math.round(buy * 1.005),
+      unit: "IRT",
+      samples: bucket.sell.length + bucket.buy.length,
     };
   }
 
@@ -99,37 +114,44 @@ export async function fetchTelegram(source) {
   return rates;
 }
 
-/** پست‌های کانال را از HTML وب‌پرویو بیرون می‌کشد */
-function extractPosts(html, maxPosts, maxAgeMs) {
+/** پست‌های کانال را از HTML وب‌پرویو بیرون می‌کشد (تازه‌ترین‌ها اول) */
+export function extractPosts(html, maxPosts = 20, maxAgeMs = Infinity) {
   const $ = cheerio.load(html);
   const posts = [];
 
   $(".tgme_widget_message_wrap").each((_, element) => {
-    if (posts.length >= maxPosts) return false;
-
     const node = $(element);
-    const text = node.find(".tgme_widget_message_text").text();
+    const body = node.find(".tgme_widget_message_text").first();
+    if (!body.length) return;
+
+    // <br> در متن پست یعنی خط تازه؛ بدون این، همه‌ی خط‌ها به هم می‌چسبند
+    body.find("br").replaceWith("\n");
+    const text = body.text();
     if (!text?.trim()) return;
 
     // زمان پست از تگ time می‌آید؛ اگر نبود، پست را تازه فرض نمی‌کنیم
-    const datetime = node.find("time[datetime]").attr("datetime");
+    const datetime = node.find("time[datetime]").last().attr("datetime");
     const at = datetime ? new Date(datetime).getTime() : 0;
     if (!at || Date.now() - at > maxAgeMs) return;
 
     posts.push({ text, at });
   });
 
-  return posts;
+  // وب‌پرویو قدیمی‌ترین را اول می‌آورد
+  return posts.sort((a, b) => b.at - a.at).slice(0, maxPosts);
 }
 
 /**
  * یک پست را به نرخ‌ها تبدیل می‌کند.
  *
- * دو قالب رایج پوشش داده می‌شود:
- *   «🔸دلار آمریکا : 231,400»        → برچسب و عدد در یک خط
- *   «💰 #آبشده_نقدی 104,700,000 فروش» → برچسب، عدد، و جهت در یک خط
+ * قالب‌های پوشش‌داده‌شده:
+ *   «🔸دلار آمریکا : 231,400»              → برچسب و عدد در یک خط
+ *   «💰 #آبشده_نقدی 104,700,000 فروش♦️»    → برچسب، عدد و جهت
+ *   «دلار فردایی تهران ⏳ 230,422 فروش🔴»  → برچسب مرکب، عدد و جهت
+ *   «103,300,000⏳باحواله🔵خرید»           → بی‌برچسب؛ نماد پیش‌فرض کانال
+ *   «گرم: 23,846,899»                      → قیمت گرم طلای ۱۸
  */
-function parsePost(rawText) {
+export function parsePost(rawText, spec = {}) {
   const readings = {};
   const lines = stripNoise(rawText)
     .split(/[\n\r]+/)
@@ -137,25 +159,29 @@ function parsePost(rawText) {
     .filter(Boolean);
 
   for (const line of lines) {
-    const symbol = symbolFor(line);
+    if (isSummaryLine(line)) continue;
+
+    const side = sideFor(line);
+    let symbol = symbolFor(line);
+
+    // خط بی‌برچسب فقط وقتی پذیرفته می‌شود که جهت معامله را گفته باشد؛
+    // وگرنه عددهای خلاصه‌ی روز هم به‌عنوان قیمت لحظه‌ای خوانده می‌شدند.
+    if (!symbol && spec.defaultSymbol && side) symbol = spec.defaultSymbol;
     if (!symbol) continue;
+    if (spec.only && !spec.only.includes(symbol)) continue;
 
     // عددهای چهاررقم به بالا؛ کمتر از آن قیمت نیست
-    const numbers = (line.match(/[\d,]{4,}/g) || [])
+    const numbers = (line.match(/\d[\d,]{3,}/g) || [])
       .map(toNumber)
       .filter((value) => isSane(symbol, value));
-
     if (!numbers.length) continue;
 
     // اگر چند عدد در خط بود، بزرگ‌ترین معمولاً قیمت است
-    // (اعداد کوچک‌تر اغلب درصد یا تعداد هستند)
     const value = Math.max(...numbers);
-    const side = sideFor(line);
 
     const bucket = (readings[symbol] ||= {});
-    if (side === "buy") bucket.buy = value;
-    else if (side === "sell") bucket.sell = value;
-    else bucket.sell ||= value; // بدون برچسب، فروش فرض می‌شود
+    if (side === "buy") bucket.buy ??= value;
+    else bucket.sell ??= value; // فروش، معامله یا بدون برچسب
   }
 
   return readings;

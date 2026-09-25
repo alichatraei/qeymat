@@ -50,7 +50,7 @@ export async function fetchBonbast(source) {
     const sell = toNumber(value);
     if (!sell) continue;
     const buy = toNumber(payload[`${symbol}2`]) || Math.round(sell * 0.99);
-    rates[symbol] = { buy, sell, changePercent: 0 };
+    rates[symbol] = { buy, sell, changePercent: 0, unit: "IRT" };
   }
 
   // سکه و طلا هم در همان پاسخ هستند
@@ -65,7 +65,14 @@ export async function fetchBonbast(source) {
   };
   for (const [key, symbol] of Object.entries(goldMap)) {
     const sell = toNumber(payload[key]);
-    if (sell) rates[symbol] = { buy: Math.round(sell * 0.99), sell, changePercent: 0 };
+    if (!sell) continue;
+    // انس جهانی دلاری است، بقیه تومانی
+    rates[symbol] = {
+      buy: symbol === "ounce" ? sell : Math.round(sell * 0.99),
+      sell,
+      changePercent: 0,
+      unit: symbol === "ounce" ? "RAW" : "IRT",
+    };
   }
 
   if (!Object.keys(rates).length) throw new Error("هیچ نرخی از بن‌بست دریافت نشد");

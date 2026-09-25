@@ -10,6 +10,7 @@ import { aggregateAll } from "./aggregate.js";
 import { cache, publish } from "./lib/cache.js";
 import { checkAlerts } from "./alerts.js";
 import { log } from "./lib/log.js";
+import { isSane } from "./lib/parse-fa.js";
 
 const require = createRequire(import.meta.url);
 const { prisma } = require("@qeymat/db");
@@ -72,7 +73,15 @@ export async function runSource(sourceKey) {
   }
 }
 
-/** نقل‌قول‌های خام یک منبع را ثبت می‌کند */
+/**
+ * نقل‌قول‌های خام یک منبع را ثبت می‌کند.
+ *
+ * قرارداد خروجی آداپتورها: کلید = نماد استاندارد با حروف کوچک (usd، gold18)
+ * و فیلد `unit` یکی از این‌ها:
+ *   IRT تومان · IRR ریال · RAW همان‌طور که هست · usdQuoted قیمت دلاری
+ * آداپتور قدیمی بدون unit فقط برای دارایی‌هایی که منبع اصلی‌شان است
+ * و با `multiplier` همان دارایی خوانده می‌شود.
+ */
 async function storeQuotes(source, rates) {
   const assets = await prisma.asset.findMany({
     where: { isActive: true },
@@ -98,32 +107,51 @@ async function storeQuotes(source, rates) {
   }
 
   let stored = 0;
+  let rejected = 0;
+  const now = Date.now();
 
   for (const asset of assets) {
-    // یک منبع می‌تواند نماد را با کلید خودش یا با نماد استاندارد بدهد
+    const isPrimary = asset.sourceKey === source.key;
     const raw =
-      rates[asset.sourceField] ||
-      rates[asset.sourceField?.toLowerCase()] ||
-      rates[asset.symbol.toLowerCase()];
+      rates[asset.symbol.toLowerCase()] ||
+      (isPrimary
+        ? rates[asset.sourceField] || rates[asset.sourceField?.toLowerCase()]
+        : undefined);
     if (!raw?.sell) continue;
 
-    const multiplier = raw.usdQuoted ? usdToman : asset.multiplier || 1;
-    if (raw.usdQuoted && !usdToman) continue;
+    let multiplier;
+    if (raw.usdQuoted) {
+      if (!usdToman) continue;
+      multiplier = usdToman;
+    } else if (raw.unit === "IRR") multiplier = 0.1;
+    else if (raw.unit === "IRT" || raw.unit === "RAW") multiplier = 1;
+    else if (isPrimary) multiplier = asset.multiplier || 1;
+    else continue; // واحد نامعلوم از منبع فرعی: ریسک ده‌برابر شدن نرخ
 
-    const sell = Math.round(raw.sell * multiplier);
-    const buy = raw.buy ? Math.round(raw.buy * multiplier) : null;
+    const sell = Math.round(raw.sell * multiplier * 10000) / 10000;
+    const buy = raw.buy ? Math.round(raw.buy * multiplier * 10000) / 10000 : null;
     if (!sell) continue;
+
+    // عدد بیرون از بازه‌ی منطقی (مثلاً ریال به‌جای تومان) وارد اجماع نمی‌شود
+    if (!isSane(asset.symbol, sell)) {
+      rejected += 1;
+      continue;
+    }
+
+    // زمان خود داده، اگر منبع اعلام کرده باشد؛ داده‌ی کهنه در اجماع کم‌وزن می‌شود
+    const at = new Date(Math.min(now, Number(raw.at) || now));
 
     await prisma.sourceQuote.upsert({
       where: {
         assetId_sourceKey: { assetId: asset.id, sourceKey: source.key },
       },
-      update: { buy, sell, at: new Date() },
-      create: { assetId: asset.id, sourceKey: source.key, buy, sell },
+      update: { buy, sell, at },
+      create: { assetId: asset.id, sourceKey: source.key, buy, sell, at },
     });
     stored += 1;
   }
 
+  if (rejected) log.warn(`[${source.key}] ${rejected} نقل‌قول خارج از بازه‌ی منطقی رد شد`);
   return stored;
 }
 

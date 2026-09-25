@@ -6,8 +6,8 @@ import { fetchJson } from "../lib/http.js";
  * پاسخ /market/stats به شکل زیر است:
  *   { status: "ok", stats: { "btc-rls": { bestSell, bestBuy, latest, dayChange, dayLow, dayHigh }, ... } }
  *
- * خروجی این آداپتور همیشه بر حسب واحد خام منبع (ریال) است؛
- * تبدیل به تومان با ضریب `multiplier` روی هر دارایی انجام می‌شود.
+ * خروجی این آداپتور ریالی است و با `unit: "IRR"` علامت می‌خورد تا
+ * ثبت‌کننده‌ی نقل‌قول آن را به تومان تبدیل کند.
  */
 export async function fetchNobitex(source) {
   const config = source.config || {};
@@ -44,6 +44,7 @@ export async function fetchNobitex(source) {
     rates[symbol] = {
       buy,
       sell,
+      unit: "IRR",
       // dayChange درصد است و گاهی رشته برمی‌گردد
       changePercent: round(num(stat.dayChange), 2),
       dayLow: num(stat.dayLow) || null,

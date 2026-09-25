@@ -1,13 +1,15 @@
 {
   "name": "@qeymat/worker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "dev": "dotenv -e ../../.env -- node --watch src/index.js",
     "start": "node src/index.js",
-    "run:once": "dotenv -e ../../.env -- node -e \"import('./src/crawler.js').then(m=>m.runAll()).then(r=>{console.log(r);process.exit(0)})\""
+    "run:once": "dotenv -e ../../.env -- node -e \"import('./src/crawler.js').then(m=>m.runAll()).then(r=>{console.log(r);process.exit(0)})\"",
+    "history:backfill": "dotenv -e ../../.env -- node -e \"import('./src/history/backfill.js').then(m=>m.backfillAll({force:process.argv.includes('--force')})).then(r=>{console.log(JSON.stringify(r,null,2));process.exit(0)})\" --",
+    "history:import": "dotenv -e ../../.env -- node src/history/import-csv.js"
   },
   "dependencies": {
     "@qeymat/db": "*",

@@ -2,6 +2,8 @@ import http from "node:http";
 import { createRequire } from "node:module";
 import cron from "node-cron";
 import { runSource, runAll, refreshCache, settle } from "./crawler.js";
+import { backfillAll, rollupFromHistory } from "./history/backfill.js";
+import { importCsv } from "./history/import-csv.js";
 import { closeCache } from "./lib/cache.js";
 import { log } from "./lib/log.js";
 
@@ -82,6 +84,12 @@ async function main() {
   );
   await schedule();
 
+  // تاریخچه‌ی ۱۰ ساله: در پس‌زمینه تا راه‌اندازی معطل نماند.
+  // فقط دارایی‌هایی که هنوز تاریخچه‌ی کافی ندارند پر می‌شوند.
+  backfillAll()
+    .then((report) => log.info("بک‌فیل تاریخچه:", JSON.stringify(report)))
+    .catch((error) => log.error("بک‌فیل تاریخچه شکست خورد:", error));
+
   // هر ۱۰ دقیقه زمان‌بندی را با تنظیمات پنل مدیریت همگام می‌کند
   cron.schedule("*/10 * * * *", () =>
     schedule().catch((error) => log.error(error)),
@@ -97,8 +105,28 @@ async function main() {
   cron.schedule("*/30 * * * *", () =>
     expireSubscriptions().catch((error) => log.error(error)),
   );
+  // کندل روزهای گذشته از تاریخچه‌ی زنده، بامداد تهران
+  cron.schedule(
+    "10 0 * * *",
+    () => rollupFromHistory().catch((error) => log.error(error)),
+    { timezone: "Asia/Tehran" },
+  );
+  // همگام‌سازی هفتگی با آرشیو TGJU برای پر کردن روزهای جاافتاده
+  cron.schedule(
+    "30 5 * * 6",
+    () => backfillAll({ force: true }).catch((error) => log.error(error)),
+    { timezone: "Asia/Tehran" },
+  );
 
-  const server = http.createServer(async (request, response) => {
+  const server = http.createServer((request, response) => {
+    handle(request, response).catch((error) => {
+      log.error("خطای درخواست:", error?.message || error);
+      if (!response.headersSent) response.writeHead(500);
+      response.end(JSON.stringify({ ok: false, error: String(error?.message || error) }));
+    });
+  });
+
+  async function handle(request, response) {
     const url = new URL(request.url, `http://localhost:${PORT}`);
     response.setHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -140,6 +168,29 @@ async function main() {
       return;
     }
 
+    // بک‌فیل دستی تاریخچه: POST /backfill?symbols=USD,EUR&force=1
+    if (url.pathname === "/backfill" && request.method === "POST") {
+      if (!authorized(request)) return deny(response);
+      const symbols = url.searchParams.get("symbols")?.split(",").filter(Boolean);
+      const result = await backfillAll({ symbols, force: url.searchParams.get("force") === "1" });
+      response.writeHead(200);
+      response.end(JSON.stringify({ ok: true, result }));
+      return;
+    }
+
+    // درون‌ریزی CSV: بدنه‌ی درخواست متن فایل است
+    if (url.pathname === "/import-csv" && request.method === "POST") {
+      if (!authorized(request)) return deny(response);
+      const text = await readBody(request, 20 * 1024 * 1024);
+      const result = await importCsv(text, {
+        symbol: url.searchParams.get("symbol") || undefined,
+        overwriteLive: url.searchParams.get("overwriteLive") === "1",
+      });
+      response.writeHead(200);
+      response.end(JSON.stringify({ ok: true, result }));
+      return;
+    }
+
     if (url.pathname === "/refresh-cache" && request.method === "POST") {
       await refreshCache();
       response.writeHead(200);
@@ -149,7 +200,7 @@ async function main() {
 
     response.writeHead(404);
     response.end(JSON.stringify({ error: "not found" }));
-  });
+  }
 
   server.listen(PORT, () => log.info(`سلامت کرالر روی پورت ${PORT}`));
 
@@ -162,6 +213,34 @@ async function main() {
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+function authorized(request) {
+  const token = request.headers["x-worker-token"];
+  return Boolean(process.env.WORKER_TOKEN) && token === process.env.WORKER_TOKEN;
+}
+
+function deny(response) {
+  response.writeHead(401);
+  response.end(JSON.stringify({ error: "unauthorized" }));
+}
+
+function readBody(request, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error("فایل بزرگ‌تر از حد مجاز است"));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("error", reject);
+  });
 }
 
 main().catch((error) => {

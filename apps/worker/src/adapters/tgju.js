@@ -1,68 +1,59 @@
 import { fetchJson } from "../lib/http.js";
+import { TGJU_KEYS, tgjuNumber } from "../lib/tgju-map.js";
 
 /**
- * TGJU — نرخ طلا، سکه و انس جهانی.
+ * TGJU — ارز، طلا، سکه و انس جهانی.
  *
- * پاسخ ajax.json به شکل { "geram18": { p: "۳۴٬۰۰۰٬۰۰۰", d, dp, dt, ... }, ... } است
- * که قیمت‌ها ریالی و با جداکننده هزارگان هستند.
+ * پاسخ ajax.json به شکل { current: { "geram18": { p: "241,246,000", h, l, dp, dt, ts }, ... } }
+ * است و بیشتر قیمت‌ها ریالی‌اند. خروجی این آداپتور با نماد استاندارد و
+ * از پیش به تومان تبدیل‌شده است (unit: "IRT")؛ جز انس که دلاری می‌ماند.
+ *
+ * نرخی که `ts` آن قدیمی‌تر از `maxAgeHours` باشد نادیده گرفته می‌شود — TGJU
+ * برای بازار تعطیل آخرین نرخ روز قبل را برمی‌گرداند و نباید با نرخ تازه‌ی
+ * منابع دیگر هم‌وزن شود.
  */
-const FIELD_ALIASES = {
-  geram18: ["geram18", "gold_18", "gold18"],
-  geram24: ["geram24", "gold_24", "gold24"],
-  sekee: ["sekee", "sekeh_emami", "coin_emami"],
-  sekeb: ["sekeb", "sekeh_bahar", "coin_bahar"],
-  nim: ["nim", "sekeh_nim", "coin_half"],
-  rob: ["rob", "sekeh_rob", "coin_quarter"],
-  gerami: ["gerami", "sekeh_gerami", "coin_gerami"],
-  ons: ["ons", "gold_ons", "ounce"],
-  mesghal: ["mesghal", "mesghal_gold"],
-};
-
 export async function fetchTgju(source) {
   const config = source.config || {};
   const payload = await fetchJson(source.endpoint || "https://call5.tgju.org/ajax.json", {
     headers: { Accept: "application/json" },
-    timeoutMs: config.timeoutMs || 12000,
+    timeoutMs: config.timeoutMs || 15000,
   });
 
   const current = payload?.current || payload;
   if (!current || typeof current !== "object") throw new Error("پاسخ نامعتبر از TGJU");
 
+  const maxAgeMs = (config.maxAgeHours || 36) * 60 * 60 * 1000;
   const rates = {};
-  for (const [symbol, aliases] of Object.entries(FIELD_ALIASES)) {
-    const entry = aliases.map((alias) => current[alias]).find(Boolean);
+
+  for (const [symbol, spec] of Object.entries(TGJU_KEYS)) {
+    if (spec.live === false) continue;
+    const entry = current[spec.key];
     if (!entry) continue;
 
-    const sell = toNumber(entry.p ?? entry.price ?? entry.value);
+    // ts به وقت تهران است: «2026-09-24 00:00:00»
+    const at = entry.ts ? Date.parse(`${entry.ts.replace(" ", "T")}+03:30`) : Date.now();
+    if (Number.isFinite(at) && Date.now() - at > maxAgeMs) continue;
+
+    const factor = spec.unit === "IRR" ? spec.factor ?? 0.1 : 1;
+    const sell = tgjuNumber(entry.p) * factor;
     if (!sell) continue;
 
-    const low = toNumber(entry.l ?? entry.low);
-    const high = toNumber(entry.h ?? entry.high);
+    const low = tgjuNumber(entry.l) * factor;
+    const high = tgjuNumber(entry.h) * factor;
+    let changePercent = tgjuNumber(entry.dp);
+    if (String(entry.dt || "").includes("low")) changePercent = -Math.abs(changePercent);
 
-    rates[symbol] = {
-      buy: low || Math.round(sell * 0.995),
-      sell,
-      changePercent: toNumber(entry.dp ?? entry.change_percent),
+    rates[symbol.toLowerCase()] = {
+      buy: Math.round(sell * 0.995 * 100) / 100,
+      sell: spec.unit === "RAW" ? sell : Math.round(sell),
+      changePercent,
       dayLow: low || null,
       dayHigh: high || null,
+      unit: spec.unit === "RAW" ? "RAW" : "IRT",
+      at,
     };
-
-    // TGJU برای اکثر فیلدها با علامت d جهت تغییر را می‌دهد
-    if (String(entry.dt || "").includes("low")) {
-      rates[symbol].changePercent = -Math.abs(rates[symbol].changePercent);
-    }
   }
 
-  if (!Object.keys(rates).length) throw new Error("هیچ نرخی از TGJU دریافت نشد");
+  if (!Object.keys(rates).length) throw new Error("هیچ نرخ تازه‌ای از TGJU دریافت نشد");
   return rates;
-}
-
-function toNumber(value) {
-  if (value === null || value === undefined) return 0;
-  const normalized = String(value)
-    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
-    .replace(/٫/g, ".")
-    .replace(/[،٬,\s]/g, "");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
 }

@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import webpush from "web-push";
 import { log } from "./lib/log.js";
+import { sendAlertSms } from "./lib/sms.js";
 
 const require = createRequire(import.meta.url);
 const { prisma } = require("@qeymat/db");
@@ -23,18 +24,40 @@ function ensureVapid() {
 }
 
 /**
- * برای دارایی‌هایی که تازه به‌روز شده‌اند، هشدارهای فعال را بررسی
- * و اعلان مرورگر می‌فرستد.
+ * برای دارایی‌هایی که تازه به‌روز شده‌اند، هشدارهای فعال را بررسی می‌کند.
+ *
+ * هشدار فقط به کاربر واردشده تعلق دارد:
+ *   - اعلان مرورگر به همه‌ی دستگاه‌هایی که کاربر اعلان را رویشان روشن کرده
+ *   - پیامک، اگر هشدار پیامکی باشد و کاربر هنوز اشتراک قیمت پلاس فعال داشته باشد
+ *
+ * هشدار با «عبور» از قیمت هدف شلیک می‌شود، نه با بودن در آن سمت؛ پس با
+ * هر تیک تکرار نمی‌شود. بعد از شلیک غیرفعال می‌شود.
  *
  * @param {Array<{asset: object, sell: number, previousSell: number|null}>} touched
  */
 export async function checkAlerts(touched) {
-  if (!ensureVapid()) return;
+  const pushReady = ensureVapid();
 
   const assetIds = touched.map((item) => item.asset.id);
   const alerts = await prisma.priceAlert.findMany({
-    where: { assetId: { in: assetIds }, isActive: true },
-    include: { sub: true, asset: true },
+    where: { assetId: { in: assetIds }, isActive: true, userId: { not: null } },
+    include: {
+      sub: true,
+      asset: true,
+      user: {
+        select: {
+          id: true,
+          phone: true,
+          isActive: true,
+          pushSubscriptions: true,
+          plusSubscriptions: {
+            where: { status: "ACTIVE", expiresAt: { gt: new Date() } },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
   });
   if (!alerts.length) return;
 
@@ -42,7 +65,7 @@ export async function checkAlerts(touched) {
 
   for (const alert of alerts) {
     const current = priceByAsset.get(alert.assetId);
-    if (!current) continue;
+    if (!current || !alert.user?.isActive) continue;
 
     const crossed =
       alert.direction === "ABOVE"
@@ -54,20 +77,45 @@ export async function checkAlerts(touched) {
     if (!crossed) continue;
 
     const direction = alert.direction === "ABOVE" ? "بالاتر از" : "پایین‌تر از";
-    const sent = await send(alert.sub, {
-      title: `${alert.asset.nameFa} ${direction} هدف شما رسید`,
-      body: `قیمت فعلی ${format(current.sell)} تومان است.`,
-      url: `/?symbol=${alert.asset.symbol}`,
-      tag: `alert-${alert.id}`,
-    });
+    const unit = alert.asset.unit === "USD" ? "دلار" : "تومان";
+    const channels = [];
 
-    if (sent) {
-      await prisma.priceAlert.update({
-        where: { id: alert.id },
-        data: { isActive: false, firedAt: new Date() },
-      });
-      log.info(`هشدار ${alert.asset.symbol} ارسال شد`);
+    if (alert.push && pushReady) {
+      const subs = alert.user.pushSubscriptions.length
+        ? alert.user.pushSubscriptions
+        : alert.sub
+          ? [alert.sub]
+          : [];
+      let delivered = 0;
+      for (const sub of subs) {
+        const ok = await send(sub, {
+          title: `${alert.asset.nameFa} ${direction} ${format(alert.threshold)} ${unit}`,
+          body: `قیمت فعلی ${format(current.sell)} ${unit} است.`,
+          url: `/chart?symbol=${alert.asset.symbol}`,
+          tag: `alert-${alert.id}`,
+        });
+        if (ok) delivered += 1;
+      }
+      if (delivered) channels.push(`push×${delivered}`);
     }
+
+    if (alert.sms && alert.user.phone && alert.user.plusSubscriptions.length) {
+      const ok = await sendAlertSms({
+        phone: alert.user.phone,
+        price: current.sell,
+        symbol: alert.asset.symbol,
+        name: alert.asset.nameFa,
+      });
+      if (ok) channels.push("sms");
+    }
+
+    // حتی اگر هیچ کانالی تحویل نداد غیرفعال می‌شود؛ وگرنه با هر عبور بعدی
+    // دوباره تلاش و احتمالاً پیامک تکراری فرستاده می‌شد.
+    await prisma.priceAlert.update({
+      where: { id: alert.id },
+      data: { isActive: false, firedAt: new Date() },
+    });
+    log.info(`هشدار ${alert.asset.symbol} شلیک شد (${channels.join("، ") || "بدون کانال تحویل"})`);
   }
 }
 

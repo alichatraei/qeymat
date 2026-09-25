@@ -44,37 +44,49 @@ async function fromApi(config) {
     rates[slug] = {
       buy: toNumber(item.buy) || Math.round(sell * 0.99),
       sell,
+      unit: "IRT",
       changePercent: toNumber(item.changePercent ?? item.dp),
     };
   }
   return rates;
 }
 
-/** نگاشت نام فارسی ارز به نماد داخلی */
+/**
+ * نگاشت نام فارسی ارز به نماد داخلی. نام کامل ردیف مقایسه می‌شود، نه
+ * زیررشته — وگرنه «یوان چین» با «ین» و «دلار استانبول» با «دلار» اشتباه
+ * گرفته می‌شد.
+ */
 const NAME_MAP = [
-  [/دلار\s*آمریکا|دلار\s*امریکا|^دلار$/, "usd"],
-  [/یورو/, "eur"],
-  [/درهم/, "aed"],
-  [/لیر\s*ترکیه|لیر/, "try"],
-  [/پوند/, "gbp"],
-  [/دلار\s*کانادا/, "cad"],
-  [/ین\s*ژاپن|ین/, "jpy"],
-  [/یوان/, "cny"],
-  [/روبل/, "rub"],
-  [/دینار\s*عراق/, "iqd"],
-  [/فرانک/, "chf"],
-  [/دلار\s*استرالیا/, "aud"],
-  [/ریال\s*عربستان|ریال\s*سعودی/, "sar"],
-  [/روپیه\s*هند/, "inr"],
-  [/رینگیت/, "myr"],
+  [/^دلار\s*(آمریکا|امریکا)$/, "usd"],
+  [/^یورو$/, "eur"],
+  [/^درهم(\s*امارات)?$/, "aed"],
+  [/^لیر\s*ترکیه$/, "try"],
+  [/^پوند(\s*انگلیس)?$/, "gbp"],
+  [/^دلار\s*کانادا$/, "cad"],
+  [/^ین\s*ژاپن$/, "jpy"],
+  [/^یوان(\s*چین)?$/, "cny"],
+  [/^روبل(\s*روسیه)?$/, "rub"],
+  [/^دینار\s*عراق$/, "iqd"],
+  [/^دینار\s*کویت$/, "kwd"],
+  [/^فرانک(\s*سوئیس)?$/, "chf"],
+  [/^دلار\s*استرالیا$/, "aud"],
+  [/^ریال\s*(عربستان|سعودی)$/, "sar"],
+  [/^روپیه\s*هند$/, "inr"],
+  [/^رینگیت(\s*مالزی)?$/, "myr"],
 ];
 
-function symbolFor(text) {
-  const clean = text.replace(/\u200c/g, " ").replace(/\s+/g, " ").trim();
+function symbolFor(name) {
   for (const [pattern, symbol] of NAME_MAP) {
-    if (pattern.test(clean)) return symbol;
+    if (pattern.test(name)) return symbol;
   }
   return null;
+}
+
+/** «صد ین ژاپن» یعنی قیمت برای ۱۰۰ واحد */
+function unitOf(name) {
+  const match = /^(صد|هزار)\s+/.exec(name);
+  if (!match) return { name, per: 1 };
+  return { name: name.slice(match[0].length), per: match[1] === "صد" ? 100 : 1000 };
 }
 
 async function fromHtml(source, config) {
@@ -88,31 +100,30 @@ async function fromHtml(source, config) {
   const $ = cheerio.load(html);
   const rates = {};
 
-  // ساختار سایت: هر ردیف قیمت یک لینک/ردیف با نام فارسی و عدد است.
-  $("table tr, .currency-row, li, a").each((_, element) => {
-    const node = $(element);
-    const text = node.text().replace(/\u200c/g, " ").replace(/\s+/g, " ").trim();
-    if (!text || text.length > 160) return;
+  // ساختار جدول: نام ارز | قیمت خرید | قیمت فروش | یک دلار چند؟
+  $("table tr").each((_, element) => {
+    const cells = $(element)
+      .find("td")
+      .map((__, cell) => $(cell).text().replace(/\u200c/g, " ").replace(/\s+/g, " ").trim())
+      .get();
+    if (cells.length < 3) return;
 
-    const symbol = symbolFor(text);
+    const { name, per } = unitOf(cells[0].replace(/ي/g, "ی").replace(/ك/g, "ک"));
+    const symbol = symbolFor(name);
     if (!symbol || rates[symbol]) return;
 
-    // اعداد چهار رقم به بالا با جداکننده هزارگان
-    const numbers = text
-      .match(/[\d۰-۹,٬]{4,}/g)
-      ?.map(toNumber)
-      .filter((value) => value > 500);
+    const first = toNumber(cells[1]) / per;
+    const second = toNumber(cells[2]) / per;
+    if (!first && !second) return;
 
-    if (!numbers?.length) return;
-
-    const sell = numbers[0];
-    const buy = numbers[1] && numbers[1] < sell * 1.2 ? numbers[1] : Math.round(sell * 0.99);
-
-    const changeMatch = text.match(/([-+−]?\s*[\d۰-۹.٫]+)\s*%|٪\s*([-+−]?[\d۰-۹.٫]+)/);
+    // فروش همیشه بزرگ‌تر از خرید است؛ به ترتیب ستون‌ها تکیه نمی‌کنیم
+    const sell = Math.max(first, second);
+    const buy = Math.min(first, second) || Math.round(sell * 0.99);
     rates[symbol] = {
-      buy,
+      buy: buy > sell * 0.9 ? buy : Math.round(sell * 0.99),
       sell,
-      changePercent: changeMatch ? toNumber(changeMatch[1] || changeMatch[2]) : 0,
+      unit: "IRT",
+      changePercent: 0,
     };
   });
 
