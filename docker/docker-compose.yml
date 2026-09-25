@@ -65,6 +65,9 @@ services:
       context: ..
       dockerfile: docker/web.Dockerfile
     restart: unless-stopped
+    # همه‌ی متغیرهای .env (پیامک، زرین‌پال، …) به کانتینر می‌رسد؛
+    # مقادیر زیر روی آن‌ها اولویت دارند.
+    env_file: [../.env]
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -98,6 +101,8 @@ services:
       context: ..
       dockerfile: docker/worker.Dockerfile
     restart: unless-stopped
+    # رله‌ی تلگرام، پیامک هشدار و تنظیمات موتور تحلیل از .env خوانده می‌شوند
+    env_file: [../.env]
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
