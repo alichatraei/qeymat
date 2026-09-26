@@ -3,6 +3,11 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
+    # تغییرات اپ موبایل سرور را دوباره مستقر نمی‌کند
+    paths-ignore:
+      - "apps/android/**"
+      - "apps/ios/**"
+      - ".github/workflows/android.yml"
   workflow_dispatch:
 
 concurrency:

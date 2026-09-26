@@ -17,7 +17,8 @@
 qeymat/
 ├── apps/
 │   ├── web/          Next.js 15 (App Router) + Tailwind — سایت، PWA، پنل‌ها، API
-│   └── worker/       سرویس کرالر: زمان‌بند و آداپتور منابع نرخ
+│   ├── worker/       سرویس کرالر: زمان‌بند، آداپتور منابع و موتور تحلیل
+│   └── android/      اپ نیتیو اندروید (Kotlin + Compose) با ویجت — apps/android/README.md
 ├── packages/
 │   ├── db/           اسکیمای Prisma، کلاینت مشترک و seed
 │   └── shared/       پلن‌ها، فرمت اعداد فارسی و محاسبات مشترک
@@ -208,5 +209,5 @@ docker compose -f docker/docker-compose.yml exec postgres \
 
 ## فازهای بعدی
 
-- اپ اندروید و iOS بر پایه‌ی همین API
+- اپ iOS با Swift/SwiftUI و ویجت WidgetKit بر پایه‌ی همین API (اندروید در `apps/android` آماده است)
 - ربات تلگرام (زیرساخت اعلان و API آماده است)

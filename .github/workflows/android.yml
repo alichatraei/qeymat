@@ -1,0 +1,57 @@
+name: Android
+
+# ساخت اپ اندروید «قیمت». APK‌ها به‌عنوان artifact همین اجرا دانلودشدنی‌اند
+# (Actions ← همین اجرا ← Artifacts).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "apps/android/**"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: تست واحد و ساخت نسخه‌ی دیباگ
+        run: gradle --no-daemon --stacktrace :core:model:test assembleDebug
+
+      - name: انتشار APK دیباگ
+        uses: actions/upload-artifact@v4
+        with:
+          name: qeymat-debug-apk
+          path: apps/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: ساخت نسخه‌ی انتشار (R8)
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: انتشار APK انتشار (بدون امضا)
+        uses: actions/upload-artifact@v4
+        with:
+          name: qeymat-release-apk-unsigned
+          path: apps/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

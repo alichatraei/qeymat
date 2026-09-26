@@ -11,3 +11,5 @@ packages/db/generated
 *.log
 .DS_Store
 README.md
+apps/android
+apps/ios
