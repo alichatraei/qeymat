@@ -12,3 +12,6 @@
 -keep class * extends androidx.work.ListenableWorker { <init>(...); }
 
 -dontwarn org.slf4j.**
+
+# Koin 4.0: کد ViewModel چندسکویی به androidx.core.bundle.Bundle ارجاع می‌دهد که روی اندروید فقط typealias است
+-dontwarn androidx.core.bundle.**
