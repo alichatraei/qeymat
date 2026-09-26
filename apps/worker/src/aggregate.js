@@ -72,14 +72,34 @@ const RELATIONS = {
 export async function aggregateAll() {
   const [assets, sources] = await Promise.all([
     prisma.asset.findMany({ where: { isActive: true }, include: { rate: true } }),
-    prisma.source.findMany({ select: { key: true, weight: true, quality: true } }),
+    prisma.source.findMany({ select: { key: true, weight: true, quality: true, config: true } }),
   ]);
+  // هر منبع می‌تواند پنجره‌ی تازگی خودش را داشته باشد (config.quoteTtlMinutes)؛
+  // مثلاً TGJU ارزهای جهان را ساعتی یک‌بار به‌روز می‌کند
+  for (const source of sources) {
+    source.ttlMs = Number(source.config?.quoteTtlMinutes) * 60 * 1000 || QUOTE_TTL_MS;
+  }
   const sourceByKey = new Map(sources.map((s) => [s.key, s]));
+  const maxTtl = Math.max(QUOTE_TTL_MS, ...sources.map((s) => s.ttlMs));
 
   const quotes = await prisma.sourceQuote.findMany({
-    where: { at: { gte: new Date(Date.now() - QUOTE_TTL_MS) } },
+    where: { at: { gte: new Date(Date.now() - maxTtl) } },
   });
   const quotesByAsset = groupBy(quotes, (quote) => quote.assetId);
+
+  // برای دارایی‌های بدون نرخ: نقل‌قول‌های قدیمی‌تر از پنجره‌ی تازگی (تا ۳۶ ساعت)
+  const unrated = assets.filter((asset) => !asset.rate).map((asset) => asset.id);
+  const staleQuotesByAsset = unrated.length
+    ? groupBy(
+        await prisma.sourceQuote.findMany({
+          where: {
+            assetId: { in: unrated },
+            at: { gte: new Date(Date.now() - 36 * 60 * 60 * 1000) },
+          },
+        }),
+        (quote) => quote.assetId,
+      )
+    : new Map();
 
   // ---- دور اول: فقط منابع مستقیم ----
   const direct = new Map();
@@ -113,7 +133,10 @@ export async function aggregateAll() {
   const errorsBySource = new Map();
 
   for (const asset of assets) {
-    const own = toPoints(quotesByAsset.get(asset.id) || [], sourceByKey);
+    let own = toPoints(quotesByAsset.get(asset.id) || [], sourceByKey);
+    if (!own.length && !asset.rate) {
+      own = toPoints(staleQuotesByAsset.get(asset.id) || [], sourceByKey, 0.05);
+    }
 
     // ---- دور دوم: تخمین کمکی از روابط، وقتی منابع مستقیم کم‌اند ----
     const derived = [];
@@ -175,7 +198,9 @@ export async function aggregateAll() {
     const previousOff =
       previous && lastClose && Math.abs(previous - lastClose) / lastClose > limit;
     if (outcome.confidence < MIN_CONFIDENCE && previous && !(consistentWithClose && previousOff)) {
-      log.warn(
+      // تک‌منبعِ کهنه‌شونده (مثل ارزهای جهان از TGJU) عادی است؛ فقط اختلاف منابع ارزش گزارش دارد
+      if (outcome.used > 1)
+        log.warn(
         `[engine] ${asset.symbol}: اطمینان ${outcome.confidence.toFixed(2)} پایین است، نرخ قبلی حفظ شد`,
       );
       continue;
@@ -187,6 +212,20 @@ export async function aggregateAll() {
       const list = errorsBySource.get(point.sourceKey) || [];
       list.push(error);
       errorsBySource.set(point.sourceKey, list);
+    }
+
+    // ---- بدون تغییر؟ نوشتن در دیتابیس لازم نیست ----
+    // با حدود ۱۷۰ دارایی و اجرای اجماع بعد از هر منبع، این شرط بار دیتابیس را چند برابر کم می‌کند
+    const existingToday = candleByAsset.get(asset.id);
+    if (
+      asset.rate &&
+      asset.rate.sell === outcome.sell &&
+      asset.rate.buy === outcome.buy &&
+      existingToday?.source === "live" &&
+      existingToday.close === outcome.sell &&
+      Date.now() - new Date(asset.rate.fetchedAt).getTime() < 10 * 60 * 1000
+    ) {
+      continue;
     }
 
     // ---- کندل امروز ----
@@ -249,20 +288,28 @@ export async function aggregateAll() {
   return results;
 }
 
-/** نقل‌قول‌های خام ← نقطه‌های وزن‌دار */
-function toPoints(quotes, sourceByKey) {
+/**
+ * نقل‌قول‌های خام ← نقطه‌های وزن‌دار.
+ * `staleFloor` برای دارایی‌ای که هنوز هیچ نرخی ندارد: نقل‌قول کهنه (ولی در
+ * بازه‌ی maxAgeHours منبع) با وزن ناچیز پذیرفته می‌شود — بهتر از خالی ماندن.
+ */
+function toPoints(quotes, sourceByKey, staleFloor = 0) {
   return quotes
     .filter((quote) => quote.sell > 0)
     .map((quote) => {
       const source = sourceByKey.get(quote.sourceKey);
+      const ttl = source?.ttlMs ?? QUOTE_TTL_MS;
       const weight =
-        (source?.weight ?? 1) * Math.max(QUALITY_FLOOR, source?.quality ?? 1) * freshness(quote.at);
+        (source?.weight ?? 1) *
+        Math.max(QUALITY_FLOOR, source?.quality ?? 1) *
+        Math.max(staleFloor, freshness(quote.at, ttl));
       return {
         sell: quote.sell,
         buy: quote.buy ?? null,
         sourceKey: quote.sourceKey,
         weight,
         at: new Date(quote.at).getTime(),
+        ttl,
       };
     })
     .filter((point) => point.weight > 0);
@@ -282,8 +329,8 @@ export function consensus(points) {
   if (points.length === 1) {
     const only = points[0];
     return {
-      sell: Math.round(only.sell),
-      buy: Math.round(only.buy ?? only.sell * 0.995),
+      sell: priceRound(only.sell),
+      buy: priceRound(only.buy ?? only.sell * 0.995),
       confidence: only.derived ? 0.3 : 0.45 * freshnessOfPoint(only),
       used: only.derived ? 0 : 1,
       rejected: 0,
@@ -318,8 +365,8 @@ export function consensus(points) {
   if (independent <= 1) confidence = Math.min(confidence, 0.6);
 
   return {
-    sell: Math.round(sell),
-    buy: Math.round(buy),
+    sell: priceRound(sell),
+    buy: priceRound(buy),
     confidence: Math.min(1, Math.max(0, confidence)),
     used: independentCount(directPoints.filter((point) => pool.includes(point))),
     rejected,
@@ -378,16 +425,16 @@ function globalPriceOf(asset, sell, { usd, usdt }) {
   return null;
 }
 
-/** ضریب تازگی: خطی از ۱ تا ۰ در بازه‌ی TTL */
-function freshness(at) {
+/** ضریب تازگی: خطی از ۱ تا ۰ در بازه‌ی TTL منبع */
+function freshness(at, ttl = QUOTE_TTL_MS) {
   const age = Date.now() - new Date(at).getTime();
   if (age <= 0) return 1;
-  if (age >= QUOTE_TTL_MS) return 0;
-  return 1 - age / QUOTE_TTL_MS;
+  if (age >= ttl) return 0;
+  return 1 - age / ttl;
 }
 
 function freshnessOfPoint(point) {
-  return point.at ? freshness(point.at) : 1;
+  return point.at ? freshness(point.at, point.ttl) : 1;
 }
 
 function weightedMedian(entries) {
@@ -417,6 +464,11 @@ function groupBy(items, keyOf) {
     else map.set(key, [item]);
   }
   return map;
+}
+
+/** قیمت‌های کوچک (دونگ ویتنام، کیپ لائوس، …) اعشار لازم دارند */
+function priceRound(value) {
+  return Math.abs(value) >= 1000 ? Math.round(value) : Number(value.toPrecision(4));
 }
 
 function round(value, digits) {

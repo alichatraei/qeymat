@@ -217,6 +217,7 @@ export async function refreshCache() {
         nameEn: asset.nameEn,
         category: asset.category,
         tier: asset.tier,
+        featured: asset.featured,
         countryCode: asset.countryCode,
         mark: asset.mark,
         unit: asset.unit,

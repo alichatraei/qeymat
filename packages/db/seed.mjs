@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
 import crypto from "node:crypto";
 
+import { FEATURED_WORLD, WORLD_CURRENCIES } from "./world-currencies.mjs";
+
 const require = createRequire(import.meta.url);
 const { prisma } = require("./index.js");
 
@@ -88,7 +90,8 @@ const sources = [
     endpoint: "https://call5.tgju.org/ajax.json",
     intervalSec: 60,
     // TGJU برای بازار تعطیل نرخ روز قبل را می‌دهد؛ کهنه‌تر از این نادیده گرفته می‌شود
-    config: { maxAgeHours: 36, timeoutMs: 15000 },
+    // quoteTtlMinutes: TGJU ارزهای جهان را حدوداً ساعتی به‌روز می‌کند
+    config: { maxAgeHours: 36, timeoutMs: 15000, quoteTtlMinutes: 180 },
   },
   {
     key: "telegram",
@@ -684,6 +687,25 @@ const assets = [
   },
 ];
 
+// ارزهای جهان — نرخ از TGJU؛ بعد از ارزهای اصلی مرتب می‌شوند
+const knownSymbols = new Set(assets.map((asset) => asset.symbol));
+WORLD_CURRENCIES.forEach(([code, nameFa, nameEn, countryCode], index) => {
+  if (knownSymbols.has(code)) return;
+  assets.push({
+    symbol: code,
+    nameFa,
+    nameEn,
+    category: "CURRENCY",
+    countryCode,
+    sourceLabel: "بازار ارز",
+    sourceKey: "tgju",
+    sourceField: code.toLowerCase(),
+    sortOrder: 100 + index,
+    tier: "FREE",
+    featured: FEATURED_WORLD.includes(code),
+  });
+});
+
 /* ------------------------------------------------------------------ *
  * اجرا
  * ------------------------------------------------------------------ */
@@ -720,10 +742,12 @@ async function main() {
         multiplier: asset.multiplier ?? 1,
         unit: asset.unit ?? "TOMAN",
         tier: "FREE",
+        featured: asset.featured ?? true,
         sortOrder: asset.sortOrder,
       },
       create: {
         ...asset,
+        featured: asset.featured ?? true,
         sourceLabel: asset.sourceLabel ?? "بازار آزاد",
         multiplier: asset.multiplier ?? 1,
         tier: asset.tier ?? "FREE",

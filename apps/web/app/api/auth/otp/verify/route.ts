@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await createSession({
+  const token = await createSession({
     id: user.id,
     email: user.email,
     phone: user.phone,
@@ -62,5 +62,12 @@ export async function POST(request: NextRequest) {
     role: user.role,
   });
 
-  return NextResponse.json({ ok: true, isNew: result.isNew, role: user.role });
+  // اپ نیتیو کوکی نگه نمی‌دارد و توکن را خودش ذخیره می‌کند
+  const native = request.headers.get("x-qeymat-client");
+  return NextResponse.json({
+    ok: true,
+    isNew: result.isNew,
+    role: user.role,
+    ...(native ? { token, phone: user.phone, expiresInDays: 30 } : {}),
+  });
 }

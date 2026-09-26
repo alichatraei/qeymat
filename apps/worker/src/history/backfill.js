@@ -3,7 +3,7 @@ import { fetchJson } from "../lib/http.js";
 import { log } from "../lib/log.js";
 import { isSane, isSaneHistory } from "../lib/parse-fa.js";
 import { parseAnyDay, tehranDay } from "../lib/time.js";
-import { TGJU_KEYS, tgjuNumber } from "../lib/tgju-map.js";
+import { tgjuNumber, tgjuSpecFor } from "../lib/tgju-map.js";
 
 const require = createRequire(import.meta.url);
 const { prisma } = require("@qeymat/db");
@@ -33,7 +33,7 @@ const TGJU_HISTORY = "https://api.tgju.org/v1/market/indicator/summary-table-dat
 export async function backfillAll({ symbols, force = false } = {}) {
   const assets = await prisma.asset.findMany({
     where: { isActive: true, ...(symbols?.length ? { symbol: { in: symbols } } : {}) },
-    select: { id: true, symbol: true },
+    select: { id: true, symbol: true, category: true },
   });
   const since = new Date(Date.now() - MAX_YEARS * 366 * 24 * 60 * 60 * 1000);
 
@@ -43,7 +43,7 @@ export async function backfillAll({ symbols, force = false } = {}) {
   const report = [];
 
   for (const asset of ordered) {
-    const spec = TGJU_KEYS[asset.symbol];
+    const spec = tgjuSpecFor(asset.symbol, asset.category);
     if (!spec) continue;
 
     if (!force) {

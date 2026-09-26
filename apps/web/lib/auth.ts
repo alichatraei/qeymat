@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { prisma } from "@qeymat/db";
@@ -25,7 +25,11 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(user: SessionUser) {
+/**
+ * نشست می‌سازد: کوکی برای مرورگر، و همان توکن برای اپ‌های نیتیو
+ * (اپ اندروید آن را در هدر Authorization: Bearer می‌فرستد).
+ */
+export async function createSession(user: SessionUser): Promise<string> {
   const token = await new SignJWT({
     phone: user.phone,
     name: user.name,
@@ -44,15 +48,23 @@ export async function createSession(user: SessionUser) {
     path: "/",
     maxAge: MAX_AGE,
   });
+  return token;
 }
 
 export async function destroySession() {
   (await cookies()).delete(COOKIE_NAME);
 }
 
+/** توکن نشست: کوکی مرورگر یا هدر Authorization اپ موبایل */
+async function sessionToken() {
+  const bearer = (await headers()).get("authorization");
+  if (bearer?.toLowerCase().startsWith("bearer ")) return bearer.slice(7).trim();
+  return (await cookies()).get(COOKIE_NAME)?.value;
+}
+
 /** کاربر جاری یا null — بدون پرتاب خطا */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const token = (await cookies()).get(COOKIE_NAME)?.value;
+  const token = await sessionToken();
   if (!token) return null;
 
   try {

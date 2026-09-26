@@ -8,6 +8,8 @@ export type RateView = {
   nameEn: string;
   category: AssetCategory;
   tier: AssetTier;
+  /// در فهرست اصلی نمایش داده شود؛ بقیه‌ی ارزها فقط در جست‌وجو
+  featured?: boolean;
   countryCode: string | null;
   mark: string | null;
   unit: string;

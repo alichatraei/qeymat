@@ -45,6 +45,7 @@ export default function MarketBoard({
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RateView | null>(null);
   const [heroRange, setHeroRange] = useState("1w");
+  const [showAll, setShowAll] = useState(false);
 
   // نرخ‌ها هر ۳۰ ثانیه تازه می‌شوند؛ داده‌ی اولیه از سرور می‌آید تا صفحه فوراً رندر شود
   const { data, isValidating, mutate } = useSWR<MarketSnapshot>("/api/public/rates", fetcher, {
@@ -77,9 +78,14 @@ export default function MarketBoard({
           ? `${asset.nameFa} ${asset.symbol} ${asset.nameEn}`.toLowerCase().includes(term)
           : asset.category === category &&
             // دلار و هم‌خانواده‌هایش بالای صفحه جدا نمایش داده می‌شوند
-            !(category === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol)),
+            !(category === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol)) &&
+            // صدها ارز جهان فقط با جست‌وجو یا «همه‌ی ارزها» دیده می‌شوند
+            (showAll || asset.featured !== false),
       );
-  }, [snapshot.assets, category, search]);
+  }, [snapshot.assets, category, search, showAll]);
+  const hiddenCount = snapshot.assets.filter(
+    (asset) => asset.category === category && asset.featured === false,
+  ).length;
 
   const heroPoints = heroSeries?.series?.points ?? (heroRange === "1w" ? initialHistory : []);
 
@@ -196,7 +202,12 @@ export default function MarketBoard({
               {heroLoading && !heroPoints.length ? (
                 <div className="mt-5 h-[230px] animate-pulse rounded-2xl bg-soft" />
               ) : (
-                <PriceChart data={heroPoints} height={230} compactAxis={heroRange === "10y"} />
+                <PriceChart
+                  data={heroPoints}
+                  height={230}
+                  compactAxis={heroRange === "10y"}
+                  interval={heroSeries?.series?.interval ?? "day"}
+                />
               )}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -341,6 +352,16 @@ export default function MarketBoard({
             )}
           </div>
         </div>
+
+        {hiddenCount && !search ? (
+          <button
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+            className="mt-4 flex h-11 w-full items-center justify-center rounded-control border border-dashed border-line-strong text-[12px] font-semibold text-sub transition-colors hover:text-ink"
+          >
+            {showAll ? "فقط ارزهای اصلی" : `همه‌ی ارزهای جهان · ${fa(hiddenCount)} ارز دیگر`}
+          </button>
+        ) : null}
       </section>
 
       {selected ? <RateDrawer rate={selected} onClose={() => setSelected(null)} /> : null}

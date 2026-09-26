@@ -25,7 +25,18 @@ export async function fetchTgju(source) {
   const maxAgeMs = (config.maxAgeHours || 36) * 60 * 60 * 1000;
   const rates = {};
 
-  for (const [symbol, spec] of Object.entries(TGJU_KEYS)) {
+  // ارزهای جهان: هر کلید price_<کد> که در جدول صریح نیست، ریالی و برای یک واحد
+  const specs = { ...TGJU_KEYS };
+  for (const key of Object.keys(current)) {
+    const match = /^price_([a-z]{3})$/.exec(key);
+    if (!match) continue;
+    const symbol = match[1].toUpperCase();
+    if (!Object.values(TGJU_KEYS).some((spec) => spec.key === key) && !specs[symbol]) {
+      specs[symbol] = { key, unit: "IRR", factor: 0.1 };
+    }
+  }
+
+  for (const [symbol, spec] of Object.entries(specs)) {
     if (spec.live === false) continue;
     const entry = current[spec.key];
     if (!entry) continue;

@@ -29,6 +29,7 @@ export async function getSnapshot(): Promise<MarketSnapshot> {
         nameEn: asset.nameEn,
         category: asset.category,
         tier: asset.tier,
+        featured: asset.featured,
         countryCode: asset.countryCode,
         mark: asset.mark,
         unit: asset.unit,

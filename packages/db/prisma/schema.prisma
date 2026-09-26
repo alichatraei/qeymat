@@ -115,6 +115,8 @@ model Asset {
   tier        AssetTier     @default(FREE)
   sortOrder   Int           @default(100)
   isActive    Boolean       @default(true)
+  /// در فهرست اصلی سایت و صفحه‌ی اول اپ نمایش داده شود؛ بقیه فقط در جست‌وجو و کاتالوگ ارزها
+  featured    Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   quotes      SourceQuote[]

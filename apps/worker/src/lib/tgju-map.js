@@ -50,6 +50,18 @@ export const TGJU_KEYS = {
   BRENT: { key: "oil_brent", unit: "USD", live: false },
 };
 
+/**
+ * کلید TGJU یک دارایی. ارزهایی که در جدول بالا نیستند (کاتالوگ ارزهای جهان)
+ * با الگوی استاندارد price_<کد ISO> و قیمت ریالی برای یک واحد خوانده می‌شوند.
+ */
+export function tgjuSpecFor(symbol, category) {
+  if (TGJU_KEYS[symbol]) return TGJU_KEYS[symbol];
+  if (category === "CURRENCY" && /^[A-Z]{3}$/.test(symbol)) {
+    return { key: `price_${symbol.toLowerCase()}`, unit: "IRR", factor: 0.1 };
+  }
+  return null;
+}
+
 /** «2,346,150» یا «۲٬۳۴۶٬۱۵۰» ← عدد */
 export function tgjuNumber(value) {
   if (value === null || value === undefined) return 0;
