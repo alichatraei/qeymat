@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <receiver
+            android:name="online.qeymat.widget.PricesWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_prices_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/prices_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="online.qeymat.widget.DollarWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_dollar_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/dollar_widget_info" />
+        </receiver>
+    </application>
+</manifest>

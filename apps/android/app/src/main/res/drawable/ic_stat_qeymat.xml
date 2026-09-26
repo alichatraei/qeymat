@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- آیکون نوار اعلان: فقط شکل، بدون رنگ -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M45.86,37.9 A17.5,17.5 0 1,0 29.39,47.99 L29.65,40.49 A10,10 0 1,1 39.06,34.73 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M28.39,47.88 L28.39,34.3 L29.39,33.7 L35.79,28.9 L35.79,47.01 A17.5,17.5 0 0,1 28.39,47.88 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M41.2,43.2h6.2v6.2h-6.2z" />
+</vector>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_prices_label">قیمت‌های منتخب</string>
+    <string name="widget_prices_description">دلار، طلا و ارزهای منتخب شما روی صفحه‌ی اصلی</string>
+    <string name="widget_dollar_label">قیمت دلار</string>
+    <string name="widget_dollar_description">نرخ لحظه‌ای دلار با نمودار یک هفته</string>
+</resources>

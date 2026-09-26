@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">قیمت</string>
+    <string name="alerts_channel">هشدار قیمت</string>
+    <string name="alerts_channel_description">وقتی قیمت به هدف شما رسید</string>
+</resources>
