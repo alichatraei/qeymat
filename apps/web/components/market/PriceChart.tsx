@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { fa } from "@qeymat/shared";
 import { useThemeColors } from "@/components/theme/useThemeColors";
+import { niceScale, timeTicks, tooltipLabel, type Granularity } from "@/lib/chart-scale";
 import type { HistoryPoint } from "@/lib/types";
 
 const tooltipStyle = (surface: string, ink: string) => ({
@@ -43,21 +44,37 @@ function compact(value: number) {
 /**
  * نمودار قیمت یک دارایی. رنگ از جهت تغییر بازه می‌آید:
  * سبز وقتی نقطه‌ی آخر بالاتر از نقطه‌ی اول است، قرمز در غیر این صورت.
+ *
+ * محور افقی زمان واقعی است (نه دسته‌ای)، پس روزهای تعطیل فاصله‌ی درست
+ * می‌گیرند و برچسب‌ها روی مرز روز/ماه/سال شمسی می‌نشینند. محور قیمت گام
+ * یکسان و گرد دارد.
  */
 export default function PriceChart({
   data,
   height = 260,
   unit = "تومان",
   compactAxis = false,
+  interval = "day",
 }: {
   data: HistoryPoint[];
   height?: number;
   unit?: string;
   compactAxis?: boolean;
+  interval?: Granularity;
 }) {
   const colors = useThemeColors();
 
-  if (!data.length) {
+  const rows = useMemo(
+    () => data.map((point) => ({ t: Date.parse(point.at), value: point.value })),
+    [data],
+  );
+  const x = useMemo(() => timeTicks(rows.map((row) => row.t)), [rows]);
+  const y = useMemo(() => {
+    const values = rows.map((row) => row.value);
+    return niceScale(Math.min(...values), Math.max(...values));
+  }, [rows]);
+
+  if (!rows.length) {
     return (
       <div
         className="mt-5 grid place-items-center rounded-2xl border border-dashed border-line text-[11.5px] text-muted"
@@ -68,19 +85,14 @@ export default function PriceChart({
     );
   }
 
-  const positive = data[data.length - 1].value >= data[0].value;
+  const positive = rows[rows.length - 1].value >= rows[0].value;
   const color = positive ? colors.green : colors.danger;
-
-  const values = data.map((point) => point.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const pad = (max - min || max * 0.02) * 0.18;
   const gradientId = `fill-${positive ? "up" : "down"}`;
 
   return (
     <div className="chart-lt mt-5 w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
+        <AreaChart data={rows} margin={{ top: 12, right: 4, left: 12, bottom: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor={color} stopOpacity={0.22} />
@@ -89,15 +101,23 @@ export default function PriceChart({
           </defs>
           <CartesianGrid stroke={colors.grid} vertical={false} />
           <XAxis
-            dataKey="label"
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={[rows[0].t, rows[rows.length - 1].t]}
+            ticks={x.ticks}
+            interval={0}
+            tickFormatter={x.format}
             tick={{ fill: colors.tick, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            minTickGap={28}
+            padding={{ left: 6, right: 6 }}
           />
           <YAxis
             orientation="right"
-            domain={[Math.max(0, min - pad), max + pad]}
+            domain={y.domain}
+            ticks={y.ticks}
+            interval={0}
             tick={{ fill: colors.tick, fontSize: 11 }}
             tickFormatter={(value) => (compactAxis ? compact(value) : price(value))}
             tickLine={false}
@@ -106,7 +126,7 @@ export default function PriceChart({
           />
           <Tooltip
             formatter={(value) => [`${price(Number(value))} ${unit}`, "قیمت"]}
-            labelFormatter={(label) => String(label)}
+            labelFormatter={(time) => tooltipLabel(Number(time), interval)}
             contentStyle={tooltipStyle(colors.surface, colors.ink)}
             cursor={{ stroke: colors.tick, strokeDasharray: "3 3" }}
           />
@@ -142,31 +162,41 @@ export function CompareChart({
   series,
   mode = "percent",
   height = 360,
+  interval = "day",
 }: {
   series: CompareSeries[];
   mode?: "percent" | "absolute";
   height?: number;
+  interval?: Granularity;
 }) {
   const colors = useThemeColors();
 
   const rows = useMemo(() => {
-    const byKey = new Map<string, Record<string, number | string>>();
-    const order: string[] = [];
+    const byKey = new Map<string, Record<string, number>>();
     for (const item of series) {
       const base = item.points[0]?.value || 1;
       for (const point of item.points) {
-        const key = point.at.slice(0, 10);
+        const key = interval === "raw" ? point.at : point.at.slice(0, 10);
         let row = byKey.get(key);
         if (!row) {
-          row = { key, label: point.label };
+          row = { t: Date.parse(point.at) };
           byKey.set(key, row);
-          order.push(key);
         }
         row[item.symbol] = mode === "percent" ? ((point.value - base) / base) * 100 : point.value;
       }
     }
-    return order.sort().map((key) => byKey.get(key)!);
-  }, [series, mode]);
+    return [...byKey.values()].sort((a, b) => a.t - b.t);
+  }, [series, mode, interval]);
+
+  const x = useMemo(() => timeTicks(rows.map((row) => row.t)), [rows]);
+  const y = useMemo(() => {
+    const values = rows.flatMap((row) =>
+      Object.entries(row)
+        .filter(([key]) => key !== "t")
+        .map(([, value]) => value),
+    );
+    return niceScale(Math.min(...values), Math.max(...values));
+  }, [rows]);
 
   if (!rows.length) {
     return (
@@ -185,14 +215,23 @@ export function CompareChart({
         <LineChart data={rows} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
           <CartesianGrid stroke={colors.grid} vertical={false} />
           <XAxis
-            dataKey="label"
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={[rows[0].t, rows[rows.length - 1].t]}
+            ticks={x.ticks}
+            interval={0}
+            tickFormatter={x.format}
             tick={{ fill: colors.tick, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            minTickGap={28}
+            padding={{ left: 6, right: 6 }}
           />
           <YAxis
             orientation="right"
+            domain={y.domain}
+            ticks={y.ticks}
+            interval={0}
             tick={{ fill: colors.tick, fontSize: 11 }}
             tickFormatter={(value) =>
               mode === "percent" ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(value)}٪` : compact(value)
@@ -200,7 +239,6 @@ export function CompareChart({
             tickLine={false}
             axisLine={false}
             width={mode === "percent" ? 56 : 84}
-            domain={["auto", "auto"]}
           />
           <Tooltip
             formatter={(value, key) => {
@@ -213,7 +251,7 @@ export function CompareChart({
                 item?.nameFa ?? String(key),
               ];
             }}
-            labelFormatter={(label) => String(label)}
+            labelFormatter={(time) => tooltipLabel(Number(time), interval)}
             contentStyle={tooltipStyle(colors.surface, colors.ink)}
             cursor={{ stroke: colors.tick, strokeDasharray: "3 3" }}
           />

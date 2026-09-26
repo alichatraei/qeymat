@@ -231,7 +231,12 @@ export default function ChartExplorer({
                 <div className="mt-5 h-[380px] animate-pulse rounded-2xl bg-soft" />
               ) : (
                 <>
-                  <CompareChart series={multi?.series ?? []} mode={mode} height={380} />
+                  <CompareChart
+                    series={multi?.series ?? []}
+                    mode={mode}
+                    height={380}
+                    interval={effectiveInterval as "raw" | "day" | "month" | "year"}
+                  />
                   <CompareTable series={multi?.series ?? []} />
                 </>
               )
@@ -243,6 +248,7 @@ export default function ChartExplorer({
                 height={380}
                 unit={unitLabel(rate.unit)}
                 compactAxis={rangeSpec.days > 366}
+                interval={series?.interval ?? "day"}
               />
             )}
 

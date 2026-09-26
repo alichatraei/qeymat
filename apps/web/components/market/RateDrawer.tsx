@@ -100,7 +100,13 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
           {isLoading && !series ? (
             <div className="mt-5 h-[230px] animate-pulse rounded-2xl bg-soft" />
           ) : (
-            <PriceChart data={series?.points ?? []} height={230} unit={unit} compactAxis={range === "10y" || range === "5y"} />
+            <PriceChart
+              data={series?.points ?? []}
+              height={230}
+              unit={unit}
+              compactAxis={range === "10y" || range === "5y"}
+              interval={series?.interval ?? "day"}
+            />
           )}
           {series && series.yearsAvailable > 0 && ["5y", "10y"].includes(range) && series.yearsAvailable < (range === "5y" ? 5 : 10) ? (
             <p className="mt-2 text-[10.5px] text-muted">
