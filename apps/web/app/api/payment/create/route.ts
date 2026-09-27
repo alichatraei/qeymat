@@ -72,9 +72,11 @@ export async function POST(request: NextRequest) {
       where: { id: order.id },
       data: { status: "FAILED", failReason: `${result.code}: ${result.message}` },
     });
+    console.error(`[zarinpal] request failed for order ${order.id}: ${result.code} ${result.message}`);
+    // ۵۰۲ نه: Cloudflare پاسخ ۵۰۲ را با صفحه‌ی خودش عوض می‌کند و پیام خطا به کاربر نمی‌رسد
     return NextResponse.json(
-      { error: { code: "gateway_error", message: result.message } },
-      { status: 502 },
+      { error: { code: "gateway_error", message: `درگاه پرداخت: ${result.message}` } },
+      { status: 400 },
     );
   }
 
