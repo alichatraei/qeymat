@@ -37,3 +37,6 @@ Thumbs.db
 coverage/
 .turbo/
 .cache/
+
+# فیش‌های بارگذاری‌شده در توسعه‌ی محلی
+apps/web/uploads/

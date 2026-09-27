@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSessionUser } from "@/lib/auth";
 import { getPlusStatus } from "@/lib/plus";
+import { getCheckoutData } from "@/lib/pricing";
 import PlusStore from "@/components/market/PlusStore";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 export default async function PlusPage() {
   const user = await getSessionUser();
-  const plus = await getPlusStatus(user?.id);
+  const [plus, checkout] = await Promise.all([getPlusStatus(user?.id), getCheckoutData()]);
 
   return (
     <PlusStore
@@ -22,6 +23,7 @@ export default async function PlusPage() {
       hasPlus={plus.active}
       expiresAt={plus.expiresAt}
       currentTier={plus.tier}
+      checkout={checkout}
     />
   );
 }

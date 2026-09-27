@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@qeymat/db";
 import { getSessionUser } from "@/lib/auth";
 import DashboardBoard from "@/components/dashboard/DashboardBoard";
+import { getCheckoutData } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "پنل توسعه‌دهنده", robots: { index: false } };
@@ -17,7 +18,7 @@ export default async function DashboardPage({
 
   const params = await searchParams;
 
-  const [subscription, apiKey, payments, usage, orders] = await Promise.all([
+  const [subscription, apiKey, payments, usage, orders, receipts, checkout] = await Promise.all([
     prisma.subscription.findFirst({
       where: { userId: user.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
       orderBy: { expiresAt: "desc" },
@@ -35,6 +36,12 @@ export default async function DashboardPage({
       orderBy: { createdAt: "desc" },
       take: 15,
     }),
+    prisma.receiptPayment.findMany({
+      where: { userId: user.id, kind: "API_PLAN" },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
+    getCheckoutData(),
   ]);
 
   return (
@@ -73,6 +80,15 @@ export default async function DashboardPage({
         refId: order.refId,
         createdAt: order.createdAt.toISOString(),
       }))}
+      receipts={receipts.map((receipt) => ({
+        id: receipt.id,
+        plan: receipt.plan,
+        amountToman: receipt.amountToman,
+        status: receipt.status,
+        adminNote: receipt.adminNote,
+        createdAt: receipt.createdAt.toISOString(),
+      }))}
+      checkout={checkout}
     />
   );
 }

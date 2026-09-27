@@ -83,6 +83,9 @@ services:
     # فقط روی لوپ‌بک؛ nginx میزبان جلوی آن می‌ایستد
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    # فیش‌های کارت‌به‌کارت؛ با استقرار دوباره پاک نمی‌شوند
+    volumes:
+      - receipts:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,6 +133,7 @@ services:
 
 volumes:
   postgres-data:
+  receipts:
 
 networks:
   qeymat:

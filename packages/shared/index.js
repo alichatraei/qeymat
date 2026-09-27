@@ -262,14 +262,20 @@ export function clock(date = new Date()) {
 }
 
 /** تاریخ کامل شمسی */
+const JALALI_PARTS = new Intl.DateTimeFormat("fa-IR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Asia/Tehran",
+});
+
+// ترتیب خروجی format در نسخه‌های مختلف ICU فرق دارد («۱۴۰۵ مهر ۶, دوشنبه»)؛
+// برای همین از اجزا ساخته می‌شود: «دوشنبه ۶ مهر ۱۴۰۵»
 export function jalali(date = new Date()) {
-  return new Intl.DateTimeFormat("fa-IR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Tehran",
-  }).format(new Date(date));
+  const parts = {};
+  for (const part of JALALI_PARTS.formatToParts(new Date(date))) parts[part.type] = part.value;
+  return `${parts.weekday} ${parts.day} ${parts.month} ${parts.year}`;
 }
 
 /** قیمت تومانی یک محصول ارزی بر اساس نرخ دلار و درصد کارمزد */

@@ -1,6 +1,8 @@
 import { prisma } from "@qeymat/db";
 import { getSessionUser } from "@/lib/auth";
 import AdminBoard from "@/components/admin/AdminBoard";
+import { PLANS, PLUS_PLANS } from "@qeymat/shared";
+import { getPaymentSettingsForAdmin, getPricing } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,9 @@ export default async function AdminPage() {
     gatewayOrders,
     tickets,
     revenue,
+    receipts,
+    paymentSettings,
+    pricing,
   ] = await Promise.all([
       prisma.user.count(),
       prisma.subscription.count({ where: { status: "ACTIVE", expiresAt: { gt: new Date() } } }),
@@ -67,7 +72,28 @@ export default async function AdminPage() {
         where: { status: "PAID", paidAt: { gte: startOfMonth } },
         _sum: { amountRial: true },
       }),
+      // همه‌ی فیش‌های در انتظار + ۴۰ فیش آخر بررسی‌شده
+      Promise.all([
+        prisma.receiptPayment.findMany({
+          where: { status: "PENDING" },
+          orderBy: { createdAt: "asc" },
+          include: { user: { select: { name: true, phone: true, email: true } } },
+        }),
+        prisma.receiptPayment.findMany({
+          where: { status: { not: "PENDING" } },
+          orderBy: { reviewedAt: "desc" },
+          take: 40,
+          include: { user: { select: { name: true, phone: true, email: true } } },
+        }),
+      ]).then(([pendingReceipts, reviewed]) => [...pendingReceipts, ...reviewed]),
+      getPaymentSettingsForAdmin(),
+      getPricing(),
     ]);
+
+  const approvedReceipts = await prisma.receiptPayment.aggregate({
+    where: { status: "APPROVED", reviewedAt: { gte: startOfMonth } },
+    _sum: { amountToman: true },
+  });
 
   return (
     <AdminBoard
@@ -80,8 +106,48 @@ export default async function AdminPage() {
         subscribers,
         plusCount,
         openTickets,
-        monthRevenueToman: Math.round((revenue._sum.amountRial ?? 0) / 10),
+        monthRevenueToman:
+          Math.round((revenue._sum.amountRial ?? 0) / 10) + (approvedReceipts._sum.amountToman ?? 0),
       }}
+      receipts={receipts.map((receipt) => ({
+        id: receipt.id,
+        user: receipt.user.name,
+        contact: receipt.user.phone ?? receipt.user.email ?? "—",
+        kind: receipt.kind,
+        plan: receipt.plan,
+        amountToman: receipt.amountToman,
+        mime: receipt.receiptMime,
+        trackingCode: receipt.trackingCode,
+        payerCardLast4: receipt.payerCardLast4,
+        userNote: receipt.userNote,
+        status: receipt.status,
+        adminNote: receipt.adminNote,
+        reviewedAt: receipt.reviewedAt?.toISOString() ?? null,
+        createdAt: receipt.createdAt.toISOString(),
+      }))}
+      paymentSettings={paymentSettings}
+      pricing={[
+        ...pricing.plus.map((plan) => ({
+          id: plan.id,
+          group: plan.tier,
+          label: plan.label,
+          months: plan.months,
+          price: plan.price,
+          active: plan.active,
+          quota: plan.smsAlerts,
+          defaultPrice: PLUS_PLANS.find((item) => item.id === plan.id)?.price ?? plan.price,
+        })),
+        ...pricing.api.map((plan) => ({
+          id: plan.id,
+          group: "api" as const,
+          label: plan.label,
+          months: plan.months,
+          price: plan.price,
+          active: plan.active,
+          quota: plan.limit,
+          defaultPrice: PLANS.find((item) => item.id === plan.id)?.price ?? plan.price,
+        })),
+      ]}
       gatewayOrders={gatewayOrders.map((order) => ({
         id: order.id,
         user: order.user.name,

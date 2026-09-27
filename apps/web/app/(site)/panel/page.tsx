@@ -11,7 +11,7 @@ export default async function PanelPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/panel");
 
-  const [profile, plus, apiSub, orders, tickets] = await Promise.all([
+  const [profile, plus, apiSub, orders, tickets, receipts] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: { phone: true, email: true, name: true, createdAt: true },
@@ -33,6 +33,11 @@ export default async function PanelPage() {
       where: { userId: user.id },
       orderBy: { lastReplyAt: "desc" },
       take: 20,
+    }),
+    prisma.receiptPayment.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 15,
     }),
   ]);
 
@@ -67,6 +72,15 @@ export default async function PanelPage() {
         status: order.status,
         refId: order.refId,
         createdAt: order.createdAt.toISOString(),
+      }))}
+      receipts={receipts.map((receipt) => ({
+        id: receipt.id,
+        kind: receipt.kind,
+        plan: receipt.plan,
+        amountToman: receipt.amountToman,
+        status: receipt.status,
+        adminNote: receipt.adminNote,
+        createdAt: receipt.createdAt.toISOString(),
       }))}
       tickets={tickets.map((ticket) => ({
         id: ticket.id,

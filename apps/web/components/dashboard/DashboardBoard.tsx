@@ -15,9 +15,19 @@ import {
   Loader2,
   LogOut,
 } from "lucide-react";
-import { PLANS, fa, getPlan, jalali } from "@qeymat/shared";
+import { fa, getPlan, jalali } from "@qeymat/shared";
 import PushToggle from "@/components/pwa/PushToggle";
-import { startCheckout } from "@/lib/checkout";
+import CheckoutDialog from "@/components/market/CheckoutDialog";
+import type { CheckoutData } from "@/lib/pricing";
+
+type ReceiptRow = {
+  id: string;
+  plan: string;
+  amountToman: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  adminNote: string | null;
+  createdAt: string;
+};
 import type { SessionUser } from "@/lib/types";
 
 type Payment = {
@@ -60,6 +70,8 @@ export default function DashboardBoard({
   payments,
   usage,
   orders,
+  receipts,
+  checkout,
   initialPlan,
 }: {
   user: SessionUser;
@@ -73,6 +85,8 @@ export default function DashboardBoard({
   payments: Payment[];
   usage: { endpoint: string; count: number; avgLatency: number }[];
   orders: Order[];
+  receipts: ReceiptRow[];
+  checkout: CheckoutData;
   initialPlan: string;
 }) {
   const router = useRouter();
@@ -86,7 +100,9 @@ export default function DashboardBoard({
   const usedPercent = subscription
     ? Math.min(100, Math.round((subscription.requestsUsed / subscription.requestLimit) * 100))
     : 0;
-  const selectedPlan = getPlan(plan) ?? PLANS[1];
+  const PLANS = checkout.api;
+  const selectedPlan = PLANS.find((item) => item.id === plan) ?? PLANS[1] ?? PLANS[0];
+  const [paying, setPaying] = useState(false);
 
   const copy = async (value: string, id: string) => {
     await navigator.clipboard.writeText(value).catch(() => {});
@@ -107,17 +123,6 @@ export default function DashboardBoard({
     } catch (error) {
       setMessage({ tone: "bad", text: error instanceof Error ? error.message : "صدور کلید انجام نشد." });
     } finally {
-      setBusy("");
-    }
-  };
-
-  /** پرداخت از زرین‌پال؛ بعد از بازگشت، اشتراک فعال شده است */
-  const checkout = async () => {
-    setBusy("payment");
-    setMessage(null);
-    const failure = await startCheckout("API_PLAN", selectedPlan.id, `/dashboard?plan=${selectedPlan.id}`);
-    if (failure) {
-      setMessage({ tone: "bad", text: failure });
       setBusy("");
     }
   };
@@ -318,11 +323,13 @@ export default function DashboardBoard({
               <div>
                 <h2 className="text-[16px] font-bold">{subscription ? "تمدید یا تغییر پلن" : "خرید اشتراک"}</h2>
                 <p className="mt-1 text-[11.5px] leading-6 text-muted">
-                  پرداخت با کارت بانکی از درگاه زرین‌پال. اشتراک بلافاصله فعال می‌شود و زمان باقی‌مانده‌ی
-                  اشتراک فعلی به دوره‌ی تازه اضافه می‌شود.
+                  با درگاه آنلاین یا کارت‌به‌کارت پرداخت کنید. زمان باقی‌مانده‌ی اشتراک فعلی به دوره‌ی تازه
+                  اضافه می‌شود و کلید API عوض نمی‌شود.
                 </p>
               </div>
-              <span className="chip bg-soft text-sub">زرین‌پال</span>
+              <span className="chip bg-soft text-sub">
+                {[checkout.methods.zarinpal ? "درگاه آنلاین" : "", checkout.methods.card ? "کارت‌به‌کارت" : ""].filter(Boolean).join(" · ") || "غیرفعال"}
+              </span>
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -347,10 +354,32 @@ export default function DashboardBoard({
               ))}
             </div>
 
-            <button type="button" className="btn-solid mt-4" onClick={checkout} disabled={busy === "payment"}>
-              {busy === "payment" ? <Loader2 className="animate-spin" /> : <CreditCard />}
-              پرداخت {fa(selectedPlan.price)} تومان
+            <button type="button" className="btn-solid mt-4" onClick={() => setPaying(true)} disabled={!selectedPlan}>
+              <CreditCard />
+              {selectedPlan ? `پرداخت ${fa(selectedPlan.price)} تومان` : "پلنی فعال نیست"}
             </button>
+
+            {receipts.length ? (
+              <div className="mt-6 border-t border-line pt-4">
+                <h3 className="mb-2 text-[12px] font-bold text-sub">فیش‌های کارت‌به‌کارت</h3>
+                <ul className="space-y-2">
+                  {receipts.map((receipt) => (
+                    <li key={receipt.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-field px-3 py-2.5 text-[11.5px]">
+                      <span className="font-semibold">{getPlan(receipt.plan)?.label ?? receipt.plan}</span>
+                      <span className="tabular text-muted">{fa(receipt.amountToman)} تومان</span>
+                      <span className="text-muted">{jalali(receipt.createdAt)}</span>
+                      <span className={`mr-auto ${STATUS_CLASS[receipt.status]}`}>
+                        {receipt.status === "PENDING" ? "در انتظار بررسی" : STATUS_LABEL[receipt.status]}
+                      </span>
+                      <a href={`/api/receipts/${receipt.id}/file`} target="_blank" rel="noopener" className="text-green-dark hover:underline">
+                        فیش
+                      </a>
+                      {receipt.adminNote ? <span className="w-full text-[11px] text-muted">پاسخ پشتیبانی: {receipt.adminNote}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {orders.length ? (
               <div className="table-scroll mt-6 border-t border-line pt-4">
@@ -447,6 +476,16 @@ export default function DashboardBoard({
           </section>
         </div>
       </div>
+      {paying && selectedPlan ? (
+        <CheckoutDialog
+          kind="API_PLAN"
+          plan={{ id: selectedPlan.id, label: selectedPlan.label, price: selectedPlan.price }}
+          methods={checkout.methods}
+          card={checkout.card}
+          returnTo={`/dashboard?plan=${selectedPlan.id}`}
+          onClose={() => setPaying(false)}
+        />
+      ) : null}
     </main>
   );
 }

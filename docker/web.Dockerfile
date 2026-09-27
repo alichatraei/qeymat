@@ -48,6 +48,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public           ./apps/
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/prisma        ./packages/db/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/packages/db/generated     ./packages/db/generated
 
+# فیش‌های واریزی؛ در compose یک volume دائمی روی این مسیر سوار می‌شود
+RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
+ENV UPLOAD_DIR=/app/uploads
+
 USER nextjs
 EXPOSE 3000
 

@@ -246,6 +246,7 @@ model User {
   pushSubscriptions PushSubscription[]
   aiOrders          AiOrder[]
   alerts            PriceAlert[]
+  receipts          ReceiptPayment[]
 
   @@index([phone])
 }
@@ -279,6 +280,34 @@ model PlusSubscription {
   createdAt DateTime           @default(now())
 
   @@index([userId, status])
+}
+
+/// پرداخت کارت‌به‌کارت: کاربر فیش واریزی را بارگذاری می‌کند و مدیر پس از
+/// بررسی تأیید یا رد می‌کند. تأیید، همان فعال‌سازی پرداخت درگاه را انجام می‌دهد.
+model ReceiptPayment {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           ProductKind
+  plan           String
+  /// مبلغ پلن به تومان در لحظه‌ی ثبت (قیمت‌ها از پنل مدیریت تغییر می‌کنند)
+  amountToman    Int
+  /// نام فایل فیش در پوشه‌ی بارگذاری‌ها (نه مسیر کامل)
+  receiptFile    String
+  receiptMime    String
+  /// شماره پیگیری یا ارجاع بانکی که کاربر وارد کرده
+  trackingCode   String?
+  /// چهار رقم آخر کارت واریزکننده
+  payerCardLast4 String?
+  userNote       String?
+  status         PaymentStatus @default(PENDING)
+  adminNote      String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }
 
 /// سفارش پرداخت از درگاه زرین‌پال — هم برای پلن API و هم قیمت پلاس

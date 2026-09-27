@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Clock, Code2, Globe, Lock, Rocket, Zap } from "lucide-react";
 import PlanPicker from "@/components/market/PlanPicker";
 import { getRate } from "@/lib/market";
+import { getCheckoutData } from "@/lib/pricing";
+import { getSessionUser } from "@/lib/auth";
 import { fa } from "@qeymat/shared";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ export default async function DevelopersPage({
   searchParams: Promise<{ plan?: string }>;
 }) {
   const { plan } = await searchParams;
+  const [checkout, user] = await Promise.all([getCheckoutData(), getSessionUser()]);
   const usd = await getRate("USD");
 
   return (
@@ -94,17 +97,17 @@ export default async function DevelopersPage({
 
       <section className="content-width pt-14">
         <div className="mx-auto max-w-[46ch] text-center">
-          <span className="text-[11.5px] font-bold text-green-dark">پرداخت ریالی با زرین‌پال</span>
+          <span className="text-[11.5px] font-bold text-green-dark">پرداخت ریالی</span>
           <h2 className="mt-2 text-[26px] font-extrabold tracking-[-.8px]">
             پلنی متناسب با رشد محصولتان
           </h2>
           <p className="mt-3 text-[12.5px] leading-6 text-muted">
-            با کارت بانکی از درگاه زرین‌پال پرداخت کنید؛ اشتراک همان لحظه فعال می‌شود. تمدید، زمان
-            باقی‌مانده‌ی اشتراک فعلی را حفظ می‌کند.
+            با درگاه آنلاین یا کارت‌به‌کارت پرداخت کنید. تمدید، زمان باقی‌مانده‌ی اشتراک فعلی را حفظ
+            می‌کند و کلید API شما عوض نمی‌شود.
           </p>
         </div>
 
-        <PlanPicker initialPlan={plan} />
+        <PlanPicker checkout={checkout} isLoggedIn={Boolean(user)} initialPlan={plan} />
       </section>
     </main>
   );

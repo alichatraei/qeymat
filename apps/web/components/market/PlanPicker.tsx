@@ -1,31 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CreditCard, Loader2, ShieldCheck } from "lucide-react";
-import { PLANS, fa } from "@qeymat/shared";
-import { startCheckout } from "@/lib/checkout";
+import { useRouter } from "next/navigation";
+import { Check, CreditCard, ShieldCheck } from "lucide-react";
+import { fa } from "@qeymat/shared";
+import CheckoutDialog from "./CheckoutDialog";
+import type { CheckoutData } from "@/lib/pricing";
 
 /**
- * انتخاب و خرید پلن وب‌سرویس. پرداخت مستقیم از درگاه زرین‌پال؛ بعد از
- * پرداخت موفق اشتراک همان لحظه فعال می‌شود و کاربر به پنل توسعه‌دهنده می‌رود.
+ * انتخاب و خرید پلن وب‌سرویس — درگاه زرین‌پال یا کارت‌به‌کارت.
+ * قیمت‌ها و پلن‌های فعال از پنل مدیریت می‌آیند.
  */
-export default function PlanPicker({ initialPlan = "quarterly" }: { initialPlan?: string }) {
-  const [selected, setSelected] = useState(PLANS.some((item) => item.id === initialPlan) ? initialPlan : "quarterly");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function PlanPicker({
+  checkout,
+  isLoggedIn,
+  initialPlan = "quarterly",
+}: {
+  checkout: CheckoutData;
+  isLoggedIn: boolean;
+  initialPlan?: string;
+}) {
+  const router = useRouter();
+  const PLANS = checkout.api;
+  const [selected, setSelected] = useState(
+    PLANS.some((item) => item.id === initialPlan) ? initialPlan : (PLANS[1] ?? PLANS[0])?.id ?? "",
+  );
+  const [paying, setPaying] = useState(false);
 
   const plan = PLANS.find((item) => item.id === selected);
-  const monthly = PLANS[0].price;
+  const monthly = PLANS.find((item) => item.monthCount === 1)?.price ?? PLANS[0]?.price ?? 0;
 
-  const buy = async () => {
+  const buy = () => {
     if (!plan) return;
-    setLoading(true);
-    setError("");
-    const failure = await startCheckout("API_PLAN", plan.id, `/developers?plan=${plan.id}`);
-    if (failure) {
-      setError(failure);
-      setLoading(false);
+    if (!isLoggedIn) {
+      router.push(`/login?next=${encodeURIComponent(`/developers?plan=${plan.id}`)}`);
+      return;
     }
+    setPaying(true);
   };
 
   return (
@@ -100,16 +111,29 @@ export default function PlanPicker({ initialPlan = "quarterly" }: { initialPlan?
         })}
       </div>
 
-      {error ? <p className="mt-5 text-center text-[12px] text-danger">{error}</p> : null}
-
-      <button type="button" className="btn-solid mx-auto mt-9 flex h-12 px-7" onClick={buy} disabled={loading}>
-        {loading ? <Loader2 className="animate-spin" /> : <CreditCard />}
-        {plan ? `پرداخت ${fa(plan.price)} تومان — پلن ${plan.label}` : "انتخاب پلن"}
+      <button type="button" className="btn-solid mx-auto mt-9 flex h-12 px-7" onClick={buy} disabled={!plan}>
+        <CreditCard />
+        {plan ? `خرید پلن ${plan.label} — ${fa(plan.price)} تومان` : "پلنی برای فروش فعال نیست"}
       </button>
       <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted">
         <ShieldCheck className="h-3.5 w-3.5 text-green" />
-        پرداخت امن از درگاه زرین‌پال · فعال‌سازی فوری پس از پرداخت
+        {checkout.methods.card && checkout.methods.zarinpal
+          ? "پرداخت آنلاین با فعال‌سازی فوری یا کارت‌به‌کارت با ثبت فیش"
+          : checkout.methods.card
+            ? "کارت‌به‌کارت؛ اشتراک پس از تأیید فیش فعال می‌شود"
+            : "پرداخت امن از درگاه زرین‌پال · فعال‌سازی فوری"}
       </p>
+
+      {paying && plan ? (
+        <CheckoutDialog
+          kind="API_PLAN"
+          plan={{ id: plan.id, label: plan.label, price: plan.price }}
+          methods={checkout.methods}
+          card={checkout.card}
+          returnTo={`/developers?plan=${plan.id}`}
+          onClose={() => setPaying(false)}
+        />
+      ) : null}
     </>
   );
 }

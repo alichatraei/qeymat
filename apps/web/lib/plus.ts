@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@qeymat/db";
-import { getPlusPlan } from "@qeymat/shared";
+import { getPricing } from "./pricing";
 import type { PlusStatus } from "./types";
 
 const NONE: PlusStatus = { active: false, plan: null, tier: null, smsLimit: 0, expiresAt: null };
@@ -18,6 +18,10 @@ export async function getPlusStatus(userId: string | null | undefined): Promise<
     orderBy: { expiresAt: "desc" },
   });
   if (!active.length) return NONE;
+
+  // سقف پیامک از قیمت‌گذاری پویای پنل مدیریت
+  const plans = new Map((await getPricing()).plus.map((plan) => [plan.id, plan]));
+  const getPlusPlan = (id: string) => plans.get(id);
 
   let best = active[0];
   let bestLimit = getPlusPlan(best.plan)?.smsAlerts ?? 10;

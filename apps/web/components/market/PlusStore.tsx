@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, Check, Crown, Loader2, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
-import { PLUS_PLANS, PLUS_FEATURES, PLUS_TIERS, fa, jalali } from "@qeymat/shared";
-import { startCheckout } from "@/lib/checkout";
+import { BarChart3, Bell, Check, Crown, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
+import { PLUS_FEATURES, PLUS_TIERS, fa, jalali } from "@qeymat/shared";
+import CheckoutDialog from "./CheckoutDialog";
+import type { CheckoutData } from "@/lib/pricing";
 
 const PERKS = [
   { icon: Sparkles, title: "تحلیل قیمت", note: "روند، RSI، میانگین‌ها، حمایت و مقاومت، حباب سکه" },
@@ -19,21 +20,28 @@ export default function PlusStore({
   hasPlus,
   expiresAt,
   currentTier,
+  checkout,
 }: {
   isLoggedIn: boolean;
   hasPlus: boolean;
   expiresAt: string | null;
   currentTier: "plus" | "pro" | null;
+  /** پلن‌های فعال با قیمت پنل مدیریت و روش‌های پرداخت */
+  checkout: CheckoutData;
 }) {
   const router = useRouter();
   const [tier, setTier] = useState<"plus" | "pro">(currentTier === "pro" ? "pro" : "plus");
   const [selected, setSelected] = useState(currentTier === "pro" ? "pro-quarterly" : "plus-quarterly");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [paying, setPaying] = useState(false);
 
-  const plans = PLUS_PLANS.filter((item) => item.tier === tier);
+  // سطح‌هایی که دست‌کم یک پلن فعال دارند
+  const tiers = PLUS_TIERS.filter((item) => checkout.plus.some((plan) => plan.tier === item.id)).map((item) => ({
+    ...item,
+    smsAlerts: checkout.plus.find((plan) => plan.tier === item.id)?.smsAlerts ?? item.smsAlerts,
+  }));
+  const plans = checkout.plus.filter((item) => item.tier === tier);
   const plan = plans.find((item) => item.id === selected) ?? plans[1] ?? plans[0];
-  const monthly = plans[0].price;
+  const monthly = plans[0]?.price ?? 0;
 
   // لینک مستقیم به پلن حرفه‌ای: /plus#pro
   useEffect(() => {
@@ -43,19 +51,12 @@ export default function PlusStore({
     }
   }, []);
 
-  const buy = async () => {
+  const buy = () => {
     if (!isLoggedIn) {
       router.push("/login?next=/plus");
       return;
     }
-
-    setLoading(true);
-    setError("");
-    const failure = await startCheckout("PLUS_PLAN", plan.id, "/plus");
-    if (failure) {
-      setError(failure);
-      setLoading(false);
-    }
+    setPaying(true);
   };
 
   return (
@@ -129,7 +130,7 @@ export default function PlusStore({
         </div>
 
         <div id="pro" className="mx-auto mt-7 grid max-w-[620px] gap-3 sm:grid-cols-2">
-          {PLUS_TIERS.map((item) => (
+          {tiers.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -159,7 +160,7 @@ export default function PlusStore({
 
         <div className="mx-auto mt-6 grid max-w-[900px] gap-4 md:grid-cols-3">
           {plans.map((item) => {
-            const isSelected = plan.id === item.id;
+            const isSelected = plan?.id === item.id;
             const perMonth = Math.round(item.price / item.monthCount);
             const saving = Math.round(((monthly - perMonth) / monthly) * 100);
 
@@ -212,25 +213,33 @@ export default function PlusStore({
           })}
         </div>
 
-        {error ? <p className="mt-5 text-center text-[12px] text-danger">{error}</p> : null}
+        {!plan ? (
+          <p className="mt-6 text-center text-[12px] text-muted">در حال حاضر پلنی برای فروش فعال نیست.</p>
+        ) : null}
 
         <button
           type="button"
           className="btn-solid mx-auto mt-8 flex h-12 px-8"
           onClick={buy}
-          disabled={loading}
+          disabled={!plan}
         >
-          {loading ? <Loader2 className="animate-spin" /> : <Crown />}
-          {hasPlus
-            ? currentTier === "plus" && tier === "pro"
-              ? `ارتقا به حرفه‌ای — ${fa(plan.price)} تومان`
-              : `تمدید — ${fa(plan.price)} تومان`
-            : `خرید ${tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label}`}
+          <Crown />
+          {!plan
+            ? "انتخاب پلن"
+            : hasPlus
+              ? currentTier === "plus" && tier === "pro"
+                ? `ارتقا به حرفه‌ای — ${fa(plan.price)} تومان`
+                : `تمدید — ${fa(plan.price)} تومان`
+              : `خرید ${tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label}`}
         </button>
 
         <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted">
           <ShieldCheck className="h-3.5 w-3.5 text-green" />
-          پرداخت از درگاه زرین‌پال؛ اطلاعات کارت روی سایت ما ذخیره نمی‌شود
+          {checkout.methods.zarinpal && checkout.methods.card
+            ? "پرداخت آنلاین از زرین‌پال یا کارت‌به‌کارت با ثبت فیش"
+            : checkout.methods.card
+              ? "پرداخت کارت‌به‌کارت؛ اشتراک پس از تأیید فیش فعال می‌شود"
+              : "پرداخت امن از درگاه زرین‌پال؛ اطلاعات کارت روی سایت ما ذخیره نمی‌شود"}
         </p>
 
         {!isLoggedIn ? (
@@ -243,6 +252,16 @@ export default function PlusStore({
           </p>
         ) : null}
       </section>
+      {paying && plan ? (
+        <CheckoutDialog
+          kind="PLUS_PLAN"
+          plan={{ id: plan.id, label: `${tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label}`, price: plan.price }}
+          methods={checkout.methods}
+          card={checkout.card}
+          returnTo="/plus"
+          onClose={() => setPaying(false)}
+        />
+      ) : null}
     </main>
   );
 }

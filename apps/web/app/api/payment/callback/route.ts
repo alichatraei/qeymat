@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@qeymat/db";
-import { getPlan, getPlusPlan } from "@qeymat/shared";
 import { verifyPayment } from "@/lib/zarinpal";
-import { notifyUser } from "@/lib/notify";
+import { activatePurchase } from "@/lib/activation";
 
 export const dynamic = "force-dynamic";
 
@@ -70,79 +69,12 @@ export async function GET(request: NextRequest) {
   });
   if (claimed.count === 0) return back("success", `&ref=${verified.refId}`);
 
-  await activate(order);
+  await activatePurchase({
+    userId: order.userId,
+    kind: order.kind,
+    planId: order.plan,
+    reference: order.id,
+  });
 
   return back("success", `&ref=${verified.refId}`);
-}
-
-/** فعال‌سازی چیزی که خریداری شده است. */
-async function activate(order: {
-  id: string;
-  userId: string;
-  kind: string;
-  plan: string;
-}) {
-  if (order.kind === "PLUS_PLAN") {
-    const plan = getPlusPlan(order.plan);
-    if (!plan) return;
-
-    // تمدید هم‌سطح از انتهای اشتراک فعلی حساب می‌شود نه از امروز؛
-    // ارتقا از پلاس به حرفه‌ای همین حالا شروع می‌شود.
-    const current = await prisma.plusSubscription.findFirst({
-      where: { userId: order.userId, status: "ACTIVE", expiresAt: { gt: new Date() } },
-      orderBy: { expiresAt: "desc" },
-    });
-    const sameTier = current && getPlusPlan(current.plan)?.tier === plan.tier;
-
-    const startsAt = current && sameTier ? current.expiresAt : new Date();
-    const expiresAt = new Date(startsAt);
-    expiresAt.setMonth(expiresAt.getMonth() + plan.monthCount);
-
-    await prisma.plusSubscription.create({
-      data: { userId: order.userId, plan: plan.id, startsAt, expiresAt, orderId: order.id },
-    });
-
-    await notifyUser(order.userId, {
-      title: "قیمت پلاس فعال شد",
-      body: `اشتراک ${plan.tier === "pro" ? "پلاس حرفه‌ای" : "پلاس"} ${plan.label} فعال است: تحلیل قیمت و هشدار پیامکی برای ${plan.smsAlerts} شاخص.`,
-      url: "/panel",
-    });
-    return;
-  }
-
-  const plan = getPlan(order.plan);
-  if (!plan) return;
-
-  // تمدید: زمان باقی‌مانده‌ی اشتراک فعلی حفظ می‌شود و سهمیه‌ی تازه از صفر
-  const current = await prisma.subscription.findFirst({
-    where: { userId: order.userId, status: "ACTIVE", expiresAt: { gt: new Date() } },
-    orderBy: { expiresAt: "desc" },
-  });
-  const expiresAt = new Date(current ? current.expiresAt : new Date());
-  expiresAt.setMonth(expiresAt.getMonth() + plan.monthCount);
-
-  await prisma.subscription.updateMany({
-    where: { userId: order.userId, status: "ACTIVE" },
-    data: { status: "CANCELLED" },
-  });
-  await prisma.subscription.create({
-    data: {
-      userId: order.userId,
-      plan: plan.id,
-      requestLimit: plan.limit,
-      expiresAt,
-    },
-  });
-
-  // کلید فعلی دست نمی‌خورد تا سرویس‌های مشتری با تمدید قطع نشوند؛
-  // کاربر بی‌کلید، کلیدش را در پنل می‌سازد (مقدار خام فقط همان‌جا یک‌بار نمایش داده می‌شود).
-  const hasKey = await prisma.apiKey.count({ where: { userId: order.userId, isActive: true } });
-
-  await notifyUser(order.userId, {
-    title: "وب‌سرویس شما فعال شد",
-    body: hasKey
-      ? `پلن ${plan.label} فعال شد؛ کلید فعلی‌تان بدون تغییر کار می‌کند.`
-      : `پلن ${plan.label} فعال شد. کلید API را از پنل توسعه‌دهنده بسازید.`,
-    url: "/dashboard",
-  });
 }

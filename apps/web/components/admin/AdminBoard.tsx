@@ -26,6 +26,14 @@ import {
 import { fa, getAnyPlan, getPlan, jalali, timeAgo } from "@qeymat/shared";
 import Brand from "@/components/layout/Brand";
 import type { SessionUser } from "@/lib/types";
+import {
+  PaymentSettingsPanel,
+  PricingPanel,
+  ReceiptsPanel,
+  type PaymentSettings,
+  type PricingRow,
+  type ReceiptRow,
+} from "./PaymentAdmin";
 
 type Payment = {
   id: string;
@@ -97,6 +105,7 @@ type UserRow = {
 };
 
 const SECTIONS = [
+  { id: "receipts", label: "فیش‌های کارت‌به‌کارت", icon: Wallet, group: "مدیریت" },
   { id: "gateway", label: "پرداخت‌های درگاه", icon: Receipt, group: "مدیریت" },
   { id: "tickets", label: "تیکت‌ها", icon: LifeBuoy, group: "مدیریت" },
   { id: "payments", label: "پرداخت تتری (قدیمی)", icon: BarChart3, group: "مدیریت" },
@@ -104,6 +113,8 @@ const SECTIONS = [
   { id: "users", label: "کاربران", icon: Users, group: "مدیریت" },
   { id: "sources", label: "منابع نرخ", icon: Globe, group: "سامانه" },
   { id: "broadcast", label: "اعلان همگانی", icon: Radio, group: "سامانه" },
+  { id: "pricing", label: "قیمت پلن‌ها", icon: Crown, group: "سامانه" },
+  { id: "paymentSettings", label: "تنظیمات پرداخت", icon: Wallet, group: "سامانه" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -119,6 +130,9 @@ export default function AdminBoard({
   users,
   gatewayOrders,
   tickets,
+  receipts,
+  paymentSettings,
+  pricing,
 }: {
   admin: SessionUser;
   stats: {
@@ -137,9 +151,14 @@ export default function AdminBoard({
   users: UserRow[];
   gatewayOrders: GatewayOrderRow[];
   tickets: TicketRow[];
+  receipts: ReceiptRow[];
+  paymentSettings: PaymentSettings;
+  pricing: PricingRow[];
 }) {
   const router = useRouter();
-  const [section, setSection] = useState<SectionId>("gateway");
+  const pendingReceipts = receipts.filter((receipt) => receipt.status === "PENDING").length;
+  // با فیش در انتظار، پنل مستقیم روی صف بررسی باز می‌شود
+  const [section, setSection] = useState<SectionId>(pendingReceipts ? "receipts" : "gateway");
   const [payments, setPayments] = useState(initialPayments);
   const [orders, setOrders] = useState(initialOrders);
   const [busy, setBusy] = useState("");
@@ -237,6 +256,11 @@ export default function AdminBoard({
                       {fa(stats.openTickets)}
                     </b>
                   ) : null}
+                  {item.id === "receipts" && pendingReceipts ? (
+                    <b className="tabular mr-auto rounded-pill bg-amber px-1.5 py-0.5 text-[10px] text-white">
+                      {fa(pendingReceipts)}
+                    </b>
+                  ) : null}
                   {item.id === "payments" && pendingCount ? (
                     <b className="tabular mr-auto rounded-pill bg-green px-1.5 py-0.5 text-[10px] text-white">
                       {fa(pendingCount)}
@@ -272,13 +296,39 @@ export default function AdminBoard({
           </div>
         </header>
 
-        <div className="flex-1 space-y-5 p-6">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* نوار بخش‌ها برای موبایل؛ نوار کناری فقط در صفحه‌ی بزرگ دیده می‌شود */}
+        <nav className="table-scroll border-b border-line bg-surface lg:hidden" aria-label="بخش‌های پنل">
+          <div className="flex gap-2 px-4 py-3">
+            {SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSection(item.id)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-3 py-2 text-[11.5px] font-semibold ${
+                  section === item.id ? "border-green bg-green-soft text-green-dark" : "border-line text-sub"
+                }`}
+              >
+                <item.icon className="h-3.5 w-3.5" />
+                {item.label}
+                {item.id === "receipts" && pendingReceipts ? (
+                  <b className="tabular rounded-pill bg-amber px-1.5 text-[10px] text-white">{fa(pendingReceipts)}</b>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <div className="flex-1 space-y-5 p-4 sm:p-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <Stat icon={Wallet} tone="bg-green-soft text-green-dark" label="درآمد این ماه" value={`${fa(stats.monthRevenueToman)}`} note="تومان، تراکنش‌های موفق" />
             <Stat icon={Crown} tone="bg-amber-soft text-amber" label="مشترک قیمت پلاس" value={fa(stats.plusCount)} note={`${fa(stats.activeSubs)} اشتراک API فعال`} />
             <Stat icon={Users} tone="bg-blue/10 text-blue" label="کاربران" value={fa(stats.userCount)} note={`${fa(stats.subscribers)} مرورگر مشترک اعلان`} />
             <Stat icon={Activity} tone="bg-purple/10 text-purple" label="درخواست API امروز" value={fa(stats.todayUsage)} note={`${fa(stats.openTickets)} تیکت باز`} />
           </div>
+
+          {section === "receipts" ? <ReceiptsPanel receipts={receipts} onFlash={flash} /> : null}
+          {section === "paymentSettings" ? <PaymentSettingsPanel initial={paymentSettings} onFlash={flash} /> : null}
+          {section === "pricing" ? <PricingPanel rows={pricing} onFlash={flash} /> : null}
 
           {section === "gateway" ? (
             <Panel title="پرداخت‌های درگاه زرین‌پال" note="اشتراک‌ها پس از تأیید درگاه خودکار فعال می‌شوند؛ اینجا فقط گزارش است.">
@@ -671,12 +721,12 @@ function Stat({
   note: string;
 }) {
   return (
-    <div className="card p-5">
+    <div className="card p-4 sm:p-5">
       <span className={`grid h-10 w-10 place-items-center rounded-xl ${tone}`}>
         <Icon className="h-[18px] w-[18px]" />
       </span>
       <p className="mt-3.5 text-xxs text-muted">{label}</p>
-      <strong className="tabular mt-1 block text-[22px] font-extrabold tracking-[-.8px]">{value}</strong>
+      <strong className="tabular mt-1 block text-[18px] font-extrabold tracking-[-.8px] sm:text-[22px]">{value}</strong>
       <small className="mt-1 block text-[11px] text-muted">{note}</small>
     </div>
   );

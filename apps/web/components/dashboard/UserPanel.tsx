@@ -55,6 +55,7 @@ export default function UserPanel({
   plus,
   apiSub,
   orders,
+  receipts = [],
   tickets: initialTickets,
 }: {
   user: SessionUser;
@@ -62,6 +63,15 @@ export default function UserPanel({
   plus: { plan: string; startsAt: string; expiresAt: string } | null;
   apiSub: { plan: string; requestLimit: number; requestsUsed: number; expiresAt: string } | null;
   orders: Order[];
+  receipts?: {
+    id: string;
+    kind: string;
+    plan: string;
+    amountToman: number;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    adminNote: string | null;
+    createdAt: string;
+  }[];
   tickets: TicketView[];
 }) {
   const router = useRouter();
@@ -314,7 +324,43 @@ export default function UserPanel({
           {tab === "orders" ? (
             <section className="card mt-6 p-6">
               <h2 className="text-[16px] font-bold">سفارش‌ها و پرداخت‌ها</h2>
-              <p className="mt-1 text-[11.5px] text-muted">همه‌ی تراکنش‌های شما از درگاه زرین‌پال.</p>
+              <p className="mt-1 text-[11.5px] text-muted">پرداخت‌های درگاه آنلاین و فیش‌های کارت‌به‌کارت شما.</p>
+
+              {receipts.length ? (
+                <ul className="mt-5 space-y-2">
+                  {receipts.map((receipt) => (
+                    <li
+                      key={receipt.id}
+                      className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-field px-3.5 py-3 text-[12px]"
+                    >
+                      <span className="flex flex-col">
+                        <b>{receipt.kind === "PLUS_PLAN" ? "قیمت پلاس" : "وب‌سرویس API"} · کارت‌به‌کارت</b>
+                        <small className="text-[10.5px] text-muted">
+                          {getAnyPlan(receipt.plan)?.label ?? receipt.plan} · {jalali(receipt.createdAt)}
+                        </small>
+                      </span>
+                      <span className="tabular text-muted">{fa(receipt.amountToman)} تومان</span>
+                      <span
+                        className={`mr-auto ${
+                          receipt.status === "APPROVED"
+                            ? "state-approved"
+                            : receipt.status === "REJECTED"
+                              ? "state-rejected"
+                              : "state-pending"
+                        }`}
+                      >
+                        {receipt.status === "APPROVED" ? "تأیید و فعال شد" : receipt.status === "REJECTED" ? "رد شد" : "در انتظار بررسی"}
+                      </span>
+                      <a href={`/api/receipts/${receipt.id}/file`} target="_blank" rel="noopener" className="text-[11px] text-green-dark hover:underline">
+                        مشاهده‌ی فیش
+                      </a>
+                      {receipt.adminNote ? (
+                        <span className="w-full text-[11px] text-muted">پاسخ پشتیبانی: {receipt.adminNote}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
               {orders.length ? (
                 <div className="table-scroll mt-5">
@@ -365,7 +411,7 @@ export default function UserPanel({
                     </tbody>
                   </table>
                 </div>
-              ) : (
+              ) : receipts.length ? null : (
                 <Empty text="هنوز سفارشی ثبت نکرده‌اید." />
               )}
             </section>

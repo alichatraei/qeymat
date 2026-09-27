@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@qeymat/db";
 import { getSessionUser } from "@/lib/auth";
-import { getPlan, getPlusPlan } from "@qeymat/shared";
 import { requestPayment, tomanToRial } from "@/lib/zarinpal";
+import { findApiPlan, findPlusPlan, getPaymentConfig } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +33,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { kind, plan: planId } = parsed.data;
-  const plan = kind === "API_PLAN" ? getPlan(planId) : getPlusPlan(planId);
+  const payment = await getPaymentConfig();
+  if (!payment.methods.zarinpal) {
+    return NextResponse.json(
+      { error: { code: "method_disabled", message: "پرداخت آنلاین فعلاً فعال نیست؛ از کارت‌به‌کارت استفاده کنید." } },
+      { status: 400 },
+    );
+  }
 
-  if (!plan) {
+  const { kind, plan: planId } = parsed.data;
+  const plan = kind === "API_PLAN" ? await findApiPlan(planId) : await findPlusPlan(planId);
+
+  if (!plan || !plan.active) {
     return NextResponse.json(
       { error: { code: "invalid_plan", message: "پلن انتخابی معتبر نیست." } },
       { status: 400 },
