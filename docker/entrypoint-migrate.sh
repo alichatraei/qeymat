@@ -8,16 +8,25 @@ set -e
 SCHEMA="packages/db/prisma/schema.prisma"
 MIGRATIONS="packages/db/prisma/migrations"
 
-echo "→ انتظار برای آماده شدن دیتابیس…"
+if [ -z "$DATABASE_URL" ]; then
+  echo "✖ DATABASE_URL خالی است — آن را در .env بگذارید"
+  exit 1
+fi
+
+# میزبان و کاربر آدرس دیتابیس، بدون رمز، برای عیب‌یابی
+echo "→ انتظار برای آماده شدن دیتابیس ($(echo "$DATABASE_URL" | sed -E 's#^[a-z]+://([^:@/]+)(:[^@]*)?@([^/?]+).*#\1@\3#'))…"
 i=0
 until node -e "
 const { Client } = require('pg');
-const c = new Client({ connectionString: process.env.DATABASE_URL });
-c.connect().then(() => c.end()).catch(() => process.exit(1));
-" 2>/dev/null; do
+const c = new Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+c.connect().then(() => c.end()).catch((e) => { console.error(e.message); process.exit(1); });
+" > /tmp/db-error 2>&1; do
   i=$((i + 1))
   if [ "$i" -ge 30 ]; then
-    echo "✖ دیتابیس بعد از ۶۰ ثانیه پاسخ نداد"
+    echo "✖ دیتابیس بعد از ۶۰ ثانیه پاسخ نداد. آخرین خطا:"
+    echo "  $(tail -1 /tmp/db-error)"
+    echo "  password authentication failed ← رمز با رمز اولیه‌ی دیتابیس یکی نیست"
+    echo "  ENOTFOUND / ECONNREFUSED       ← میزبان DATABASE_URL باید postgres باشد"
     exit 1
   fi
   sleep 2
