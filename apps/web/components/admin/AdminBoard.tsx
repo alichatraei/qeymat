@@ -18,6 +18,7 @@ import {
   Rocket,
   ShoppingBag,
   LifeBuoy,
+  LogOut,
   Receipt,
   Users,
   Wallet,
@@ -156,6 +157,12 @@ export default function AdminBoard({
   pricing: PricingRow[];
 }) {
   const router = useRouter();
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/");
+    router.refresh();
+  };
   const pendingReceipts = receipts.filter((receipt) => receipt.status === "PENDING").length;
   // با فیش در انتظار، پنل مستقیم روی صف بررسی باز می‌شود
   const [section, setSection] = useState<SectionId>(pendingReceipts ? "receipts" : "gateway");
@@ -271,11 +278,19 @@ export default function AdminBoard({
             </div>
           ))}
         </nav>
-        <div className="border-t border-line p-4">
+        <div className="space-y-2 border-t border-line p-4">
           <Link href="/" className="btn-ghost w-full">
             <ChevronLeft />
             بازگشت به سایت
           </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center justify-center gap-2 rounded-[10px] px-2.5 py-2.5 text-[12px] font-semibold text-danger hover:bg-danger-soft"
+          >
+            <LogOut className="h-[15px] w-[15px]" />
+            خروج
+          </button>
         </div>
       </aside>
 
@@ -292,6 +307,10 @@ export default function AdminBoard({
             <button type="button" className="btn-ghost" onClick={() => runSource()} disabled={busy === "all"}>
               {busy === "all" ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               اجرای همه منابع
+            </button>
+            {/* در صفحه‌ی بزرگ دکمه‌ی خروج پایین نوار کناری است */}
+            <button type="button" className="btn-ghost text-danger lg:hidden" onClick={logout} aria-label="خروج">
+              <LogOut />
             </button>
           </div>
         </header>

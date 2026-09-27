@@ -120,12 +120,14 @@ export default function AnalysisCard({ symbol, compact = false }: { symbol: stri
       {!compact ? (
         <>
           <h4 className="mt-4 text-[11.5px] font-bold">بازدهی</h4>
-          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
+          {/* تعداد ستون با پهنای خود کارت تنظیم می‌شود، نه صفحه؛ کارت در ستون کناری باریک است */}
+          <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2">
             {analysis.changes.map((change) => (
-              <div key={change.id} className="rounded-xl bg-surface px-2 py-2 text-center">
-                <span className="block text-[10px] text-muted">{change.label}</span>
+              <div key={change.id} className="min-w-0 rounded-xl bg-surface px-2 py-2 text-center">
+                <span className="block whitespace-nowrap text-[10px] text-muted">{change.label}</span>
                 <strong
-                  className={`tabular text-[11.5px] ${
+                  dir="ltr"
+                  className={`tabular block whitespace-nowrap text-[11.5px] ${
                     change.percent === null ? "text-faint" : change.percent >= 0 ? "text-green" : "text-danger"
                   }`}
                 >

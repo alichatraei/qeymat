@@ -42,6 +42,28 @@ function compact(value: number) {
 }
 
 /**
+ * پهنای محور قیمت به اندازه‌ی بلندترین برچسب؛ پهنای ثابت سمت راست نمودار
+ * فضای خالی می‌گذاشت.
+ */
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function axisWidth(labels: string[], fontSize = 11) {
+  if (measureCtx === undefined && typeof document !== "undefined") {
+    measureCtx = document.createElement("canvas").getContext("2d");
+  }
+  let widest = 0;
+  for (const label of labels) {
+    if (measureCtx) {
+      measureCtx.font = `${fontSize}px Vazirmatn, Tahoma, sans-serif`;
+      widest = Math.max(widest, measureCtx.measureText(label).width);
+    } else {
+      widest = Math.max(widest, label.length * fontSize * 0.62);
+    }
+  }
+  // فاصله‌ی برچسب از نمودار (tickSize پیش‌فرض) + کمی حاشیه
+  return Math.ceil(widest) + 12;
+}
+
+/**
  * نمودار قیمت یک دارایی. رنگ از جهت تغییر بازه می‌آید:
  * سبز وقتی نقطه‌ی آخر بالاتر از نقطه‌ی اول است، قرمز در غیر این صورت.
  *
@@ -73,6 +95,8 @@ export default function PriceChart({
     const values = rows.map((row) => row.value);
     return niceScale(Math.min(...values), Math.max(...values));
   }, [rows]);
+  const yFormat = (value: number) => (compactAxis ? compact(value) : price(value));
+  const yWidth = useMemo(() => axisWidth(y.ticks.map(yFormat)), [y, compactAxis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!rows.length) {
     return (
@@ -92,7 +116,7 @@ export default function PriceChart({
   return (
     <div className="chart-lt mt-5 w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={rows} margin={{ top: 12, right: 4, left: 12, bottom: 0 }}>
+        <AreaChart data={rows} margin={{ top: 12, right: 0, left: 12, bottom: 0 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor={color} stopOpacity={0.22} />
@@ -119,10 +143,10 @@ export default function PriceChart({
             ticks={y.ticks}
             interval={0}
             tick={{ fill: colors.tick, fontSize: 11 }}
-            tickFormatter={(value) => (compactAxis ? compact(value) : price(value))}
+            tickFormatter={yFormat}
             tickLine={false}
             axisLine={false}
-            width={compactAxis ? 84 : 72}
+            width={yWidth}
           />
           <Tooltip
             formatter={(value) => [`${price(Number(value))} ${unit}`, "قیمت"]}
@@ -197,6 +221,9 @@ export function CompareChart({
     );
     return niceScale(Math.min(...values), Math.max(...values));
   }, [rows]);
+  const yFormat = (value: number) =>
+    mode === "percent" ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(value)}٪` : compact(value);
+  const yWidth = useMemo(() => axisWidth(y.ticks.map(yFormat)), [y, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!rows.length) {
     return (
@@ -212,7 +239,7 @@ export function CompareChart({
   return (
     <div className="chart-lt mt-5 w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={rows} margin={{ top: 12, right: 4, left: 4, bottom: 0 }}>
+        <LineChart data={rows} margin={{ top: 12, right: 0, left: 4, bottom: 0 }}>
           <CartesianGrid stroke={colors.grid} vertical={false} />
           <XAxis
             dataKey="t"
@@ -233,12 +260,10 @@ export function CompareChart({
             ticks={y.ticks}
             interval={0}
             tick={{ fill: colors.tick, fontSize: 11 }}
-            tickFormatter={(value) =>
-              mode === "percent" ? `${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(value)}٪` : compact(value)
-            }
+            tickFormatter={yFormat}
             tickLine={false}
             axisLine={false}
-            width={mode === "percent" ? 56 : 84}
+            width={yWidth}
           />
           <Tooltip
             formatter={(value, key) => {

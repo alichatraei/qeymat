@@ -260,7 +260,7 @@ export default function ChartExplorer({
             ) : null}
           </section>
 
-          <aside className="min-w-0 space-y-0">
+          <aside className="min-w-0 space-y-4">
             <AnalysisCard symbol={symbol} />
             <AlertForm key={symbol} rate={rate} />
             <p className="mt-4 flex items-center gap-1.5 text-[10.5px] text-muted">
