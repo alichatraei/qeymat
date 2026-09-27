@@ -37,10 +37,24 @@ const STATES: Record<
 export default async function PaymentResultPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; ref?: string; message?: string }>;
+  searchParams: Promise<{ status?: string; ref?: string; message?: string; product?: string }>;
 }) {
   const params = await searchParams;
-  const state = STATES[params.status ?? ""] ?? {
+  const api = params.product === "api";
+  const base = STATES[params.status ?? ""];
+  // بازگشت به صفحه‌ی مربوط به همان محصول: وب‌سرویس یا قیمت پلاس
+  const known = base
+    ? {
+        ...base,
+        ...(params.status === "success"
+          ? api
+            ? { note: "اشتراک وب‌سرویس فعال شد. کلید API و مصرف را در پنل توسعه‌دهنده ببینید.", href: "/dashboard", cta: "رفتن به پنل توسعه‌دهنده" }
+            : { note: "قیمت پلاس فعال شد: تحلیل قیمت و هشدار پیامکی.", href: "/panel", cta: "رفتن به پنل کاربری" }
+          : {}),
+        ...(params.status === "cancelled" ? { href: api ? "/developers" : "/plus" } : {}),
+      }
+    : null;
+  const state = known ?? {
     icon: AlertCircle,
     tone: "bg-soft text-muted",
     title: "وضعیت پرداخت مشخص نیست",

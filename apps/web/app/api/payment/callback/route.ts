@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@qeymat/db";
 import { getPlan, getPlusPlan } from "@qeymat/shared";
 import { verifyPayment } from "@/lib/zarinpal";
-import { issueApiKey } from "@/lib/api-key";
 import { notifyUser } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +17,15 @@ export async function GET(request: NextRequest) {
   const status = params.get("Status") || params.get("status");
 
   const base = process.env.NEXT_PUBLIC_SITE_URL || "https://qeymat.online";
+  let product = "";
   const back = (result: string, extra = "") =>
-    NextResponse.redirect(`${base}/payment/result?status=${result}${extra}`, { status: 303 });
+    NextResponse.redirect(`${base}/payment/result?status=${result}${product}${extra}`, { status: 303 });
 
   if (!orderId) return back("invalid");
 
   const order = await prisma.gatewayOrder.findUnique({ where: { id: orderId } });
   if (!order) return back("notfound");
+  product = `&product=${order.kind === "API_PLAN" ? "api" : "plus"}`;
 
   // سفارشی که قبلاً تأیید شده، دوباره فعال‌سازی نمی‌شود
   if (order.status === "PAID") return back("success", `&ref=${order.refId ?? ""}`);
@@ -55,15 +56,19 @@ export async function GET(request: NextRequest) {
     return back("failed", `&message=${encodeURIComponent(verified.message)}`);
   }
 
-  await prisma.gatewayOrder.update({
-    where: { id: order.id },
+  // «ادعای» اتمی سفارش: اگر کاربر دو بار از درگاه برگردد (یا صفحه را تازه کند)،
+  // فقط یکی از درخواست‌ها اشتراک را فعال می‌کند.
+  const claimed = await prisma.gatewayOrder.updateMany({
+    where: { id: order.id, status: { not: "PAID" } },
     data: {
       status: "PAID",
       refId: verified.refId,
       cardPan: verified.cardPan,
       paidAt: new Date(),
+      failReason: null,
     },
   });
+  if (claimed.count === 0) return back("success", `&ref=${verified.refId}`);
 
   await activate(order);
 
@@ -108,7 +113,12 @@ async function activate(order: {
   const plan = getPlan(order.plan);
   if (!plan) return;
 
-  const expiresAt = new Date();
+  // تمدید: زمان باقی‌مانده‌ی اشتراک فعلی حفظ می‌شود و سهمیه‌ی تازه از صفر
+  const current = await prisma.subscription.findFirst({
+    where: { userId: order.userId, status: "ACTIVE", expiresAt: { gt: new Date() } },
+    orderBy: { expiresAt: "desc" },
+  });
+  const expiresAt = new Date(current ? current.expiresAt : new Date());
   expiresAt.setMonth(expiresAt.getMonth() + plan.monthCount);
 
   await prisma.subscription.updateMany({
@@ -124,15 +134,15 @@ async function activate(order: {
     },
   });
 
-  await prisma.apiKey.updateMany({
-    where: { userId: order.userId, isActive: true },
-    data: { isActive: false },
-  });
-  await issueApiKey(order.userId);
+  // کلید فعلی دست نمی‌خورد تا سرویس‌های مشتری با تمدید قطع نشوند؛
+  // کاربر بی‌کلید، کلیدش را در پنل می‌سازد (مقدار خام فقط همان‌جا یک‌بار نمایش داده می‌شود).
+  const hasKey = await prisma.apiKey.count({ where: { userId: order.userId, isActive: true } });
 
   await notifyUser(order.userId, {
     title: "وب‌سرویس شما فعال شد",
-    body: `پلن ${plan.label} فعال شد و کلید API تازه در پنل آماده است.`,
+    body: hasKey
+      ? `پلن ${plan.label} فعال شد؛ کلید فعلی‌تان بدون تغییر کار می‌کند.`
+      : `پلن ${plan.label} فعال شد. کلید API را از پنل توسعه‌دهنده بسازید.`,
     url: "/dashboard",
   });
 }

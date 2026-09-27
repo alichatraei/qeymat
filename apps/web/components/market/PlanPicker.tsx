@@ -1,21 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import useSWR from "swr";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, CreditCard, Loader2, ShieldCheck } from "lucide-react";
 import { PLANS, fa } from "@qeymat/shared";
-import type { MarketSnapshot } from "@/lib/types";
+import { startCheckout } from "@/lib/checkout";
 
-const fetcher = (url: string) => fetch(url).then((response) => response.json());
+/**
+ * انتخاب و خرید پلن وب‌سرویس. پرداخت مستقیم از درگاه زرین‌پال؛ بعد از
+ * پرداخت موفق اشتراک همان لحظه فعال می‌شود و کاربر به پنل توسعه‌دهنده می‌رود.
+ */
+export default function PlanPicker({ initialPlan = "quarterly" }: { initialPlan?: string }) {
+  const [selected, setSelected] = useState(PLANS.some((item) => item.id === initialPlan) ? initialPlan : "quarterly");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-export default function PlanPicker() {
-  const router = useRouter();
-  const [selected, setSelected] = useState("quarterly");
-  const { data } = useSWR<MarketSnapshot>("/api/public/rates", fetcher, { refreshInterval: 60000 });
-
-  const usdt = data?.assets.find((asset) => asset.symbol === "USDT")?.sell ?? 0;
   const plan = PLANS.find((item) => item.id === selected);
+  const monthly = PLANS[0].price;
+
+  const buy = async () => {
+    if (!plan) return;
+    setLoading(true);
+    setError("");
+    const failure = await startCheckout("API_PLAN", plan.id, `/developers?plan=${plan.id}`);
+    if (failure) {
+      setError(failure);
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -52,16 +63,19 @@ export default function PlanPicker() {
               <p className="mt-1 text-[11px] text-muted">{item.note}</p>
 
               <div className="mt-5 flex items-baseline gap-1.5">
-                <strong className="tabular text-[32px] font-extrabold tracking-[-1.2px]">
-                  {item.price}
+                <strong className="tabular text-[28px] font-extrabold tracking-[-1px]">
+                  {fa(item.price)}
                 </strong>
-                <span dir="ltr" className="font-mono text-[12px] text-muted">
-                  USDT
-                </span>
+                <span className="text-[11px] text-muted">تومان</span>
               </div>
-              {usdt ? (
-                <small className="mt-1 text-[11px] text-muted">≈ {fa(item.price * usdt)} تومان</small>
-              ) : null}
+              {item.monthCount > 1 ? (
+                <small className="mt-1 text-[11px] text-green">
+                  ماهی {fa(Math.round(item.price / item.monthCount))} تومان —{" "}
+                  {fa(Math.round((1 - item.price / item.monthCount / monthly) * 100))}٪ کمتر
+                </small>
+              ) : (
+                <small className="mt-1 text-[11px] text-muted">ماهی {fa(item.price)} تومان</small>
+              )}
 
               <ul className="mt-5 space-y-2.5 border-t border-line pt-4 text-[11.5px] text-sub">
                 <li className="flex items-center gap-2">
@@ -78,7 +92,7 @@ export default function PlanPicker() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 shrink-0 text-green" />
-                  پشتیبانی ایمیلی
+                  پشتیبانی با تیکت
                 </li>
               </ul>
             </button>
@@ -86,14 +100,16 @@ export default function PlanPicker() {
         })}
       </div>
 
-      <button
-        type="button"
-        className="btn-solid mx-auto mt-9 flex h-12 px-7"
-        onClick={() => router.push(`/dashboard?plan=${selected}`)}
-      >
-        خرید پلن {plan?.label}
-        <ChevronLeft />
+      {error ? <p className="mt-5 text-center text-[12px] text-danger">{error}</p> : null}
+
+      <button type="button" className="btn-solid mx-auto mt-9 flex h-12 px-7" onClick={buy} disabled={loading}>
+        {loading ? <Loader2 className="animate-spin" /> : <CreditCard />}
+        {plan ? `پرداخت ${fa(plan.price)} تومان — پلن ${plan.label}` : "انتخاب پلن"}
       </button>
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted">
+        <ShieldCheck className="h-3.5 w-3.5 text-green" />
+        پرداخت امن از درگاه زرین‌پال · فعال‌سازی فوری پس از پرداخت
+      </p>
     </>
   );
 }

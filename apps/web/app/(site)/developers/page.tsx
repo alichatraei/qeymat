@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "API نرخ ارز، طلا و رمزارز",
   description:
-    "API ساده و سریع نرخ بازار ایران برای توسعه‌دهندگان؛ ارز، طلا، سکه و رمزارز با پاسخ JSON و پرداخت تتری.",
+    "API ساده و سریع نرخ بازار ایران برای توسعه‌دهندگان؛ ارز، طلا، سکه و رمزارز با پاسخ JSON، تاریخچه‌ی ۱۰ ساله و پرداخت ریالی.",
   alternates: { canonical: "/developers" },
 };
 
@@ -21,7 +21,12 @@ const BENEFITS = [
   { icon: Code2, title: "REST و JSON", note: "ساده برای هر پلتفرم" },
 ];
 
-export default async function DevelopersPage() {
+export default async function DevelopersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
+  const { plan } = await searchParams;
   const usd = await getRate("USD");
 
   return (
@@ -89,17 +94,17 @@ export default async function DevelopersPage() {
 
       <section className="content-width pt-14">
         <div className="mx-auto max-w-[46ch] text-center">
-          <span className="text-[11.5px] font-bold text-green-dark">پرداخت با تتر</span>
+          <span className="text-[11.5px] font-bold text-green-dark">پرداخت ریالی با زرین‌پال</span>
           <h2 className="mt-2 text-[26px] font-extrabold tracking-[-.8px]">
             پلنی متناسب با رشد محصولتان
           </h2>
           <p className="mt-3 text-[12.5px] leading-6 text-muted">
-            تمام پلن‌ها روی شبکه BEP20 فعال می‌شوند. معادل تومانی بر اساس نرخ تتر همان لحظه محاسبه
-            می‌شود.
+            با کارت بانکی از درگاه زرین‌پال پرداخت کنید؛ اشتراک همان لحظه فعال می‌شود. تمدید، زمان
+            باقی‌مانده‌ی اشتراک فعلی را حفظ می‌کند.
           </p>
         </div>
 
-        <PlanPicker />
+        <PlanPicker initialPlan={plan} />
       </section>
     </main>
   );

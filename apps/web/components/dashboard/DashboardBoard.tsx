@@ -7,6 +7,7 @@ import {
   BarChart3,
   Check,
   Copy,
+  CreditCard,
   Eye,
   EyeOff,
   FileText,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { PLANS, fa, getPlan, jalali } from "@qeymat/shared";
 import PushToggle from "@/components/pwa/PushToggle";
+import { startCheckout } from "@/lib/checkout";
 import type { SessionUser } from "@/lib/types";
 
 type Payment = {
@@ -25,6 +27,23 @@ type Payment = {
   txHash: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
+};
+
+type Order = {
+  id: string;
+  plan: string;
+  amountRial: number;
+  status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+  refId: string | null;
+  createdAt: string;
+};
+
+const ORDER_STATUS: Record<Order["status"], { label: string; className: string }> = {
+  PENDING: { label: "در انتظار پرداخت", className: "state-pending" },
+  PAID: { label: "پرداخت‌شده", className: "state-approved" },
+  FAILED: { label: "ناموفق", className: "state-rejected" },
+  CANCELLED: { label: "لغوشده", className: "state-rejected" },
+  REFUNDED: { label: "بازگشت وجه", className: "state-pending" },
 };
 
 const STATUS_LABEL = { PENDING: "در انتظار", APPROVED: "تأییدشده", REJECTED: "ردشده" } as const;
@@ -40,9 +59,7 @@ export default function DashboardBoard({
   apiKeyPrefix,
   payments,
   usage,
-  usdtRate,
-  wallet,
-  network,
+  orders,
   initialPlan,
 }: {
   user: SessionUser;
@@ -55,14 +72,11 @@ export default function DashboardBoard({
   apiKeyPrefix: string | null;
   payments: Payment[];
   usage: { endpoint: string; count: number; avgLatency: number }[];
-  usdtRate: number;
-  wallet: string;
-  network: string;
+  orders: Order[];
   initialPlan: string;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState(initialPlan);
-  const [hash, setHash] = useState("");
   const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState("");
   const [busy, setBusy] = useState("");
@@ -97,23 +111,13 @@ export default function DashboardBoard({
     }
   };
 
-  const submitPayment = async () => {
+  /** پرداخت از زرین‌پال؛ بعد از بازگشت، اشتراک فعال شده است */
+  const checkout = async () => {
     setBusy("payment");
     setMessage(null);
-    try {
-      const response = await fetch("/api/dashboard/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, txHash: hash.trim() }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message);
-      setHash("");
-      setMessage({ tone: "ok", text: "هش تراکنش ثبت شد و در صف بررسی قرار گرفت." });
-      router.refresh();
-    } catch (error) {
-      setMessage({ tone: "bad", text: error instanceof Error ? error.message : "ثبت پرداخت انجام نشد." });
-    } finally {
+    const failure = await startCheckout("API_PLAN", selectedPlan.id, `/dashboard?plan=${selectedPlan.id}`);
+    if (failure) {
+      setMessage({ tone: "bad", text: failure });
       setBusy("");
     }
   };
@@ -312,88 +316,79 @@ export default function DashboardBoard({
           <section id="payments" className="card mt-5 p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-[16px] font-bold">خرید یا تمدید اشتراک با تتر</h2>
-                <p className="mt-1 text-[11.5px] text-muted">
-                  مبلغ پلن را به آدرس زیر بفرستید و هش تراکنش را ثبت کنید.
+                <h2 className="text-[16px] font-bold">{subscription ? "تمدید یا تغییر پلن" : "خرید اشتراک"}</h2>
+                <p className="mt-1 text-[11.5px] leading-6 text-muted">
+                  پرداخت با کارت بانکی از درگاه زرین‌پال. اشتراک بلافاصله فعال می‌شود و زمان باقی‌مانده‌ی
+                  اشتراک فعلی به دوره‌ی تازه اضافه می‌شود.
                 </p>
               </div>
-              <span className="chip bg-soft text-sub">{network}</span>
+              <span className="chip bg-soft text-sub">زرین‌پال</span>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block text-xxs text-sub">پلن</span>
-                <select className="field" value={plan} onChange={(event) => setPlan(event.target.value)}>
-                  {PLANS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label} — {item.price} USDT
-                    </option>
-                  ))}
-                </select>
-                {usdtRate ? (
-                  <small className="mt-1.5 block text-2xs text-muted">
-                    معادل امروز: {fa(selectedPlan.price * usdtRate)} تومان
-                  </small>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xxs text-sub">آدرس کیف پول</span>
-                <span className="flex h-[46px] items-center gap-2 rounded-control border border-line bg-field px-3">
-                  <code dir="ltr" className="flex-1 truncate font-mono text-[11.5px]">
-                    {wallet || "آدرس هنوز در تنظیمات ثبت نشده"}
-                  </code>
-                  {wallet ? (
-                    <button
-                      type="button"
-                      onClick={() => copy(wallet, "wallet")}
-                      className="grid h-7 w-7 place-items-center rounded-lg text-muted hover:bg-soft"
-                      aria-label="کپی آدرس"
-                    >
-                      {copied === "wallet" ? (
-                        <Check className="h-3.5 w-3.5 text-green" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  ) : null}
-                </span>
-              </label>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {PLANS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setPlan(item.id)}
+                  aria-pressed={plan === item.id}
+                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-right transition-colors ${
+                    plan === item.id ? "border-green bg-green-soft" : "border-line bg-field hover:border-line-strong"
+                  }`}
+                >
+                  <span className="flex flex-col">
+                    <b className="text-[12.5px]">{item.label}</b>
+                    <small className="text-[10.5px] text-muted">{item.requests} درخواست</small>
+                  </span>
+                  <span className="tabular text-[13px] font-bold">
+                    {fa(item.price)} <small className="font-normal text-muted">تومان</small>
+                  </span>
+                </button>
+              ))}
             </div>
 
-            <label className="mt-3 block">
-              <span className="mb-1.5 block text-xxs text-sub">هش تراکنش</span>
-              <input
-                className="field"
-                dir="ltr"
-                placeholder="0x..."
-                value={hash}
-                onChange={(event) => setHash(event.target.value)}
-              />
-            </label>
-
-            <button
-              type="button"
-              className="btn-solid mt-4"
-              onClick={submitPayment}
-              disabled={busy === "payment" || hash.trim().length < 10}
-            >
-              {busy === "payment" ? <Loader2 className="animate-spin" /> : null}
-              ثبت برای بررسی
+            <button type="button" className="btn-solid mt-4" onClick={checkout} disabled={busy === "payment"}>
+              {busy === "payment" ? <Loader2 className="animate-spin" /> : <CreditCard />}
+              پرداخت {fa(selectedPlan.price)} تومان
             </button>
 
-            {payments.length ? (
+            {orders.length ? (
               <div className="table-scroll mt-6 border-t border-line pt-4">
                 <table className="w-full min-w-[540px] text-right text-[11.5px]">
                   <thead className="text-xxs text-muted">
                     <tr>
                       <th className="pb-2 font-semibold">پلن</th>
                       <th className="pb-2 font-semibold">مبلغ</th>
-                      <th className="pb-2 font-semibold">هش</th>
+                      <th className="pb-2 font-semibold">شماره پیگیری</th>
                       <th className="pb-2 font-semibold">تاریخ</th>
                       <th className="pb-2 font-semibold">وضعیت</th>
                     </tr>
                   </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr key={order.id} className="border-t border-line">
+                        <td className="py-3">{getPlan(order.plan)?.label ?? order.plan}</td>
+                        <td className="tabular py-3">{fa(order.amountRial / 10)} تومان</td>
+                        <td className="py-3">
+                          <code dir="ltr" className="font-mono text-[10.5px]">
+                            {order.refId ?? "—"}
+                          </code>
+                        </td>
+                        <td className="py-3 text-muted">{jalali(order.createdAt)}</td>
+                        <td className="py-3">
+                          <span className={ORDER_STATUS[order.status].className}>{ORDER_STATUS[order.status].label}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {payments.length ? (
+              <div className="table-scroll mt-6 border-t border-line pt-4">
+                <h3 className="mb-2 text-[12px] font-bold text-sub">پرداخت‌های تتری پیشین</h3>
+                <table className="w-full min-w-[540px] text-right text-[11.5px]">
                   <tbody>
                     {payments.map((payment) => (
                       <tr key={payment.id} className="border-t border-line">
@@ -406,9 +401,7 @@ export default function DashboardBoard({
                         </td>
                         <td className="py-3 text-muted">{jalali(payment.createdAt)}</td>
                         <td className="py-3">
-                          <span className={STATUS_CLASS[payment.status]}>
-                            {STATUS_LABEL[payment.status]}
-                          </span>
+                          <span className={STATUS_CLASS[payment.status]}>{STATUS_LABEL[payment.status]}</span>
                         </td>
                       </tr>
                     ))}

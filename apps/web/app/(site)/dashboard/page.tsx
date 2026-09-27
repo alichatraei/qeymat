@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@qeymat/db";
 import { getSessionUser } from "@/lib/auth";
-import { getRate, getSetting } from "@/lib/market";
 import DashboardBoard from "@/components/dashboard/DashboardBoard";
 
 export const dynamic = "force-dynamic";
@@ -14,11 +13,11 @@ export default async function DashboardPage({
   searchParams: Promise<{ plan?: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?next=/dashboard");
 
   const params = await searchParams;
 
-  const [subscription, apiKey, payments, usage, usdt, wallet, network] = await Promise.all([
+  const [subscription, apiKey, payments, usage, orders] = await Promise.all([
     prisma.subscription.findFirst({
       where: { userId: user.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
       orderBy: { expiresAt: "desc" },
@@ -31,9 +30,11 @@ export default async function DashboardPage({
       _count: { _all: true },
       _avg: { latencyMs: true },
     }),
-    getRate("USDT"),
-    getSetting<string>("payment.wallet", ""),
-    getSetting<string>("payment.network", "BEP20"),
+    prisma.gatewayOrder.findMany({
+      where: { userId: user.id, kind: "API_PLAN" },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
   ]);
 
   return (
@@ -64,9 +65,14 @@ export default async function DashboardPage({
         count: row._count._all,
         avgLatency: Math.round(row._avg.latencyMs ?? 0),
       }))}
-      usdtRate={usdt?.sell ?? 0}
-      wallet={wallet}
-      network={network}
+      orders={orders.map((order) => ({
+        id: order.id,
+        plan: order.plan,
+        amountRial: order.amountRial,
+        status: order.status,
+        refId: order.refId,
+        createdAt: order.createdAt.toISOString(),
+      }))}
     />
   );
 }

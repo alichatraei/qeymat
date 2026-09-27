@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Bell, Check, Crown, Loader2, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
 import { PLUS_PLANS, PLUS_FEATURES, PLUS_TIERS, fa, jalali } from "@qeymat/shared";
+import { startCheckout } from "@/lib/checkout";
 
 const PERKS = [
   { icon: Sparkles, title: "تحلیل قیمت", note: "روند، RSI، میانگین‌ها، حمایت و مقاومت، حباب سکه" },
@@ -50,17 +51,9 @@ export default function PlusStore({
 
     setLoading(true);
     setError("");
-    try {
-      const response = await fetch("/api/payment/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "PLUS_PLAN", plan: plan.id }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message);
-      window.location.href = payload.redirectUrl;
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "اتصال به درگاه انجام نشد.");
+    const failure = await startCheckout("PLUS_PLAN", plan.id, "/plus");
+    if (failure) {
+      setError(failure);
       setLoading(false);
     }
   };
