@@ -83,7 +83,11 @@ async function cleanup() {
   const usageDays = Number(process.env.USAGE_RETENTION_DAYS || 90);
   const cutoff = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [history, usage, quotes] = await Promise.all([
+  const [otp, history, usage, quotes] = await Promise.all([
+    // کد ورود یک روز پس از انقضا؛ صفحه‌ی حریم خصوصی همین مدت را اعلام کرده است
+    prisma.otpCode.deleteMany({
+      where: { expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    }),
     prisma.rateHistory.deleteMany({
       where: { at: { lt: cutoff(historyDays) } },
     }),
@@ -94,7 +98,7 @@ async function cleanup() {
     }),
   ]);
   log.info(
-    `پاک‌سازی: ${history.count} تاریخچه، ${usage.count} لاگ مصرف، ${quotes.count} نقل‌قول`,
+    `پاک‌سازی: ${history.count} تاریخچه، ${usage.count} لاگ مصرف، ${quotes.count} نقل‌قول، ${otp.count} کد ورود`,
   );
 }
 

@@ -103,7 +103,12 @@ export default function SiteFooter() {
 
       <div className="border-t border-line">
         <div className="content-width flex flex-col gap-3 py-5 text-[10.5px] text-muted md:flex-row md:items-center md:justify-between">
-          <p>تمام قیمت‌ها صرفاً جهت اطلاع‌رسانی هستند و مبنای معامله نیستند.</p>
+          <p>
+            تمام قیمت‌ها صرفاً جهت اطلاع‌رسانی هستند و مبنای معامله نیستند. ·{" "}
+            <Link href="/privacy" className="font-semibold text-sub hover:text-green-dark">
+              حریم خصوصی
+            </Link>
+          </p>
           <p>
             طراحی و توسعه:{" "}
             <span className="font-semibold text-sub">علی چترایی — تیم برنامه‌نویسی آ</span>

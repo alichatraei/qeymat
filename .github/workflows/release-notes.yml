@@ -1,0 +1,54 @@
+name: Release Notes
+
+# با هر تگ نسخه (v*) توضیحات همان نسخه در تاپیک تلگرام گروه فرستاده می‌شود.
+# توضیحات از پیام تگ می‌آید (git tag -a v2.1.0 -m "…")؛ تگ بی‌پیام فهرست
+# کامیت‌ها از تگ قبلی را می‌فرستد.
+#
+# Secrets: TELEGRAM_BOT_TOKEN، TELEGRAM_CHAT_ID، TELEGRAM_TOPIC_ID
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "تگ نسخه‌ای که توضیحاتش دوباره فرستاده شود (مثلاً v2.1.0)"
+        required: true
+
+jobs:
+  telegram:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: پیام نسخه در تاپیک تلگرام
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN یا TELEGRAM_CHAT_ID تنظیم نشده است."
+            exit 1
+          fi
+          # checkout روی تگ سبک، تگ‌های annotated را به شکل commit می‌آورد؛ دوباره گرفته می‌شوند
+          git fetch --force --tags origin > /dev/null 2>&1
+
+          VERSION="${TAG#v}"
+          # HTML تلگرام: & < > باید escape شوند؛ سقف پیام ۴۰۹۶ نویسه است و بر اساس خط بریده می‌شود
+          NOTES=$(bash .github/scripts/release-notes.sh "$TAG" \
+            | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' | head -n 60)
+          TEXT=$(printf '🚀 <b>نسخه‌ی %s</b>\n\n%s' "$VERSION" "$NOTES")
+
+          ARGS=(--form-string "chat_id=$CHAT_ID" --form-string "parse_mode=HTML"
+                --form-string "disable_web_page_preview=true" --form-string "text=$TEXT")
+          [ -n "$TOPIC_ID" ] && ARGS+=(--form-string "message_thread_id=$TOPIC_ID")
+
+          # --form-string: متن نسخه نباید به‌عنوان گزینه‌ی curl (@فایل، ;type=) خوانده شود
+          curl -sS --fail-with-body "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" "${ARGS[@]}"
+          echo
+          echo "توضیحات نسخه‌ی $VERSION در تلگرام فرستاده شد."

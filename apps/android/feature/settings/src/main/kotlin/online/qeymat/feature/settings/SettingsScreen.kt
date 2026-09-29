@@ -141,6 +141,7 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
                 }
             }) { Chevron() }
             SettingRow(QIcons.Support, "پشتیبانی", onClick = { open("https://qeymat.online/panel/tickets") }) { Chevron() }
+            SettingRow(QIcons.Lock, "حریم خصوصی", onClick = { open("https://qeymat.online/privacy") }) { Chevron() }
             SettingRow(QIcons.Info, "نسخه") { Text(Fa.digits(versionName), color = Q.Sub, fontSize = 11.5.sp) }
         }
 

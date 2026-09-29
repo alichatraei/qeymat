@@ -144,10 +144,3 @@ export async function hasPlusAccess(userId: string | null | undefined) {
   });
   return Boolean(active);
 }
-
-/** پاک‌سازی کدهای منقضی — از مسیر نگهداشت کرالر صدا زده می‌شود. */
-export async function pruneExpiredOtp() {
-  return prisma.otpCode.deleteMany({
-    where: { expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-  });
-}

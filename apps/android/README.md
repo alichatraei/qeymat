@@ -93,18 +93,30 @@ gradle :core:model:test assembleDebug
 
 ### انتشار نسخه (کافه‌بازار و مایکت)
 
-با push هر تگ `v*` (مثلاً `v2.1.0`)، workflow `Android Release`:
+با push هر تگ `v*` (مثلاً `v2.1.0`):
 
-1. APK و AAB **امضاشده** می‌سازد. نسخه از تگ می‌آید و `versionCode` از آن
-   ساخته می‌شود (`2.1.0` ← `20100`)، پس هر نسخه از قبلی بزرگ‌تر است.
-2. یک GitHub Release با همین دو فایل و فهرست کامیت‌ها از تگ قبلی می‌سازد.
-3. اگر ربات تلگرام تنظیم شده باشد، خبر نسخه و فایل APK را در تاپیک گروه
+1. workflow `Android Release` APK و AAB **امضاشده** می‌سازد. نسخه از تگ
+   می‌آید و `versionCode` از آن ساخته می‌شود (`2.1.0` ← `20100`)، پس هر نسخه
+   از قبلی بزرگ‌تر است. بعد یک GitHub Release با همین دو فایل می‌سازد.
+2. workflow `Release Notes` شماره‌ی نسخه و توضیحاتش را در تاپیک تلگرام گروه
    می‌فرستد.
 
-Secretهای لازم در تنظیمات مخزن (Settings ← Secrets and variables ← Actions):
-`ANDROID_KEYSTORE_BASE64`، `ANDROID_KEYSTORE_PASSWORD`، `ANDROID_KEY_ALIAS`،
-`ANDROID_KEY_PASSWORD` و برای تلگرام `TELEGRAM_BOT_TOKEN`، `TELEGRAM_CHAT_ID`،
-`TELEGRAM_TOPIC_ID`.
+توضیحات نسخه از **پیام تگ** می‌آید:
+
+```bash
+git tag -a v2.1.0 -m "پرداخت کارت‌به‌کارت
+- آواتار تصویری دارایی‌ها
+- رفع ثابت ماندن نرخ دلار"
+git push origin v2.1.0
+```
+
+تگ بدون پیام، فهرست کامیت‌ها از تگ قبلی را می‌فرستد.
+
+Secretها در تنظیمات مخزن (Settings ← Secrets and variables ← Actions):
+امضا `ANDROID_KEYSTORE_BASE64`، `ANDROID_KEYSTORE_PASSWORD`،
+`ANDROID_KEY_ALIAS`، `ANDROID_KEY_PASSWORD` و تلگرام `TELEGRAM_BOT_TOKEN`،
+`TELEGRAM_CHAT_ID`، `TELEGRAM_TOPIC_ID`. تا وقتی Secretهای امضا نیستند، ساخت
+APK با یک هشدار رد می‌شود ولی پیام تلگرام فرستاده می‌شود.
 
 ⚠️ کلید امضا را جای امنی نگه دارید. بازار و مایکت به‌روزرسانی را فقط با همان
 کلید اولین بارگذاری می‌پذیرند؛ گم شدنش یعنی انتشار اپ با نام بسته‌ی جدید.
