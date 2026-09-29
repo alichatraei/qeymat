@@ -47,6 +47,14 @@ const nextConfig = {
         ],
       },
       {
+        // پروفایل فونت ویجت آیفون؛ سافاری فقط با این نوع محتوا پیشنهاد نصب می‌دهد
+        source: "/widget/vazirmatn.mobileconfig",
+        headers: [
+          { key: "Content-Type", value: "application/x-apple-aspen-config" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
+      {
         // API عمومی برای مشتریان API
         source: "/api/v1/:path*",
         headers: [

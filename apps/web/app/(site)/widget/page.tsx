@@ -110,7 +110,8 @@ export default async function WidgetPage() {
             <Step n={5}>
               روی ویجت انگشت را نگه دارید و «Edit Widget» را بزنید. در <b>Script</b> «قیمت» را انتخاب کنید و در{" "}
               <b>Parameter</b> نماد دارایی‌ها را با کاما بنویسید، مثلاً <code dir="ltr">USD,GOLD18,EMAMI</code>. اگر
-              خالی بماند، دلار، یورو، طلا، سکه، تتر و بیت‌کوین نمایش داده می‌شود.
+              خالی بماند، دلار، یورو، طلا، سکه، تتر و بیت‌کوین نمایش داده می‌شود. زمان تازه‌سازی و فونت را هم
+              می‌شود همین‌جا تعیین کرد (پایین‌تر).
             </Step>
             <Step n={6}>
               برای <b>صفحه‌ی قفل</b> (iOS ۱۶ به بعد): روی صفحه‌ی قفل انگشت را نگه دارید، «Customize» و بعد صفحه‌ی قفل
@@ -137,9 +138,41 @@ export default async function WidgetPage() {
                 ))}
               </div>
             </div>
-            <p className="mt-2 text-center text-[10.5px] text-muted">نسخه‌ی اسکریپت {fa(WIDGET_VERSION)}</p>
+            <p className="mt-2 text-center text-[10.5px] text-muted">نسخه‌ی اسکریپت {WIDGET_VERSION.replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]).replace(".", "٫")}</p>
           </div>
         </div>
+
+        <div className="mt-6 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
+          <div className="rounded-xl border border-line bg-field p-4">
+            <h3 className="text-[12.5px] font-bold">هر چند وقت تازه شود؟</h3>
+            <p className="mt-2 text-[11.5px] leading-6 text-sub">
+              در Parameter بعد از نمادها با یک فاصله بنویسید: <code dir="ltr">5m</code> (هر ۵ دقیقه)،{" "}
+              <code dir="ltr">30m</code> یا <code dir="ltr">1h</code> (هر ساعت). پیش‌فرض ۱۰ دقیقه است.
+            </p>
+            <p className="mt-2 text-[10.5px] leading-5 text-muted">
+              زمان دقیق را خود iOS بر اساس باتری و میزان استفاده تعیین می‌کند؛ این عدد زودترین زمان تازه‌سازی است و
+              ممکن است ویجت کمی دیرتر به‌روز شود.
+            </p>
+          </div>
+          <div className="rounded-xl border border-line bg-field p-4">
+            <h3 className="text-[12.5px] font-bold">فونت وزیرمتن (اختیاری)</h3>
+            <p className="mt-2 text-[11.5px] leading-6 text-sub">
+              این لینک را در <b>سافاری آیفون</b> باز کنید، «Allow» و بعد در تنظیمات ← «Profile Downloaded» ←
+              «Install» را بزنید. سپس در Parameter کلمه‌ی <code dir="ltr">vazir</code> را اضافه کنید.
+            </p>
+            <a href="/widget/vazirmatn.mobileconfig" className="btn-ghost mt-3 h-10 min-h-0">
+              نصب فونت وزیرمتن
+            </a>
+            <p className="mt-2 text-[10.5px] leading-5 text-muted">
+              این پروفایل فقط فونت نصب می‌کند و به هیچ داده‌ای دسترسی ندارد. چون امضای دیجیتال ندارد، iOS آن را
+              «Not Verified» نشان می‌دهد. برای حذف: تنظیمات ← عمومی ← VPN و مدیریت دستگاه.
+            </p>
+          </div>
+        </div>
+        <p className="mt-4 rounded-xl bg-green-soft/60 px-4 py-3 text-[11.5px] leading-6 text-sub">
+          نمونه‌ی Parameter کامل: <code dir="ltr" className="font-bold text-ink">USD,GOLD18,EMAMI 5m vazir</code> — دلار،
+          طلا و سکه، هر ۵ دقیقه، با فونت وزیرمتن.
+        </p>
 
         {suggested.length ? (
           <div className="mt-6 border-t border-line pt-5">

@@ -8,14 +8,16 @@
  * متن داخل String.raw است تا \s و مانند آن دست‌نخورده بماند؛ پس داخل
  * اسکریپت نباید backtick یا ${ باشد.
  */
-export const WIDGET_VERSION = "1.0";
+export const WIDGET_VERSION = "1.1";
 
 export const SCRIPTABLE_WIDGET = String.raw`// قیمت — ویجت نرخ لحظه‌ای | qeymat.online
-// نسخه ۱٫۰
+// نسخه ۱٫۱
 //
-// پارامتر ویجت (اختیاری): نماد دارایی‌ها با کاما
-//   USD                    دلار
-//   USD,GOLD18,EMAMI,USDT  چند دارایی در ویجت متوسط و بزرگ
+// پارامتر ویجت (اختیاری) — بخش‌ها با فاصله از هم جدا می‌شوند:
+//   USD,GOLD18,EMAMI   نماد دارایی‌ها با کاما
+//   5m / 30m / 1h      هر چند وقت یک‌بار تازه شود (کمترین ۵ دقیقه، پیش‌فرض ۱۰ دقیقه)
+//   vazir              فونت وزیرمتن (اول پروفایل فونت را از qeymat.online/widget نصب کنید)
+// نمونه: USD,GOLD18 5m vazir
 // نمادها: USD EUR AED TRY GBP GOLD18 GOLD24 EMAMI HALF QUARTER GRAMI ABSHODEH USDT BTC ETH BRENT
 
 const API = "https://qeymat.online/api/public/rates";
@@ -33,9 +35,34 @@ const C = {
   mint: new Color("#8fd8b8"),
 };
 
-const param = (args.widgetParameter || "").trim().toUpperCase();
-const wanted = param ? param.split(/[\s,،]+/).filter(Boolean) : DEFAULTS;
+const options = parseParameter(args.widgetParameter || "");
+const wanted = options.symbols.length ? options.symbols : DEFAULTS;
 const family = config.widgetFamily || "medium";
+
+/** «USD,GOLD18 5m vazir» ← نمادها، فاصله‌ی تازه‌سازی (دقیقه) و فونت */
+function parseParameter(raw) {
+  const result = { symbols: [], minutes: 10, vazir: false };
+  for (const token of raw.trim().split(/\s+/).filter(Boolean)) {
+    const lower = token.toLowerCase();
+    const interval = /^(\d+)(m|min|h)?$/.exec(lower);
+    if (lower === "vazir" || lower === "وزیر") result.vazir = true;
+    else if (interval) result.minutes = Number(interval[1]) * (interval[2] === "h" ? 60 : 1);
+    else result.symbols.push(...token.toUpperCase().split(/[,،]+/).filter(Boolean));
+  }
+  // iOS کمتر از چند دقیقه را نمی‌پذیرد و بیش از یک روز هم معنا ندارد
+  result.minutes = Math.min(24 * 60, Math.max(5, result.minutes));
+  return result;
+}
+
+/** فونت وزیرمتن اگر خواسته شده باشد؛ وگرنه فونت سیستم با همان وزن */
+const VAZIR = { regular: "Vazirmatn-Regular", medium: "Vazirmatn-Medium", bold: "Vazirmatn-Bold", heavy: "Vazirmatn-ExtraBold" };
+function F(weight, size) {
+  if (options.vazir) return new Font(VAZIR[weight], size);
+  if (weight === "heavy") return Font.heavySystemFont(size);
+  if (weight === "bold") return Font.boldSystemFont(size);
+  if (weight === "medium") return Font.mediumSystemFont(size);
+  return Font.systemFont(size);
+}
 
 function fa(value, digits) {
   return Number(value).toLocaleString("fa-IR", { maximumFractionDigits: digits || 0 });
@@ -103,11 +130,11 @@ function header(widget, updatedAt, offline) {
   const row = widget.addStack();
   row.centerAlignContent();
   const time = row.addText((offline ? "آفلاین · " : "") + clock(updatedAt));
-  time.font = Font.systemFont(10);
+  time.font = F("regular", 10);
   time.textColor = C.faint;
   row.addSpacer();
   const brand = row.addText("قیمت");
-  brand.font = Font.heavySystemFont(13);
+  brand.font = F("heavy", 13);
   brand.textColor = C.mint;
 }
 
@@ -116,14 +143,14 @@ function single(widget, asset, result) {
   widget.setPadding(14, 14, 14, 14);
   header(widget, result.data.updatedAt, result.offline);
   widget.addSpacer();
-  rightText(widget, asset.nameFa, Font.semiboldSystemFont(14), C.sub);
+  rightText(widget, asset.nameFa, F("bold", 14), C.sub);
   widget.addSpacer(4);
-  rightText(widget, price(asset), Font.heavySystemFont(26), C.text);
+  rightText(widget, price(asset), F("heavy", 26), C.text);
   const unit = asset.unit === "USD" ? "" : "تومان";
-  if (unit) rightText(widget, unit, Font.systemFont(10), C.faint);
+  if (unit) rightText(widget, unit, F("regular", 10), C.faint);
   widget.addSpacer(6);
   const move = change(asset);
-  rightText(widget, move.text, Font.boldSystemFont(12), move.color);
+  rightText(widget, move.text, F("bold", 12), move.color);
 }
 
 function list(widget, assets, result, max) {
@@ -136,17 +163,17 @@ function list(widget, assets, result, max) {
     row.centerAlignContent();
     const move = change(asset);
     const delta = row.addText(move.text);
-    delta.font = Font.boldSystemFont(10);
+    delta.font = F("bold", 10);
     delta.textColor = move.color;
     row.addSpacer(8);
     const value = row.addText(price(asset));
-    value.font = Font.boldSystemFont(15);
+    value.font = F("bold", 15);
     value.textColor = C.text;
     value.lineLimit = 1;
     value.minimumScaleFactor = 0.6;
     row.addSpacer();
     const name = row.addText(asset.nameFa);
-    name.font = Font.mediumSystemFont(13);
+    name.font = F("medium", 13);
     name.textColor = C.sub;
     name.lineLimit = 1;
     widget.addSpacer(family === "large" ? 9 : 5);
@@ -161,13 +188,13 @@ function accessory(widget, asset) {
     return;
   }
   const name = widget.addText(asset.nameFa);
-  name.font = Font.semiboldSystemFont(12);
+  name.font = F("bold", 12);
   const value = widget.addText(price(asset));
-  value.font = Font.heavySystemFont(family === "accessoryCircular" ? 11 : 18);
+  value.font = F("heavy", family === "accessoryCircular" ? 11 : 18);
   value.minimumScaleFactor = 0.5;
   if (family === "accessoryRectangular") {
     const move = widget.addText(change(asset).text);
-    move.font = Font.systemFont(11);
+    move.font = F("regular", 11);
   }
 }
 
@@ -176,9 +203,9 @@ async function build() {
   const result = await load();
   if (!result) {
     background(widget);
-    rightText(widget, "قیمت", Font.heavySystemFont(14), C.mint);
+    rightText(widget, "قیمت", F("heavy", 14), C.mint);
     widget.addSpacer();
-    rightText(widget, "اتصال برقرار نشد", Font.systemFont(12), C.sub);
+    rightText(widget, "اتصال برقرار نشد", F("regular", 12), C.sub);
     widget.refreshAfterDate = new Date(Date.now() + 5 * 60 * 1000);
     return widget;
   }
@@ -195,8 +222,8 @@ async function build() {
   else if (family === "small") single(widget, first, result);
   else list(widget, assets, result, family === "large" ? 8 : 3);
 
-  // iOS خودش زمان تازه‌سازی را تعیین می‌کند؛ این فقط کمترین فاصله است
-  widget.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000);
+  // زودترین زمان تازه‌سازی؛ زمان دقیق را iOS بر اساس باتری و استفاده تعیین می‌کند
+  widget.refreshAfterDate = new Date(Date.now() + options.minutes * 60 * 1000);
   return widget;
 }
 
