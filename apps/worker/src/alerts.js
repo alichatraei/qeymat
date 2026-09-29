@@ -145,7 +145,8 @@ async function send(sub, payload) {
         keys: { p256dh: sub.p256dh, auth: sub.auth },
       },
       JSON.stringify(payload),
-      { TTL: 60 * 60 * 6 },
+      // سرویس‌های پوش (FCM) از ایران گاهی جواب نمی‌دهند؛ بدون timeout کل چرخه‌ی نرخ می‌ایستاد
+      { TTL: 60 * 60 * 6, timeout: 10000 },
     );
     return true;
   } catch (error) {

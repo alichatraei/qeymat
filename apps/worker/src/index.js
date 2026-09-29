@@ -12,20 +12,52 @@ const { prisma } = require("@qeymat/db");
 
 const PORT = Number(process.env.WORKER_PORT || 4001);
 const timers = new Map();
-/** جلوگیری از همپوشانی اجراها وقتی منبع کند است */
-const running = new Set();
+/** جلوگیری از همپوشانی اجراها وقتی منبع کند است: کلید ← زمان شروع */
+const running = new Map();
 
-async function tick(key) {
-  if (running.has(key)) return;
-  running.add(key);
+/**
+ * سقف زمان یک اجرا. اگر اجرایی به هر دلیل برنگردد (درخواست یا سرویسی که
+ * جواب نمی‌دهد)، منبع برای همیشه «در حال اجرا» نمی‌ماند و دور بعد دوباره
+ * اجرا می‌شود.
+ */
+function runLimitMs(intervalSec) {
+  return Math.max(120, intervalSec * 3) * 1000;
+}
+
+function withDeadline(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} بیش از ${Math.round(ms / 1000)} ثانیه طول کشید`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+async function tick(key, intervalSec) {
+  const limit = runLimitMs(intervalSec);
+  const startedAt = running.get(key);
+  if (startedAt && Date.now() - startedAt < limit) return;
+  if (startedAt) log.warn(`[${key}] اجرای قبلی گیر کرده بود؛ دوباره اجرا می‌شود`);
+
+  const mine = Date.now();
+  running.set(key, mine);
   try {
-    await runSource(key);
-    // نرخ نهایی بعد از هر منبع تازه دوباره محاسبه می‌شود
-    await settle();
-  } catch {
-    /* خطا داخل runSource لاگ و ثبت شده است */
+    await withDeadline(
+      (async () => {
+        await runSource(key);
+        // نرخ نهایی بعد از هر منبع تازه دوباره محاسبه می‌شود
+        await settle();
+      })(),
+      limit,
+      `اجرای ${key}`,
+    );
+  } catch (error) {
+    // خطای خود منبع داخل runSource لاگ و ثبت شده است؛ اینجا فقط گیر کردن
+    if (String(error?.message || "").includes("طول کشید")) log.error(`[${key}] ${error.message}`);
   } finally {
-    running.delete(key);
+    // اجرای گیرکرده‌ی قدیمی نباید قفل اجرای تازه را بردارد
+    if (running.get(key) === mine) running.delete(key);
   }
 }
 
@@ -39,7 +71,7 @@ async function schedule() {
     const intervalMs = Math.max(15, source.intervalSec) * 1000;
     timers.set(
       source.key,
-      setInterval(() => tick(source.key), intervalMs),
+      setInterval(() => tick(source.key, source.intervalSec), intervalMs),
     );
     log.info(`زمان‌بندی ${source.key} هر ${source.intervalSec} ثانیه`);
   }
