@@ -34,6 +34,25 @@ const sources = [
       ],
     },
   },
+  // رمزارز از چند صرافی مستقل تا با قطع شدن یکی (مثل نوبیتکس) نرخ ثابت نماند
+  {
+    key: "bitpin",
+    title: "بیت‌پین",
+    adapter: "bitpin",
+    endpoint: "https://api.bitpin.ir/api/v1/mkt/tickers/",
+    intervalSec: 30,
+    weight: 1.1,
+    config: { symbols: ["BTC", "ETH", "USDT", "SOL", "TON", "DOGE", "XRP", "BNB", "ADA", "TRX"], maxAgeMinutes: 60 },
+  },
+  {
+    key: "wallex",
+    title: "والکس",
+    adapter: "wallex",
+    endpoint: "https://api.wallex.ir/v1/markets",
+    intervalSec: 30,
+    weight: 1.1,
+    config: { symbols: ["BTC", "ETH", "USDT", "SOL", "TON", "DOGE", "XRP", "BNB", "ADA", "TRX"] },
+  },
   {
     key: "alanchand",
     title: "الان چند",

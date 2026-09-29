@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
 import { fetchNobitex } from "./adapters/nobitex.js";
+import { fetchBitpin } from "./adapters/bitpin.js";
+import { fetchWallex } from "./adapters/wallex.js";
 import { fetchAlanchand } from "./adapters/alanchand.js";
 import { fetchBonbast } from "./adapters/bonbast.js";
 import { fetchTgju } from "./adapters/tgju.js";
@@ -17,6 +19,8 @@ const { prisma } = require("@qeymat/db");
 
 const ADAPTERS = {
   nobitex: fetchNobitex,
+  bitpin: fetchBitpin,
+  wallex: fetchWallex,
   alanchand: fetchAlanchand,
   bonbast: fetchBonbast,
   tgju: fetchTgju,

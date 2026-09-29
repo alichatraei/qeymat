@@ -36,8 +36,9 @@ export async function fetchTgju(source) {
     }
   }
 
-  for (const [symbol, spec] of Object.entries(specs)) {
-    if (spec.live === false) continue;
+  for (const [symbol, base] of Object.entries(specs)) {
+    if (base.live === false) continue;
+    const spec = typeof base.live === "object" ? base.live : base;
     const entry = current[spec.key];
     if (!entry) continue;
 

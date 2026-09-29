@@ -4,11 +4,18 @@
  * هم آداپتور زنده (ajax.json) و هم بک‌فیل تاریخچه (summary-table-data) از
  * همین جدول استفاده می‌کنند تا واحدها فقط یک جا تعریف شوند.
  *
+ * live:
+ *   false  — فقط برای بک‌فیل تاریخچه
+ *   {key, unit, factor} — نرخ زنده از کلید دیگری خوانده می‌شود
+ *
  * unit:
  *   IRR  — ریال؛ برای تومان در factor=0.1 ضرب می‌شود
  *   USD  — دلاری؛ در نرخ دلار همان روز ضرب می‌شود
  *   RAW  — همان‌طور که هست (مثلاً انس جهانی که به دلار نمایش داده می‌شود)
  */
+/** کلید زنده‌ی جدا با قیمت ریالی */
+const irr = (key) => ({ key, unit: "IRR", factor: 0.1 });
+
 export const TGJU_KEYS = {
   USD: { key: "price_dollar_rl", unit: "IRR", factor: 0.1 },
   USD_FARDA: { key: "price_dollar_future", unit: "IRR", factor: 0.1, live: false },
@@ -25,15 +32,17 @@ export const TGJU_KEYS = {
   KWD: { key: "price_kwd", unit: "IRR", factor: 0.1 },
 
   USDT: { key: "crypto-tether-irr", unit: "IRR", factor: 0.1 },
-  BTC: { key: "crypto-bitcoin", unit: "USD", live: false },
-  ETH: { key: "crypto-ethereum", unit: "USD", live: false },
-  SOL: { key: "crypto-solana", unit: "USD", live: false },
-  TON: { key: "crypto-toncoin", unit: "USD", live: false },
-  XRP: { key: "crypto-ripple", unit: "USD", live: false },
-  DOGE: { key: "crypto-dogecoin", unit: "USD", live: false },
-  BNB: { key: "crypto-binance-coin", unit: "USD", live: false },
-  TRX: { key: "crypto-tron", unit: "USD", live: false },
-  ADA: { key: "crypto-cardano", unit: "USD", live: false },
+  // رمزارز: تاریخچه از کلید دلاری، نرخ زنده از کلید ریالی همان رمزارز (منبع سوم کنار
+  // بیت‌پین و والکس؛ برای TON که آن دو ندارند، تنها منبع)
+  BTC: { key: "crypto-bitcoin", unit: "USD", live: irr("crypto-bitcoin-irr") },
+  ETH: { key: "crypto-ethereum", unit: "USD", live: irr("crypto-ethereum-irr") },
+  SOL: { key: "crypto-solana", unit: "USD", live: irr("crypto-solana-irr") },
+  TON: { key: "crypto-toncoin", unit: "USD", live: irr("crypto-toncoin-irr") },
+  XRP: { key: "crypto-ripple", unit: "USD", live: irr("crypto-ripple-irr") },
+  DOGE: { key: "crypto-dogecoin", unit: "USD", live: irr("crypto-dogecoin-irr") },
+  BNB: { key: "crypto-binance-coin", unit: "USD", live: irr("crypto-binance-coin-irr") },
+  TRX: { key: "crypto-tron", unit: "USD", live: irr("crypto-tron-irr") },
+  ADA: { key: "crypto-cardano", unit: "USD", live: irr("crypto-cardano-irr") },
 
   GOLD18: { key: "geram18", unit: "IRR", factor: 0.1 },
   GOLD24: { key: "geram24", unit: "IRR", factor: 0.1 },
