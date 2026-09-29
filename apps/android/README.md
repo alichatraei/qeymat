@@ -91,7 +91,25 @@ gradle :core:model:test assembleDebug
 از صفحه‌ی همان اجرا در GitHub Actions (بخش Artifacts) دانلود می‌شوند. تغییرات
 این پوشه سرور را دوباره مستقر نمی‌کند.
 
-### امضای نسخه‌ی انتشار
+### انتشار نسخه (کافه‌بازار و مایکت)
+
+با push هر تگ `v*` (مثلاً `v2.1.0`)، workflow `Android Release`:
+
+1. APK و AAB **امضاشده** می‌سازد. نسخه از تگ می‌آید و `versionCode` از آن
+   ساخته می‌شود (`2.1.0` ← `20100`)، پس هر نسخه از قبلی بزرگ‌تر است.
+2. یک GitHub Release با همین دو فایل و فهرست کامیت‌ها از تگ قبلی می‌سازد.
+3. اگر ربات تلگرام تنظیم شده باشد، خبر نسخه و فایل APK را در تاپیک گروه
+   می‌فرستد.
+
+Secretهای لازم در تنظیمات مخزن (Settings ← Secrets and variables ← Actions):
+`ANDROID_KEYSTORE_BASE64`، `ANDROID_KEYSTORE_PASSWORD`، `ANDROID_KEY_ALIAS`،
+`ANDROID_KEY_PASSWORD` و برای تلگرام `TELEGRAM_BOT_TOKEN`، `TELEGRAM_CHAT_ID`،
+`TELEGRAM_TOPIC_ID`.
+
+⚠️ کلید امضا را جای امنی نگه دارید. بازار و مایکت به‌روزرسانی را فقط با همان
+کلید اولین بارگذاری می‌پذیرند؛ گم شدنش یعنی انتشار اپ با نام بسته‌ی جدید.
+
+### امضای نسخه‌ی انتشار روی سیستم خودتان
 
 فایل `apps/android/keystore.properties` (در گیت نیست) بسازید:
 

@@ -7,6 +7,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// نسخه از تگ گیت می‌آید (در CI: gradle -PappVersion=2.1.0). versionCode از همان
+// ساخته می‌شود و با هر نسخه بزرگ‌تر است؛ بازار و مایکت نسخه‌ی کوچک‌تر یا برابر را نمی‌پذیرند.
+val appVersion = (findProperty("appVersion") as String?)?.removePrefix("v") ?: "2.0.0"
+val appVersionCode = appVersion.substringBefore("-").split(".").map { it.toInt() }
+    .let { parts -> parts.getOrElse(0) { 0 } * 10_000 + parts.getOrElse(1) { 0 } * 100 + parts.getOrElse(2) { 0 } }
+
 // امضای نسخه‌ی انتشار از keystore.properties (در گیت نیست)؛ نبودش یعنی APK بدون امضا
 val keystoreFile = rootProject.file("keystore.properties")
 val keystore = Properties().apply { if (keystoreFile.exists()) keystoreFile.inputStream().use(::load) }
@@ -19,8 +25,8 @@ android {
         applicationId = "online.qeymat"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 200
-        versionName = "2.0.0"
+        versionCode = appVersionCode
+        versionName = appVersion
     }
 
     signingConfigs {
