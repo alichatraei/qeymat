@@ -40,11 +40,19 @@ const QUALITY_FLOOR = 0.2;
 const DERIVED_WEIGHT = 0.35;
 /** نرخ قبلیِ کهنه‌تر از این، مبنای محافظ جهش نیست (سیستم خاموش بوده یا نرخ اولیه‌ی seed است) */
 const STALE_RATE_MS = 3 * 60 * 60 * 1000;
-/** جهشی که با یک منبع تأیید شده، اگر این مدت پایدار بماند پذیرفته می‌شود */
+/** جهشی که با یک منبع تأیید شده، اگر این مدت در همان جهت بماند پذیرفته می‌شود */
 const JUMP_HOLD_MS = Number(process.env.JUMP_HOLD_MINUTES || 10) * 60 * 1000;
+/**
+ * سقف نگه‌داشتن نرخ قبلی به‌خاطر اطمینان پایین. در بازار پرنوسان منابع از
+ * هم فاصله می‌گیرند و اطمینان پایین می‌آید؛ بدون این سقف نرخ تا سه ساعت
+ * (STALE_RATE_MS) ثابت می‌ماند، درست وقتی قیمت بیشترین تغییر را دارد.
+ */
+const LOW_CONFIDENCE_HOLD_MS = Number(process.env.LOW_CONFIDENCE_HOLD_MINUTES || 15) * 60 * 1000;
 
-/** جهش‌های در انتظار تأیید: نماد ← { value, since } */
+/** جهش‌های در انتظار تأیید: نماد ← { direction, since } */
 const pendingJumps = new Map();
+/** از چه زمانی اطمینان هر نماد پایین مانده: نماد ← زمان */
+const lowConfidenceSince = new Map();
 
 /** سقف جهش مجاز بدون تأیید دو منبع، بر حسب دسته */
 const JUMP_LIMIT = {
@@ -178,10 +186,13 @@ export async function aggregateAll() {
           .map((point) => point.sourceKey),
       ).size;
       if (confirmations < 2) {
-        // جهش واقعی با یک منبع هم پذیرفته می‌شود، به شرط اینکه چند دقیقه پایدار بماند
+        // جهش واقعی با یک منبع هم پذیرفته می‌شود، به شرط اینکه چند دقیقه در
+        // همان جهت بماند. مقایسه‌ی عدد دقیق (مثلاً ±۱٪) در بازاری که پیوسته
+        // بالا می‌رود هرگز «پایدار» نمی‌شد و نرخ ساعت‌ها ثابت می‌ماند.
+        const direction = Math.sign(outcome.sell - previous);
         const pending = pendingJumps.get(asset.symbol);
-        const steady = pending && Math.abs(pending.value - outcome.sell) / pending.value < 0.01;
-        if (!steady) pendingJumps.set(asset.symbol, { value: outcome.sell, since: Date.now() });
+        const steady = pending && pending.direction === direction;
+        if (!steady) pendingJumps.set(asset.symbol, { direction, since: Date.now() });
         if (!steady || Date.now() - pending.since < JUMP_HOLD_MS) {
           log.warn(
             `[engine] ${asset.symbol}: جهش ${(jump * 100).toFixed(1)}٪ فقط با ${confirmations} منبع — در انتظار پایداری`,
@@ -198,12 +209,24 @@ export async function aggregateAll() {
     const previousOff =
       previous && lastClose && Math.abs(previous - lastClose) / lastClose > limit;
     if (outcome.confidence < MIN_CONFIDENCE && previous && !(consistentWithClose && previousOff)) {
-      // تک‌منبعِ کهنه‌شونده (مثل ارزهای جهان از TGJU) عادی است؛ فقط اختلاف منابع ارزش گزارش دارد
+      if (!lowConfidenceSince.has(asset.symbol)) lowConfidenceSince.set(asset.symbol, Date.now());
+      const heldMs = Date.now() - lowConfidenceSince.get(asset.symbol);
+      if (heldMs < LOW_CONFIDENCE_HOLD_MS) {
+        // تک‌منبعِ کهنه‌شونده (مثل ارزهای جهان از TGJU) عادی است؛ فقط اختلاف منابع ارزش گزارش دارد
+        if (outcome.used > 1)
+          log.warn(
+            `[engine] ${asset.symbol}: اطمینان ${outcome.confidence.toFixed(2)} پایین است، نرخ قبلی حفظ شد`,
+          );
+        continue;
+      }
+      // اطمینان مدتی است پایین مانده؛ از این به بعد نرخ تازه با همان اطمینان
+      // پایین منتشر می‌شود تا وقتی منابع دوباره به توافق برسند
       if (outcome.used > 1)
         log.warn(
-        `[engine] ${asset.symbol}: اطمینان ${outcome.confidence.toFixed(2)} پایین است، نرخ قبلی حفظ شد`,
-      );
-      continue;
+          `[engine] ${asset.symbol}: اطمینان ${outcome.confidence.toFixed(2)} از ${Math.round(heldMs / 60000)} دقیقه پیش پایین است؛ نرخ تازه منتشر شد`,
+        );
+    } else {
+      lowConfidenceSince.delete(asset.symbol);
     }
 
     // ---- یادگیری کیفیت منابع: فاصله‌ی هر منبع از نرخ نهایی ----
