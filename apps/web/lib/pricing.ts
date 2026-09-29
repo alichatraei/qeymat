@@ -44,7 +44,7 @@ const CARD_KEY = "payment.card";
 
 const EMPTY_CARD: CardInfo = { cardNumber: "", sheba: "", holder: "", bank: "", note: "" };
 
-async function readSetting<T>(key: string): Promise<T | null> {
+export async function readSetting<T>(key: string): Promise<T | null> {
   const row = await prisma.setting.findUnique({ where: { key } });
   return (row?.value as T) ?? null;
 }

@@ -10,6 +10,7 @@ const COLUMNS = [
       { href: "/?category=CRYPTO", label: "رمزارز" },
       { href: "/chart", label: "نمودار ۱۰ ساله" },
       { href: "/converter", label: "تبدیل ارزها" },
+      { href: "/widget", label: "ویجت گوشی" },
     ],
   },
   {

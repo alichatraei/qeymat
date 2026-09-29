@@ -246,6 +246,74 @@ export function PaymentSettingsPanel({ initial, onFlash }: { initial: PaymentSet
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* اپ موبایل                                                          */
+/* ------------------------------------------------------------------ */
+
+export type AppLinksValue = { bazaar: string; myket: string; direct: string };
+
+export function AppLinksPanel({ initial, onFlash }: { initial: AppLinksValue; onFlash: (text: string) => void }) {
+  const router = useRouter();
+  const [links, setLinks] = useState(initial);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/admin/app-links", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(links),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message || "ذخیره نشد.");
+      onFlash("لینک‌های اپ ذخیره شد.");
+      router.refresh();
+    } catch (error) {
+      onFlash(error instanceof Error ? error.message : "ذخیره نشد.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="card p-6">
+      <h2 className="text-[16px] font-bold">اپ موبایل</h2>
+      <p className="mt-1 text-[11.5px] leading-6 text-muted">
+        لینک صفحه‌ی اپ اندروید در فروشگاه‌ها. به کاربران اندروید سایت و PWA پیشنهاد نصب اپ (برای ویجت صفحه‌ی
+        اصلی) نشان داده می‌شود؛ تا هیچ لینکی وارد نشده، این پیام نمایش داده نمی‌شود.
+      </p>
+      <div className="mt-5 grid gap-3">
+        <Input
+          label="کافه‌بازار"
+          value={links.bazaar}
+          onChange={(value) => setLinks({ ...links, bazaar: value })}
+          ltr
+          placeholder="https://cafebazaar.ir/app/online.qeymat"
+        />
+        <Input
+          label="مایکت"
+          value={links.myket}
+          onChange={(value) => setLinks({ ...links, myket: value })}
+          ltr
+          placeholder="https://myket.ir/app/online.qeymat"
+        />
+        <Input
+          label="دانلود مستقیم APK (اختیاری)"
+          value={links.direct}
+          onChange={(value) => setLinks({ ...links, direct: value })}
+          ltr
+          placeholder="https://…/qeymat.apk"
+        />
+      </div>
+      <button type="button" className="btn-solid mt-5" onClick={save} disabled={saving}>
+        {saving ? <Loader2 className="animate-spin" /> : <Save />}
+        ذخیره
+      </button>
+    </section>
+  );
+}
+
 function Toggle({ label, note, checked, onChange }: { label: string; note: string; checked: boolean; onChange: (value: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-field p-4">

@@ -14,7 +14,7 @@ const DISMISS_KEY = "qeymat:install-dismissed";
  * نوار نصب اپ. روی کروم/اج از رویداد beforeinstallprompt استفاده می‌کند و
  * روی سافاری iOS راهنمای دستی «افزودن به صفحه اصلی» را نشان می‌دهد.
  */
-export default function InstallPrompt() {
+export default function InstallPrompt({ skipAndroid = false }: { skipAndroid?: boolean }) {
   const [event, setEvent] = useState<InstallEvent | null>(null);
   const [showIos, setShowIos] = useState(false);
   const [hidden, setHidden] = useState(true);
@@ -22,6 +22,7 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.sessionStorage.getItem(DISMISS_KEY)) return;
+    if (skipAndroid && /android/i.test(window.navigator.userAgent)) return;
 
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -44,7 +45,7 @@ export default function InstallPrompt() {
     }
 
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
-  }, []);
+  }, [skipAndroid]);
 
   const dismiss = () => {
     setHidden(true);

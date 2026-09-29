@@ -20,6 +20,7 @@ import {
   LifeBuoy,
   LogOut,
   Receipt,
+  Smartphone,
   Users,
   Wallet,
   X,
@@ -28,9 +29,11 @@ import { fa, getAnyPlan, getPlan, jalali, timeAgo } from "@qeymat/shared";
 import Brand from "@/components/layout/Brand";
 import type { SessionUser } from "@/lib/types";
 import {
+  AppLinksPanel,
   PaymentSettingsPanel,
   PricingPanel,
   ReceiptsPanel,
+  type AppLinksValue,
   type PaymentSettings,
   type PricingRow,
   type ReceiptRow,
@@ -116,6 +119,7 @@ const SECTIONS = [
   { id: "broadcast", label: "اعلان همگانی", icon: Radio, group: "سامانه" },
   { id: "pricing", label: "قیمت پلن‌ها", icon: Crown, group: "سامانه" },
   { id: "paymentSettings", label: "تنظیمات پرداخت", icon: Wallet, group: "سامانه" },
+  { id: "appLinks", label: "اپ موبایل", icon: Smartphone, group: "سامانه" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -134,6 +138,7 @@ export default function AdminBoard({
   receipts,
   paymentSettings,
   pricing,
+  appLinks,
 }: {
   admin: SessionUser;
   stats: {
@@ -155,6 +160,7 @@ export default function AdminBoard({
   receipts: ReceiptRow[];
   paymentSettings: PaymentSettings;
   pricing: PricingRow[];
+  appLinks: AppLinksValue;
 }) {
   const router = useRouter();
 
@@ -348,6 +354,7 @@ export default function AdminBoard({
           {section === "receipts" ? <ReceiptsPanel receipts={receipts} onFlash={flash} /> : null}
           {section === "paymentSettings" ? <PaymentSettingsPanel initial={paymentSettings} onFlash={flash} /> : null}
           {section === "pricing" ? <PricingPanel rows={pricing} onFlash={flash} /> : null}
+          {section === "appLinks" ? <AppLinksPanel initial={appLinks} onFlash={flash} /> : null}
 
           {section === "gateway" ? (
             <Panel title="پرداخت‌های درگاه زرین‌پال" note="اشتراک‌ها پس از تأیید درگاه خودکار فعال می‌شوند؛ اینجا فقط گزارش است.">

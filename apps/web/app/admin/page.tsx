@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import AdminBoard from "@/components/admin/AdminBoard";
 import { PLANS, PLUS_PLANS } from "@qeymat/shared";
 import { getPaymentSettingsForAdmin, getPricing } from "@/lib/pricing";
+import { getAppLinks } from "@/lib/app-links";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function AdminPage() {
     receipts,
     paymentSettings,
     pricing,
+    appLinks,
   ] = await Promise.all([
       prisma.user.count(),
       prisma.subscription.count({ where: { status: "ACTIVE", expiresAt: { gt: new Date() } } }),
@@ -88,6 +90,7 @@ export default async function AdminPage() {
       ]).then(([pendingReceipts, reviewed]) => [...pendingReceipts, ...reviewed]),
       getPaymentSettingsForAdmin(),
       getPricing(),
+      getAppLinks(),
     ]);
 
   const approvedReceipts = await prisma.receiptPayment.aggregate({
@@ -126,6 +129,7 @@ export default async function AdminPage() {
         createdAt: receipt.createdAt.toISOString(),
       }))}
       paymentSettings={paymentSettings}
+      appLinks={appLinks}
       pricing={[
         ...pricing.plus.map((plan) => ({
           id: plan.id,
