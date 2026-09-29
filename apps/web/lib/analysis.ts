@@ -21,9 +21,6 @@ export type Analysis = {
   unit: string;
   price: number;
   updatedAt: string;
-  confidence: number | null;
-  sourceCount: number | null;
-  sources: { key: string; title: string; price: number; at: string; deviation: number }[];
   changes: { id: string; label: string; percent: number | null }[];
   indicators: {
     sma20: number | null;
@@ -77,18 +74,11 @@ export async function analyze(symbol: string): Promise<Analysis | null> {
   if (!asset?.rate) return null;
 
   const since = new Date(Date.now() - 400 * DAY_MS);
-  const [daily, quotes, sources] = await Promise.all([
-    prisma.rateDaily.findMany({
-      where: { assetId: asset.id, day: { gte: since } },
-      orderBy: { day: "asc" },
-      select: { day: true, close: true, high: true, low: true },
-    }),
-    prisma.sourceQuote.findMany({
-      where: { assetId: asset.id, at: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
-      orderBy: { at: "desc" },
-    }),
-    prisma.source.findMany({ select: { key: true, title: true } }),
-  ]);
+  const daily = await prisma.rateDaily.findMany({
+    where: { assetId: asset.id, day: { gte: since } },
+    orderBy: { day: "asc" },
+    select: { day: true, close: true, high: true, low: true },
+  });
 
   const price = asset.rate.sell;
   const closes = daily.map((row) => row.close);
@@ -230,22 +220,12 @@ export async function analyze(symbol: string): Promise<Analysis | null> {
         ? "برآیند شاخص‌ها نزولی است."
         : "بازار در حالت خنثی و بدون روند مشخص است.";
 
-  const titleByKey = new Map(sources.map((source) => [source.key, source.title]));
   const analysis: Analysis = {
     symbol: asset.symbol,
     nameFa: asset.nameFa,
     unit: asset.unit,
     price,
     updatedAt: asset.rate.fetchedAt.toISOString(),
-    confidence: asset.rate.confidence ?? null,
-    sourceCount: asset.rate.sourceCount ?? null,
-    sources: quotes.map((quote) => ({
-      key: quote.sourceKey,
-      title: titleByKey.get(quote.sourceKey) ?? quote.sourceKey,
-      price: quote.sell,
-      at: quote.at.toISOString(),
-      deviation: round(((quote.sell - price) / price) * 100, 2),
-    })),
     changes,
     indicators: {
       sma20,

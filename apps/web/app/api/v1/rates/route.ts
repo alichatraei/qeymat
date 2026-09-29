@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       sell: asset.sell,
       unit: asset.unit,
       change_24h: asset.changePercent,
-      source: asset.sourceLabel,
+      source: "qeymat.online",
       updated_at: asset.fetchedAt,
     }));
 

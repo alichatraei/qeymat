@@ -5,8 +5,8 @@ import { getSnapshot } from "@/lib/market";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "مبدل ارز به تومان",
-  description: "تبدیل دلار، یورو، درهم، طلا و رمزارز به تومان با نرخ لحظه‌ای بازار.",
+  title: "تبدیل ارزها",
+  description: "تبدیل دلار، یورو، درهم، طلا و رمزارز به تومان یا به یکدیگر با نرخ لحظه‌ای بازار، و اشتراک نتیجه به‌صورت متن یا تصویر.",
   alternates: { canonical: "/converter" },
 };
 

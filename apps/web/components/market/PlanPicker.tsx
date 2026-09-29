@@ -99,7 +99,7 @@ export default function PlanPicker({
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 shrink-0 text-green" />
-                  تاریخچه و مبدل
+                  تاریخچه و تبدیل ارز
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 shrink-0 text-green" />

@@ -146,30 +146,6 @@ export default function AnalysisCard({ symbol, compact = false }: { symbol: stri
             ))}
           </ul>
 
-          {analysis.sources.length ? (
-            <>
-              <h4 className="mt-4 text-[11.5px] font-bold">منابع این نرخ</h4>
-              <div className="mt-2 space-y-1.5">
-                {analysis.sources.map((source) => (
-                  <div key={source.key} className="flex items-center justify-between gap-3 text-[11px]">
-                    <span className="text-sub">{source.title}</span>
-                    <span className="flex items-center gap-3">
-                      <span className="tabular">{formatPrice(source.price)}</span>
-                      <small className={source.deviation >= 0 ? "text-green" : "text-danger"}>
-                        {percent(source.deviation)}
-                      </small>
-                      <small className="w-[70px] text-left text-muted">{timeAgo(source.at)}</small>
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {analysis.confidence !== null ? (
-                <p className="mt-2 text-[10.5px] text-muted">
-                  اطمینان موتور تحلیل به این نرخ: ٪{fa(Math.round(analysis.confidence * 100))}
-                </p>
-              ) : null}
-            </>
-          ) : null}
         </>
       ) : null}
 

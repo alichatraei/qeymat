@@ -64,13 +64,13 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
           <span className="h-9 w-9" />
         </div>
 
-        <div className="px-5 pb-8">
+        <div className="px-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
           <div className="mt-5 flex items-center gap-3.5">
             <RateIcon rate={rate} size="large" />
             <div>
               <h2 className="text-[21px] font-bold tracking-[-.5px]">{rate.nameFa}</h2>
-              <small className="text-[11.5px] text-muted">
-                {rate.symbol} · {rate.sourceCount && rate.sourceCount > 1 ? `اجماع ${fa(rate.sourceCount)} منبع` : rate.sourceLabel}
+              <small dir="ltr" className="block text-right text-[11.5px] text-muted">
+                {rate.symbol}
               </small>
             </div>
           </div>
@@ -115,9 +115,15 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
           ) : null}
 
           <div className="mt-6 grid grid-cols-2 gap-3">
+            <Stat label="قیمت خرید" value={formatPrice(rate.buy)} />
+            <Stat label="قیمت فروش" value={formatPrice(rate.sell)} />
             <Stat label="کمترین امروز" value={rate.dayLow ? formatPrice(rate.dayLow) : "—"} />
             <Stat label="بیشترین امروز" value={rate.dayHigh ? formatPrice(rate.dayHigh) : "—"} />
-            <Stat label="قیمت خرید" value={formatPrice(rate.buy)} />
+            <Stat
+              label="تغییر امروز"
+              value={movement(rate.changePercent)}
+              tone={rate.changePercent >= 0 ? "text-green" : "text-danger"}
+            />
             <Stat label="آخرین به‌روزرسانی" value={timeAgo(rate.fetchedAt)} />
           </div>
 
@@ -132,7 +138,7 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
             </Link>
             <Link href={`/converter?symbol=${rate.symbol}`} className="btn-ghost">
               <Repeat />
-              تبدیل
+              تبدیل ارز
             </Link>
           </div>
         </div>
@@ -141,11 +147,11 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
   return (
     <div className="rounded-xl border border-line bg-field p-3.5">
       <span className="block text-2xs text-muted">{label}</span>
-      <strong className="tabular mt-1.5 block text-[13px]">{value}</strong>
+      <strong className={`tabular mt-1.5 block text-[13px] ${tone}`}>{value}</strong>
     </div>
   );
 }

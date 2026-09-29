@@ -155,18 +155,9 @@ fun DetailSheet(
                 InfoBox("قیمت فروش", Fa.price(asset.sell, asset.isUsd), Modifier.weight(1f))
             }
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InfoBox(
-                    "اطمینان تحلیل",
-                    asset.confidence?.let { "٪" + Fa.number((it * 100).roundToLong().toInt()) } ?: "—",
-                    Modifier.weight(1f),
-                    small = true,
-                )
-                InfoBox(
-                    "منبع",
-                    asset.sourceCount?.takeIf { it > 1 }?.let { "اجماع ${Fa.number(it)} منبع" } ?: asset.sourceLabel,
-                    Modifier.weight(1f),
-                    small = true,
-                )
+                // منبع و اطمینان موتور نمایش داده نمی‌شود؛ «قیمت» خودش مرجع نرخ است
+                InfoBox("کمترین امروز", asset.dayLow?.let { Fa.price(it, asset.isUsd) } ?: "—", Modifier.weight(1f), small = true)
+                InfoBox("بیشترین امروز", asset.dayHigh?.let { Fa.price(it, asset.isUsd) } ?: "—", Modifier.weight(1f), small = true)
             }
 
             AnalysisSection(detail.analysis, plusActive = ui.plus.active, loggedIn = ui.loggedIn)

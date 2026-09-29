@@ -47,7 +47,7 @@ const TOPICS: Topic[] = [
     "sell": 231100,
     "unit": "TOMAN",
     "change_24h": -1.2,
-    "source": "بازار آزاد",
+    "source": "qeymat.online",
     "updated_at": "2026-09-13T18:25:00Z"
   }
 }`,

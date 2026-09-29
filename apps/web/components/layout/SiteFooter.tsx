@@ -9,7 +9,7 @@ const COLUMNS = [
       { href: "/?category=GOLD", label: "طلا و سکه" },
       { href: "/?category=CRYPTO", label: "رمزارز" },
       { href: "/chart", label: "نمودار ۱۰ ساله" },
-      { href: "/converter", label: "مبدل تومان" },
+      { href: "/converter", label: "تبدیل ارزها" },
     ],
   },
   {
@@ -38,8 +38,8 @@ export default function SiteFooter() {
         <div>
           <Brand />
           <p className="mt-4 max-w-[34ch] text-[12px] leading-6 text-muted">
-            مرجع ساده و شفاف نرخ بازار ایران. نرخ هر دارایی را موتور تحلیل قیمت از الان‌چند، TGJU،
-            کانال‌های معاملاتی و صرافی‌ها می‌سازد.
+            مرجع نرخ لحظه‌ای بازار ایران: دلار و ارز، طلا و سکه و رمزارز، با نمودار، تبدیل ارز و
+            هشدار قیمت.
           </p>
           <a
             href="https://asapay.pro"

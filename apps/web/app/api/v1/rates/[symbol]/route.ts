@@ -52,7 +52,7 @@ export async function GET(
         day_low: rate.dayLow,
         day_high: rate.dayHigh,
         global_price: rate.globalPrice,
-        source: rate.sourceLabel,
+        source: "qeymat.online",
         updated_at: rate.fetchedAt,
       },
     },
