@@ -306,6 +306,25 @@ function oil(label: string, background: string): Art {
   };
 }
 
+/** گاز طبیعی: شعله‌ی آبی */
+const flame: Art = (id) => (
+  <>
+    <defs>
+      <linearGradient id={id} x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stopColor="#1D4ED8" />
+        <stop offset=".6" stopColor="#38BDF8" />
+        <stop offset="1" stopColor="#BAE6FD" />
+      </linearGradient>
+    </defs>
+    <rect width="40" height="40" fill="#E0F2FE" />
+    <path
+      d="M20 7c1 5 7 8 7 15a7 7 0 0 1-14 0c0-3 1.5-5 3.5-6.5 0 2.5 1 4 2.5 4.5C18 15 18.5 11 20 7z"
+      fill={`url(#${id})`}
+    />
+    <path d="M20 22c1.5 1.5 3 3 3 5a3 3 0 0 1-6 0c0-2 1.5-3.5 3-5z" fill="#fff" opacity=".75" />
+  </>
+);
+
 /* ---------- سهام و شاخص ---------- */
 
 function ticker(text: string, background: string, color = "#fff"): Art {
@@ -384,8 +403,31 @@ const ARTS: Record<string, Art> = {
   // کالا
   BRENT: oil("B", "#E0F2FE"),
   WTI: oil("W", "#FEF3C7"),
+  OPEC: oil("O", "#DCFCE7"),
+  NATGAS: flame,
   XAU: bar("Au"),
   XAG: bar("Ag", {
+    top: "#F8FAFC",
+    mid: "#C7CDD6",
+    low: "#8A94A3",
+    bg: "#EEF2F6",
+    ink: "#3F4854",
+  }),
+  XPT: bar("Pt", {
+    top: "#F1F5F9",
+    mid: "#B8C2CF",
+    low: "#6B7686",
+    bg: "#E8EDF3",
+    ink: "#334155",
+  }),
+  XPD: bar("Pd", {
+    top: "#F5F3FF",
+    mid: "#C4BFD9",
+    low: "#77708F",
+    bg: "#EEECF6",
+    ink: "#3B3552",
+  }),
+  SILVER999: bar("999", {
     top: "#F8FAFC",
     mid: "#C7CDD6",
     low: "#8A94A3",

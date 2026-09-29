@@ -125,6 +125,13 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
               tone={rate.changePercent >= 0 ? "text-green" : "text-danger"}
             />
             <Stat label="آخرین به‌روزرسانی" value={timeAgo(rate.fetchedAt)} />
+            {rate.globalPrice ? (
+              // نفت، فلزات و سهام به دلار؛ رمزارز به تتر
+              <Stat
+                label="قیمت جهانی"
+                value={`${formatPrice(rate.globalPrice)} ${rate.category === "CRYPTO" ? "تتر" : "دلار"}`}
+              />
+            ) : null}
           </div>
 
           <AnalysisCard symbol={rate.symbol} compact />

@@ -92,6 +92,8 @@ private class Metal(val top: Color, val mid: Color, val low: Color, val bg: Colo
 
 private val GoldMetal = Metal(GoldTop, GoldMid, GoldLow, Cream, Color(0xFF7A5410))
 private val SilverMetal = Metal(Color(0xFFF8FAFC), Color(0xFFC7CDD6), Color(0xFF8A94A3), Color(0xFFEEF2F6), Color(0xFF3F4854))
+private val PlatinumMetal = Metal(Color(0xFFF1F5F9), Color(0xFFB8C2CF), Color(0xFF6B7686), Color(0xFFE8EDF3), Color(0xFF334155))
+private val PalladiumMetal = Metal(Color(0xFFF5F3FF), Color(0xFFC4BFD9), Color(0xFF77708F), Color(0xFFEEECF6), Color(0xFF3B3552))
 private val CopperMetal = Metal(Color(0xFFF6B98A), Color(0xFFC8753C), Color(0xFF8E4A1E), Color(0xFFFCEBDD), Color(0xFF5A2C0E))
 
 /** شمش با برچسب (عیار یا نماد) */
@@ -240,6 +242,19 @@ private fun oil(text: String, bg: Color): Art = { measurer ->
     label(measurer, text, 20f, 24f, 7f, Color.White)
 }
 
+/** گاز طبیعی: شعله‌ی آبی */
+private val flame: Art = {
+    background(Color(0xFFE0F2FE))
+    drawPath(
+        svg("M20 7c1 5 7 8 7 15a7 7 0 0 1-14 0c0-3 1.5-5 3.5-6.5 0 2.5 1 4 2.5 4.5C18 15 18.5 11 20 7z"),
+        Brush.verticalGradient(
+            0f to Color(0xFFBAE6FD), 0.4f to Color(0xFF38BDF8), 1f to Color(0xFF1D4ED8),
+            startY = 7f, endY = 29f,
+        ),
+    )
+    drawPath(svg("M20 22c1.5 1.5 3 3 3 5a3 3 0 0 1-6 0c0-2 1.5-3.5 3-5z"), Color.White.copy(alpha = 0.75f))
+}
+
 /* ---------- سهام و شاخص ---------- */
 
 private fun ticker(text: String, bg: Color, ink: Color = Color.White): Art = { measurer ->
@@ -281,9 +296,14 @@ private val ARTS: Map<String, Art> = mapOf(
     // کالا
     "BRENT" to oil("B", Color(0xFFE0F2FE)),
     "WTI" to oil("W", Color(0xFFFEF3C7)),
+    "OPEC" to oil("O", Color(0xFFDCFCE7)),
+    "NATGAS" to flame,
     "XAU" to bar("Au"),
     "XAG" to bar("Ag", SilverMetal),
     "XCU" to bar("Cu", CopperMetal),
+    "XPT" to bar("Pt", PlatinumMetal),
+    "XPD" to bar("Pd", PalladiumMetal),
+    "SILVER999" to bar("999", SilverMetal),
 
     // سهام
     "AAPL" to ticker("AAPL", Color(0xFF111111)),

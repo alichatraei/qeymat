@@ -45,9 +45,19 @@ export const TGJU_KEYS = {
   GRAMI: { key: "gerami", unit: "IRR", factor: 0.1 },
   OUNCE: { key: "ons", unit: "RAW" },
 
-  XAU: { key: "ons", unit: "USD", live: false },
-  XAG: { key: "silver", unit: "USD", live: false },
-  BRENT: { key: "oil_brent", unit: "USD", live: false },
+  // کالا و فلزات: قیمت دلاری TGJU در نرخ دلار ضرب و تومانی می‌شود (مثل بقیه‌ی دارایی‌ها)؛
+  // قیمت دلاری همان globalPrice است. TGJU نرخ زنده‌ی WTI ندارد (کلید oil از تیر به‌روز نشده).
+  XAU: { key: "ons", unit: "USD" },
+  XAG: { key: "silver", unit: "USD" },
+  XPT: { key: "platinum", unit: "USD" },
+  XPD: { key: "palladium", unit: "USD" },
+  // هر تن
+  XCU: { key: "base_global_copper", unit: "USD" },
+  BRENT: { key: "oil_brent", unit: "USD" },
+  OPEC: { key: "oil_opec", unit: "USD" },
+  NATGAS: { key: "energy_natural_gas", unit: "USD" },
+  // نقره‌ی ۹۹۹ بازار ایران، هر گرم به ریال
+  SILVER999: { key: "silver_999", unit: "IRR", factor: 0.1 },
 };
 
 /**

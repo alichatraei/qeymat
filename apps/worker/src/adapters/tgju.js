@@ -49,6 +49,17 @@ export async function fetchTgju(source) {
     const sell = tgjuNumber(entry.p) * factor;
     if (!sell) continue;
 
+    // قیمت دلاری (نفت، فلزات): ثبت نقل‌قول آن را در نرخ روز دلار ضرب می‌کند
+    if (spec.unit === "USD") {
+      rates[symbol.toLowerCase()] = {
+        buy: Math.round(sell * 0.995 * 10000) / 10000,
+        sell,
+        usdQuoted: true,
+        at,
+      };
+      continue;
+    }
+
     const low = tgjuNumber(entry.l) * factor;
     const high = tgjuNumber(entry.h) * factor;
     let changePercent = tgjuNumber(entry.dp);

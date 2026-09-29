@@ -8,6 +8,8 @@ import { CATEGORY_TABS, DOLLAR_SYMBOLS, fa, timeAgo, unitLabel } from "@qeymat/s
 import RateIcon from "./RateIcon";
 import PriceChart, { formatPrice } from "./PriceChart";
 import RateDrawer from "./RateDrawer";
+import RateCard from "./RateCard";
+import Favorites from "./Favorites";
 import type { AssetCategory, HistoryPoint, HistorySeries, MarketSnapshot, RateView } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((response) => response.json());
@@ -197,12 +199,15 @@ export default function MarketBoard({
         </div>
       </section>
 
-      {/* --------------------------- بقیه‌ی بازار --------------------------- */}
-      <section className="content-width pt-10">
+      {/* ------------------- منتخب من: ترکیبی و قابل چیدن ------------------- */}
+      <Favorites assets={snapshot.assets} onOpen={setSelected} />
+
+      {/* --------------------------- همه‌ی نرخ‌ها --------------------------- */}
+      <section className="content-width pt-12">
         <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
           <div>
             <h2 className="text-[24px] font-bold tracking-[-.5px]">
-              {category === "CURRENCY" && !search ? "سایر ارزها" : "نرخ‌های بازار"}
+              همه‌ی نرخ‌ها
             </h2>
             <p className="mt-1.5 text-[12px] text-muted">
               روی هر کارت بزنید تا نمودار، قیمت خرید و فروش، کمترین و بیشترین و هشدار قیمت را ببینید
@@ -268,35 +273,5 @@ export default function MarketBoard({
 
       {selected ? <RateDrawer rate={selected} onClose={() => setSelected(null)} /> : null}
     </main>
-  );
-}
-
-/**
- * کارت یک دارایی: فقط نشانه، نام و قیمت. تغییر روز، خرید، کف و سقف و
- * نمودار با زدن روی کارت در صفحه‌ی جزئیات دیده می‌شود.
- */
-function RateCard({ rate, onOpen }: { rate: RateView; onOpen: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex min-w-0 flex-col gap-3 rounded-card border border-line bg-surface p-3.5 text-right transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card active:scale-[.98]"
-    >
-      <span className="flex items-center gap-2.5">
-        <RateIcon rate={rate} />
-        <span className="min-w-0 flex-1">
-          <strong className="block truncate text-[12.5px] text-ink">{rate.nameFa}</strong>
-          <small dir="ltr" className="block text-right text-[10px] text-faint">
-            {rate.symbol}
-          </small>
-        </span>
-      </span>
-      <span className="flex items-baseline gap-1">
-        <strong className="tabular truncate text-[17px] font-extrabold tracking-[-.4px] text-ink">
-          {formatPrice(rate.sell)}
-        </strong>
-        <small className="shrink-0 text-[10.5px] text-muted">{unitLabel(rate.unit)}</small>
-      </span>
-    </button>
   );
 }
