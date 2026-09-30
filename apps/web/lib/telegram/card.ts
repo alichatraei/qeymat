@@ -367,24 +367,32 @@ export async function priceCard(rate: RateView, points: HistoryPoint[]) {
   return canvas.encode("jpeg", 90);
 }
 
-export async function conversionCard(conversion: Conversion, fromRate?: RateView) {
+export async function conversionCard(conversion: Conversion, fromRate?: RateView, points: HistoryPoint[] = []) {
   ensureFonts();
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
   await background(ctx, fromRate?.countryCode);
   const box = panel(ctx);
   const right = box.x + box.w - 56;
+  const withChart = points.length > 1;
 
   if (fromRate) await icon(ctx, fromRate, right - 34, box.y + 76, 34);
   rightText(ctx, "تبدیل ارز", right - (fromRate ? 86 : 0), box.y + 92, "heavy", 40, "#1b2430", 600);
   // «→» در وزیرمتن نیست و تصویر سرور فونت جایگزین ندارد
   chip(ctx, `${conversion.from} > ${conversion.to}`, box.x + 50, box.y + 50);
 
-  rightText(ctx, `${amountText(conversion.amount)} ${conversion.fromName} =`, right, box.y + 200, "bold", 48, "#4b5563", 960);
+  // با نمودار، متن‌ها فشرده‌تر بالای کارت می‌نشینند؛ مثل کارت قیمت
+  const top = withChart ? [170, 268, 318] : [200, 330, 430];
+  rightText(ctx, `${amountText(conversion.amount)} ${conversion.fromName} =`, right, box.y + top[0], "bold", withChart ? 40 : 48, "#4b5563", 960);
   const result = amountText(conversion.result);
-  const resultWidth = rightText(ctx, result, right, box.y + 330, "heavy", 118, "#12885a", 700);
-  rightText(ctx, conversion.toName, right - resultWidth - 24, box.y + 322, "bold", 44, "#6b7480", 300);
-  rightText(ctx, conversion.rateLine, right, box.y + 430, "bold", 32, "#6b7480", 960);
+  const resultSize = withChart ? 92 : 118;
+  const resultWidth = rightText(ctx, result, right, box.y + top[1], "heavy", resultSize, "#12885a", 700);
+  rightText(ctx, conversion.toName, right - resultWidth - 22, box.y + top[1] - 6, "bold", withChart ? 38 : 44, "#6b7480", 300);
+  rightText(ctx, conversion.rateLine, right, box.y + top[2], "bold", withChart ? 26 : 32, "#6b7480", 960);
+
+  if (withChart) {
+    chart(ctx, points, { x: box.x + 36, y: box.y + 352, w: box.w - 92, h: 138 }, points[points.length - 1].value >= points[0].value);
+  }
 
   await footer(ctx);
   return canvas.encode("jpeg", 90);

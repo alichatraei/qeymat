@@ -195,7 +195,8 @@ export default function ConverterBoard({
 function formatAmount(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "۰";
   if (value >= 100) return fa(Math.round(value));
-  return new Intl.NumberFormat("fa-IR", { maximumSignificantDigits: 6 }).format(value);
+  if (value >= 1) return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat("fa-IR", { maximumSignificantDigits: 4 }).format(value);
 }
 
 function CurrencySelect({

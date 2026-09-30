@@ -21,11 +21,12 @@ export function nameOf(symbol: string, bySymbol: Map<string, RateView>) {
   return VIRTUAL[symbol] ?? bySymbol.get(symbol)?.nameFa ?? symbol;
 }
 
-/** عدد بزرگ بدون اعشار؛ کوچک (مثل تومان به بیت‌کوین) با رقم‌های معنادار */
+/** بالای ۱۰۰ بدون اعشار، از ۱ تا ۱۰۰ حداکثر دو رقم اعشار، زیر ۱ (مثل تومان به بیت‌کوین) چهار رقم معنادار */
 export function amountText(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "۰";
   if (value >= 100) return fa(Math.round(value));
-  return new Intl.NumberFormat("fa-IR", { maximumSignificantDigits: 6 }).format(value);
+  if (value >= 1) return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat("fa-IR", { maximumSignificantDigits: 4 }).format(value);
 }
 
 export function priceText(rate: RateView) {
