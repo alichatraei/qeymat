@@ -2,6 +2,9 @@ import { createRequire } from "node:module";
 import { fetchNobitex } from "./adapters/nobitex.js";
 import { fetchBitpin } from "./adapters/bitpin.js";
 import { fetchWallex } from "./adapters/wallex.js";
+import { fetchTabdeal } from "./adapters/tabdeal.js";
+import { fetchArzdigital } from "./adapters/arzdigital.js";
+import { fetchNavasan } from "./adapters/navasan.js";
 import { fetchAlanchand } from "./adapters/alanchand.js";
 import { fetchBonbast } from "./adapters/bonbast.js";
 import { fetchTgju } from "./adapters/tgju.js";
@@ -21,6 +24,9 @@ const ADAPTERS = {
   nobitex: fetchNobitex,
   bitpin: fetchBitpin,
   wallex: fetchWallex,
+  tabdeal: fetchTabdeal,
+  arzdigital: fetchArzdigital,
+  navasan: fetchNavasan,
   alanchand: fetchAlanchand,
   bonbast: fetchBonbast,
   tgju: fetchTgju,

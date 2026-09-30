@@ -54,6 +54,45 @@ const sources = [
     config: { symbols: ["BTC", "ETH", "USDT", "SOL", "TON", "DOGE", "XRP", "BNB", "ADA", "TRX"] },
   },
   {
+    key: "tabdeal",
+    title: "صرافی تبدیل",
+    adapter: "tabdeal",
+    endpoint: "https://api1.tabdeal.org/r/plots/market_information/",
+    intervalSec: 60,
+    weight: 1,
+    // رمزارز از API بازار، دلار/یورو/پوند/درهم از صفحه‌ی /live/currency
+    config: {
+      symbols: ["BTC", "ETH", "USDT", "SOL", "TON", "DOGE", "XRP", "BNB", "ADA", "TRX"],
+      currencyPage: "https://tabdeal.org/live/currency",
+      quoteTtlMinutes: 60,
+    },
+  },
+  {
+    key: "arzdigital",
+    title: "ارزدیجیتال",
+    adapter: "arzdigital",
+    endpoint: "https://arzdigital.com",
+    // صفحه‌ها سنگین‌اند و خودشان ۱۵ دقیقه کش می‌شوند
+    intervalSec: 300,
+    weight: 0.9,
+    config: {
+      symbols: ["BTC", "ETH", "USDT", "SOL", "TON", "DOGE", "XRP", "BNB", "ADA", "TRX"],
+      maxAgeHours: 36,
+      quoteTtlMinutes: 90,
+    },
+  },
+  {
+    // وب‌سرویس پولی؛ تا NAVASAN_API_KEY در .env نباشد خاموش می‌ماند و از پنل روشن می‌شود
+    key: "navasan",
+    title: "نوسان (وب‌سرویس)",
+    adapter: "navasan",
+    endpoint: "https://api.navasan.tech/latest/",
+    intervalSec: 1800,
+    weight: 1.1,
+    isActive: false,
+    config: { maxAgeHours: 36, quoteTtlMinutes: 60 },
+  },
+  {
     key: "alanchand",
     title: "الان چند",
     intervalSec: 90,
