@@ -40,8 +40,30 @@ const QUALITY_FLOOR = 0.2;
 const DERIVED_WEIGHT = 0.35;
 /** نرخ قبلیِ کهنه‌تر از این، مبنای محافظ جهش نیست (سیستم خاموش بوده یا نرخ اولیه‌ی seed است) */
 const STALE_RATE_MS = 3 * 60 * 60 * 1000;
-/** جهشی که با یک منبع تأیید شده، اگر این مدت در همان جهت بماند پذیرفته می‌شود */
-const JUMP_HOLD_MS = Number(process.env.JUMP_HOLD_MINUTES || 10) * 60 * 1000;
+/**
+ * جهشی که فقط یک منبع آن را نشان می‌دهد، وقتی پذیرفته می‌شود که این مدت در
+ * بازه‌ی ±۲٪ ثابت بماند. (قبلاً «ماندن در همان جهت» کافی بود؛ همین اجازه داد
+ * پست اشتباه یک کانال تلگرام دلار را نیمه‌شب ۲۵٪ پایین بیاورد.)
+ */
+const JUMP_HOLD_MS = Number(process.env.JUMP_HOLD_MINUTES || 20) * 60 * 1000;
+const JUMP_STEADY_BAND = 0.02;
+/** نقل‌قولی که این مضرب از سقف جهش با نرخ فعلی فاصله دارد، بدون تأیید منبع دوم کنار گذاشته می‌شود */
+const SOLITARY_FACTOR = 3;
+/** فاصله‌ی مجاز دلار از تتر؛ تتر سه منبع زنده‌ی شبانه‌روزی دارد */
+const USDT_BAND = Number(process.env.USD_USDT_BAND || 0.1);
+const USDT_CHECKED = new Set(["USD", "USD_HERAT"]);
+
+/**
+ * نماینده‌ی شبانه: وقتی هیچ منبع مستقیمِ تازه‌ای نیست (بازار تهران شب‌ها بسته
+ * است و منابع قیمت تازه نمی‌دهند)، نرخ با دارایی زنده‌ی مرتبط حرکت می‌کند —
+ * دلار با تتر و طلا با انس جهانی — با نسبتی که در ساعت‌های باز بازار یاد گرفته شده.
+ * با PROXY_ENABLED=false خاموش می‌شود.
+ */
+const PROXIES = { USD: "USDT", GOLD18: "XAU", GOLD24: "XAU", ABSHODEH: "XAU" };
+const PROXY_ENABLED = process.env.PROXY_ENABLED !== "false";
+const PROXY_WEIGHT = 0.8;
+/** نسبت یادگرفته: نماد ← نرخ نماد ÷ نرخ نماینده */
+const proxyRatio = new Map();
 /**
  * سقف نگه‌داشتن نرخ قبلی به‌خاطر اطمینان پایین. در بازار پرنوسان منابع از
  * هم فاصله می‌گیرند و اطمینان پایین می‌آید؛ بدون این سقف نرخ تا سه ساعت
@@ -49,7 +71,7 @@ const JUMP_HOLD_MS = Number(process.env.JUMP_HOLD_MINUTES || 10) * 60 * 1000;
  */
 const LOW_CONFIDENCE_HOLD_MS = Number(process.env.LOW_CONFIDENCE_HOLD_MINUTES || 15) * 60 * 1000;
 
-/** جهش‌های در انتظار تأیید: نماد ← { direction, since } */
+/** جهش‌های در انتظار تأیید: نماد ← { value, since } */
 const pendingJumps = new Map();
 /** از چه زمانی اطمینان هر نماد پایین مانده: نماد ← زمان */
 const lowConfidenceSince = new Map();
@@ -139,12 +161,41 @@ export async function aggregateAll() {
 
   const results = [];
   const errorsBySource = new Map();
+  const bySymbol = new Map(assets.map((asset) => [asset.symbol, asset]));
+
+  // بعد از ری‌استارت worker، نسبت نماینده از آخرین نرخ‌های منتشرشده شروع می‌شود
+  for (const [symbol, proxy] of Object.entries(PROXIES)) {
+    if (proxyRatio.has(symbol)) continue;
+    const own = bySymbol.get(symbol)?.rate?.sell;
+    const base = bySymbol.get(proxy)?.rate?.sell;
+    if (own && base) proxyRatio.set(symbol, own / base);
+  }
 
   for (const asset of assets) {
     let own = toPoints(quotesByAsset.get(asset.id) || [], sourceByKey);
     if (!own.length && !asset.rate) {
       own = toPoints(staleQuotesByAsset.get(asset.id) || [], sourceByKey, 0.05);
     }
+
+    // نرخ قبلی فقط وقتی مبنای مقایسه است که تازه و منطقی باشد؛ نرخ ماندهٔ
+    // seed یا نرخ ده‌برابرِ نسخهٔ قبل نباید جلوی اصلاح را بگیرد.
+    const previousAt = asset.rate?.fetchedAt ? new Date(asset.rate.fetchedAt).getTime() : 0;
+    const previous =
+      asset.rate?.sell && Date.now() - previousAt < STALE_RATE_MS && isSane(asset.symbol, asset.rate.sell)
+        ? asset.rate.sell
+        : null;
+    const limit = JUMP_LIMIT[asset.category] ?? 0.08;
+    const lastClose = prevCloseByAsset.get(asset.id);
+    const previousOff =
+      previous && lastClose && Math.abs(previous - lastClose) / lastClose > limit;
+
+    // ---- نقل‌قول تک و پرت: فاصله‌ی زیاد از نرخ فعلی بدون تأیید منبع دیگر ----
+    if (previous && !previousOff) own = dropSolitary(asset.symbol, own, previous, limit * SOLITARY_FACTOR);
+
+    // ---- نماینده‌ی شبانه ----
+    const freshDirect = own.filter((point) => freshnessOfPoint(point) >= 0.5).length;
+    const proxySymbol = PROXY_ENABLED ? PROXIES[asset.symbol] : null;
+    const proxyBase = proxySymbol ? direct.get(proxySymbol) : null;
 
     // ---- دور دوم: تخمین کمکی از روابط، وقتی منابع مستقیم کم‌اند ----
     const derived = [];
@@ -162,20 +213,36 @@ export async function aggregateAll() {
       }
     }
 
+    if (!freshDirect && proxyBase && proxyBase.used >= 1 && proxyRatio.has(asset.symbol)) {
+      const ratio = proxyRatio.get(asset.symbol);
+      derived.push({
+        sell: proxyBase.sell * ratio,
+        buy: proxyBase.buy * ratio,
+        sourceKey: `proxy:${proxySymbol}`,
+        weight: PROXY_WEIGHT * proxyBase.confidence,
+        derived: true,
+      });
+    }
+
     const outcome = consensus([...own, ...derived]);
     if (!outcome) continue;
+    // فقط نماینده (بدون منبع مستقیم): اطمینان نصف اطمینان خود نماینده، نه ۰٫۳ ثابت
+    // تک‌نقطه‌ی مشتق — تتر با سه منبع زنده پشتوانه‌ی محکم‌تری از یک رابطه‌ی ساده است
+    if (!own.length && derived.length === 1 && derived[0].sourceKey.startsWith("proxy:")) {
+      outcome.confidence = 0.5 * proxyBase.confidence;
+    }
 
-    // نرخ قبلی فقط وقتی مبنای مقایسه است که تازه و منطقی باشد؛ نرخ ماندهٔ
-    // seed یا نرخ ده‌برابرِ نسخهٔ قبل نباید جلوی اصلاح را بگیرد.
-    const previousAt = asset.rate?.fetchedAt ? new Date(asset.rate.fetchedAt).getTime() : 0;
-    const previous =
-      asset.rate?.sell && Date.now() - previousAt < STALE_RATE_MS && isSane(asset.symbol, asset.rate.sell)
-        ? asset.rate.sell
-        : null;
+    // ---- دلار و تتر معمولاً چند درصد بیشتر فاصله ندارند ----
+    const usdtRef = USDT_CHECKED.has(asset.symbol) ? direct.get("USDT") : null;
+    if (usdtRef && usdtRef.used >= 2 && Math.abs(outcome.sell - usdtRef.sell) / usdtRef.sell > USDT_BAND) {
+      log.warn(
+        `[engine] ${asset.symbol}: ${Math.round(outcome.sell)} با تتر (${Math.round(usdtRef.sell)}) بیش از ${USDT_BAND * 100}٪ فاصله دارد؛ نرخ قبلی حفظ شد`,
+      );
+      continue;
+    }
+
     const jump = previous ? Math.abs(outcome.sell - previous) / previous : 0;
-    const limit = JUMP_LIMIT[asset.category] ?? 0.08;
     // اگر نرخ تازه با پایانی دیروز (آرشیو) سازگار است، جهش مال نرخ قبلیِ اشتباه است
-    const lastClose = prevCloseByAsset.get(asset.id);
     const consistentWithClose =
       lastClose && Math.abs(outcome.sell - lastClose) / lastClose <= limit;
 
@@ -186,13 +253,11 @@ export async function aggregateAll() {
           .map((point) => point.sourceKey),
       ).size;
       if (confirmations < 2) {
-        // جهش واقعی با یک منبع هم پذیرفته می‌شود، به شرط اینکه چند دقیقه در
-        // همان جهت بماند. مقایسه‌ی عدد دقیق (مثلاً ±۱٪) در بازاری که پیوسته
-        // بالا می‌رود هرگز «پایدار» نمی‌شد و نرخ ساعت‌ها ثابت می‌ماند.
-        const direction = Math.sign(outcome.sell - previous);
+        // جهش واقعی با یک منبع هم پذیرفته می‌شود، به شرط اینکه مدتی در همان
+        // سطح (±۲٪) بماند؛ پست اشتباهی که چند دقیقه بعد اصلاح یا کهنه می‌شود رد می‌شود
         const pending = pendingJumps.get(asset.symbol);
-        const steady = pending && pending.direction === direction;
-        if (!steady) pendingJumps.set(asset.symbol, { direction, since: Date.now() });
+        const steady = pending && Math.abs(pending.value - outcome.sell) / pending.value < JUMP_STEADY_BAND;
+        if (!steady) pendingJumps.set(asset.symbol, { value: outcome.sell, since: Date.now() });
         if (!steady || Date.now() - pending.since < JUMP_HOLD_MS) {
           log.warn(
             `[engine] ${asset.symbol}: جهش ${(jump * 100).toFixed(1)}٪ فقط با ${confirmations} منبع — در انتظار پایداری`,
@@ -206,8 +271,6 @@ export async function aggregateAll() {
       pendingJumps.delete(asset.symbol);
     }
 
-    const previousOff =
-      previous && lastClose && Math.abs(previous - lastClose) / lastClose > limit;
     if (outcome.confidence < MIN_CONFIDENCE && previous && !(consistentWithClose && previousOff)) {
       if (!lowConfidenceSince.has(asset.symbol)) lowConfidenceSince.set(asset.symbol, Date.now());
       const heldMs = Date.now() - lowConfidenceSince.get(asset.symbol);
@@ -227,6 +290,13 @@ export async function aggregateAll() {
         );
     } else {
       lowConfidenceSince.delete(asset.symbol);
+    }
+
+    // ---- یادگیری نسبت نماینده، فقط وقتی خود دارایی منبع تازه دارد ----
+    if (proxyBase && freshDirect && proxyBase.used >= 1) {
+      const observed = outcome.sell / proxyBase.sell;
+      const current = proxyRatio.get(asset.symbol);
+      proxyRatio.set(asset.symbol, current ? current * 0.9 + observed * 0.1 : observed);
     }
 
     // ---- یادگیری کیفیت منابع: فاصله‌ی هر منبع از نرخ نهایی ----
@@ -309,6 +379,32 @@ export async function aggregateAll() {
 
   log.info(`[engine] ${results.length} نرخ به‌روز شد`);
   return results;
+}
+
+/**
+ * نقل‌قولی که بیش از maxGap با نرخ فعلی فاصله دارد فقط وقتی می‌ماند که منبع
+ * مستقل دیگری همان سطح را (±۲٪) تأیید کند. جهش واقعی بازار در چند منبع دیده
+ * می‌شود؛ پست اشتباه یک کانال (مثلاً نرخ مرکز مبادله به‌جای بازار آزاد) نه.
+ */
+function dropSolitary(symbol, points, anchor, maxGap) {
+  const far = (point) => Math.abs(point.sell - anchor) / anchor > maxGap;
+  if (!points.some(far)) return points;
+  const kept = points.filter(
+    (point) =>
+      !far(point) ||
+      points.some(
+        (other) =>
+          other !== point &&
+          other.sourceKey !== point.sourceKey &&
+          Math.abs(other.sell - point.sell) / point.sell < 0.02,
+      ),
+  );
+  for (const point of points.filter((item) => !kept.includes(item))) {
+    log.warn(
+      `[engine] ${symbol}: نقل‌قول ${point.sourceKey} (${Math.round(point.sell)}) با نرخ فعلی ${Math.round(anchor)} فاصله‌ی زیادی دارد و منبع دیگری تأییدش نکرد؛ کنار گذاشته شد`,
+    );
+  }
+  return kept;
 }
 
 /**

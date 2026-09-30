@@ -61,7 +61,8 @@ const sources = [
     adapter: "alanchand",
     endpoint: "https://alanchand.com/",
     intervalSec: 90,
-    config: { timeoutMs: 12000 },
+    // سایت زمان نرخ را اعلام نمی‌کند؛ عدد تکراری از زمان آخرین تغییرش پیر می‌شود
+    config: { timeoutMs: 12000, quoteTtlMinutes: 60 },
   },
   {
     key: "bonbast",
@@ -124,6 +125,8 @@ const sources = [
       // TELEGRAM_RELAY_TOKEN خوانده می‌شود؛ توکن در دیتابیس نمی‌ماند.
       maxPosts: 20,
       maxAgeMinutes: 180,
+      // کانال‌ها معمولاً ساعتی پست می‌گذارند؛ نرخ هر پست تا دو ساعت در اجماع می‌ماند
+      quoteTtlMinutes: 120,
       channels: [
         // وزن‌ها بر اساس اینکه کانال چقدر ساخت‌یافته و مرتب پست می‌گذارد
         { name: "Price33", weight: 1 },

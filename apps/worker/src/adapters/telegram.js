@@ -45,7 +45,7 @@ export async function fetchTelegram(source) {
 
   if (!channels.length) throw new Error("هیچ کانالی در کانفیگ تعریف نشده است");
 
-  /** @type {Record<string, {buy: {value:number, weight:number}[], sell: {value:number, weight:number}[]}>} */
+  /** @type {Record<string, {buy: {value:number, weight:number, at:number}[], sell: {value:number, weight:number, at:number}[]}>} */
   const collected = {};
   const errors = [];
   let postsSeen = 0;
@@ -83,14 +83,15 @@ export async function fetchTelegram(source) {
       const recency = Math.max(0.25, 1 - (Date.now() - post.at) / maxAgeMs);
       for (const [symbol, reading] of Object.entries(parsePost(post.text, spec))) {
         const bucket = (collected[symbol] ||= { buy: [], sell: [] });
-        if (reading.sell) bucket.sell.push({ value: reading.sell, weight: weight * recency });
-        if (reading.buy) bucket.buy.push({ value: reading.buy, weight: weight * recency });
+        if (reading.sell) bucket.sell.push({ value: reading.sell, weight: weight * recency, at: post.at });
+        if (reading.buy) bucket.buy.push({ value: reading.buy, weight: weight * recency, at: post.at });
       }
     }
   });
 
   const rates = {};
-  for (const [symbol, bucket] of Object.entries(collected)) {
+  for (const [symbol, raw] of Object.entries(collected)) {
+    const bucket = { sell: trimOutliers(raw.sell), buy: trimOutliers(raw.buy) };
     const sell = weightedMedian(bucket.sell);
     const buy = weightedMedian(bucket.buy);
     if (!sell && !buy) continue;
@@ -101,6 +102,9 @@ export async function fetchTelegram(source) {
       sell: sell || Math.round(buy * 1.005),
       unit: "IRT",
       samples: bucket.sell.length + bucket.buy.length,
+      // زمان تازه‌ترین پستی که در این نرخ آمده؛ کانال‌ها شب پست نمی‌گذارند
+      // و نرخ ساعت‌ها قبل نباید در اجماع تازه حساب شود
+      at: Math.max(...bucket.sell.concat(bucket.buy).map((entry) => entry.at)),
     };
   }
 
@@ -185,6 +189,19 @@ export function parsePost(rawText, spec = {}) {
   }
 
   return readings;
+}
+
+/**
+ * خوانشی که بیش از ۱۵٪ با میانه‌ی بقیه فاصله دارد کنار گذاشته می‌شود (فقط وقتی
+ * دست‌کم سه خوانش هست). نمونه: پستی با «دلار آمریکا : 111,350» (نرخ مرکز
+ * مبادله) کنار پست‌های بازار آزاد ۲۵۴ هزار تومانی.
+ */
+export function trimOutliers(entries) {
+  if (!entries || entries.length < 3) return entries || [];
+  const values = entries.map((entry) => entry.value).sort((a, b) => a - b);
+  const mid = values[Math.floor(values.length / 2)];
+  const kept = entries.filter((entry) => Math.abs(entry.value - mid) / mid <= 0.15);
+  return kept.length ? kept : entries;
 }
 
 /**

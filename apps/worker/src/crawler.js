@@ -114,6 +114,17 @@ async function storeQuotes(source, rates) {
   let rejected = 0;
   const now = Date.now();
 
+  // نقل‌قول قبلی همین منبع؛ منبعی که زمان داده را اعلام نمی‌کند و ساعت‌ها
+  // همان عدد را تکرار می‌کند (مثل الان‌چند در شب) نباید هر بار «تازه» حساب شود
+  const previous = new Map(
+    (
+      await prisma.sourceQuote.findMany({
+        where: { sourceKey: source.key },
+        select: { assetId: true, sell: true, at: true },
+      })
+    ).map((quote) => [quote.assetId, quote]),
+  );
+
   for (const asset of assets) {
     const isPrimary = asset.sourceKey === source.key;
     const raw =
@@ -142,8 +153,14 @@ async function storeQuotes(source, rates) {
       continue;
     }
 
-    // زمان خود داده، اگر منبع اعلام کرده باشد؛ داده‌ی کهنه در اجماع کم‌وزن می‌شود
-    const at = new Date(Math.min(now, Number(raw.at) || now));
+    // زمان خود داده، اگر منبع اعلام کرده باشد؛ داده‌ی کهنه در اجماع کم‌وزن می‌شود.
+    // بدون زمان اعلام‌شده، عدد تکراری زمان آخرین تغییرش را نگه می‌دارد.
+    const before = previous.get(asset.id);
+    const at = raw.at
+      ? new Date(Math.min(now, Number(raw.at) || now))
+      : before && before.sell === sell
+        ? before.at
+        : new Date(now);
 
     await prisma.sourceQuote.upsert({
       where: {
