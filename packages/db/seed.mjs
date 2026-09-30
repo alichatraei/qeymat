@@ -555,6 +555,8 @@ const assets = [
     nameFa: "نفت برنت",
     nameEn: "Brent Crude",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "🛢",
     sourceLabel: "بازار جهانی",
     sourceKey: "tgju",
@@ -567,6 +569,8 @@ const assets = [
     nameFa: "نفت WTI",
     nameEn: "WTI Crude",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "🛢",
     sourceLabel: "بازار جهانی",
     sourceKey: "twelvedata",
@@ -579,6 +583,8 @@ const assets = [
     nameFa: "طلای جهانی",
     nameEn: "Gold Spot",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "Au",
     sourceLabel: "بازار جهانی",
     sourceKey: "tgju",
@@ -591,6 +597,8 @@ const assets = [
     nameFa: "نقره‌ی جهانی",
     nameEn: "Silver Spot",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "Ag",
     sourceLabel: "بازار جهانی",
     sourceKey: "tgju",
@@ -603,6 +611,8 @@ const assets = [
     nameFa: "مس (هر تن)",
     nameEn: "Copper",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "Cu",
     sourceLabel: "بازار جهانی",
     sourceKey: "tgju",
@@ -615,6 +625,8 @@ const assets = [
     nameFa: "پلاتین جهانی",
     nameEn: "Platinum Spot",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "Pt",
     sourceKey: "tgju",
     sourceField: "platinum",
@@ -626,6 +638,8 @@ const assets = [
     nameFa: "پالادیوم جهانی",
     nameEn: "Palladium Spot",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "Pd",
     sourceKey: "tgju",
     sourceField: "palladium",
@@ -648,6 +662,8 @@ const assets = [
     nameFa: "سبد نفتی اوپک",
     nameEn: "OPEC Basket",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "🛢",
     sourceKey: "tgju",
     sourceField: "oil_opec",
@@ -659,6 +675,8 @@ const assets = [
     nameFa: "گاز طبیعی",
     nameEn: "Natural Gas",
     category: "COMMODITY",
+    // قیمت جهانی به دلار (نفت هر بشکه، فلزات هر انس، مس هر تن)
+    unit: "USD",
     mark: "🔥",
     sourceKey: "tgju",
     sourceField: "energy_natural_gas",
@@ -827,23 +845,47 @@ WORLD_CURRENCIES.forEach(([code, nameFa, nameEn, countryCode], index) => {
  * ------------------------------------------------------------------ */
 async function main() {
   console.log("→ منابع نرخ");
+  // منبعی که مدیر از پنل حذف کرده، با استقرار بعدی دوباره ساخته نمی‌شود
+  const removedRow = await prisma.setting.findUnique({ where: { key: "sources.removed" } });
+  const removed = new Set(Array.isArray(removedRow?.value) ? removedRow.value : []);
+
   for (const source of sources) {
-    await prisma.source.upsert({
+    if (removed.has(source.key)) continue;
+    const existing = await prisma.source.findUnique({ where: { key: source.key } });
+    if (!existing) {
+      await prisma.source.create({ data: source });
+      continue;
+    }
+    // فاصله‌ی اجرا، وزن، فعال بودن، نشانی و تنظیمات را مدیر از پنل عوض می‌کند و
+    // استقرار نباید آن‌ها را برگرداند؛ کلیدهای تازه‌ی config فقط اضافه می‌شوند
+    await prisma.source.update({
       where: { key: source.key },
-      update: {
+      data: {
         title: source.title,
         adapter: source.adapter,
-        endpoint: source.endpoint,
-        intervalSec: source.intervalSec,
-        weight: source.weight ?? 1,
-        config: source.config,
+        config: { ...(source.config || {}), ...(existing.config || {}) },
       },
-      create: source,
     });
   }
 
   console.log("→ دارایی‌ها");
   for (const asset of assets) {
+    // تغییر واحد (مثلاً نفت از تومان به دلار): نرخ، تاریخچه و نقل‌قول‌های واحد قبلی
+    // پاک می‌شوند تا نمودار و محافظ جهش با عددهای ناهم‌واحد قاطی نشوند؛ worker
+    // تاریخچه را با واحد تازه از TGJU دوباره پر می‌کند. هشدارهای قیمتی آن دارایی
+    // هم غیرفعال می‌شوند، چون قیمت هدفشان به واحد قبلی بوده است.
+    const before = await prisma.asset.findUnique({ where: { symbol: asset.symbol }, select: { id: true, unit: true } });
+    if (before && before.unit !== (asset.unit ?? "TOMAN")) {
+      await prisma.$transaction([
+        prisma.rate.deleteMany({ where: { assetId: before.id } }),
+        prisma.rateDaily.deleteMany({ where: { assetId: before.id } }),
+        prisma.rateHistory.deleteMany({ where: { assetId: before.id } }),
+        prisma.sourceQuote.deleteMany({ where: { assetId: before.id } }),
+        prisma.priceAlert.updateMany({ where: { assetId: before.id, isActive: true }, data: { isActive: false } }),
+      ]);
+      console.log(`  ${asset.symbol}: واحد ${before.unit} ← ${asset.unit ?? "TOMAN"}؛ داده‌ی واحد قبلی پاک شد`);
+    }
+
     await prisma.asset.upsert({
       where: { symbol: asset.symbol },
       update: {

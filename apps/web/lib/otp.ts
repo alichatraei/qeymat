@@ -43,7 +43,7 @@ type IssueResult =
 /** ساخت و ارسال کد ورود. کد خام هرگز ذخیره نمی‌شود. */
 export async function issueOtp(phone: string, ip?: string | null): Promise<IssueResult> {
   const recent = await prisma.otpCode.findFirst({
-    where: { phone, createdAt: { gt: new Date(Date.now() - RESEND_COOLDOWN_MS) } },
+    where: { phone, purpose: "LOGIN", createdAt: { gt: new Date(Date.now() - RESEND_COOLDOWN_MS) } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -58,7 +58,7 @@ export async function issueOtp(phone: string, ip?: string | null): Promise<Issue
 
   // سقف روزانه برای جلوگیری از سوءاستفاده و هزینه‌ی پیامک
   const todayCount = await prisma.otpCode.count({
-    where: { phone, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    where: { phone, purpose: "LOGIN", createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
   });
   if (todayCount >= 10) {
     return { ok: false, message: "تعداد درخواست کد برای امروز به سقف رسیده است." };
@@ -89,8 +89,9 @@ type VerifyResult =
 
 /** بررسی کد و ساخت کاربر در اولین ورود موفق. */
 export async function verifyOtp(phone: string, code: string): Promise<VerifyResult> {
+  // فقط کد ورود؛ کد تأیید مدیر (ADMIN_GRANT) نباید برای ورود پذیرفته شود
   const record = await prisma.otpCode.findFirst({
-    where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
+    where: { phone, purpose: "LOGIN", consumedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
 

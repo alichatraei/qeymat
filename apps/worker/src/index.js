@@ -4,6 +4,7 @@ import cron from "node-cron";
 import { runSource, runAll, refreshCache, settle } from "./crawler.js";
 import { backfillAll, rollupFromHistory } from "./history/backfill.js";
 import { importCsv } from "./history/import-csv.js";
+import { repairDollarHistory } from "./history/repair.js";
 import { closeCache } from "./lib/cache.js";
 import { log } from "./lib/log.js";
 
@@ -120,6 +121,11 @@ async function main() {
   );
   await schedule();
 
+  // نقطه‌های خراب تاریخچه‌ی دلار (مثل افت اشتباه ۷ مهر) پاک و کندل‌ها بازسازی می‌شوند
+  repairDollarHistory()
+    .then((report) => report.removed && log.info("تعمیر تاریخچه:", JSON.stringify(report)))
+    .catch((error) => log.error("تعمیر تاریخچه شکست خورد:", error));
+
   // تاریخچه‌ی ۱۰ ساله: در پس‌زمینه تا راه‌اندازی معطل نماند.
   // فقط دارایی‌هایی که هنوز تاریخچه‌ی کافی ندارند پر می‌شوند.
   backfillAll()
@@ -133,7 +139,10 @@ async function main() {
   // نگهداشت شبانه، ۴ بامداد تهران
   cron.schedule(
     "0 4 * * *",
-    () => cleanup().catch((error) => log.error(error)),
+    () =>
+      cleanup()
+        .then(() => repairDollarHistory({ days: 3 }))
+        .catch((error) => log.error(error)),
     {
       timezone: "Asia/Tehran",
     },

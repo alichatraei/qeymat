@@ -33,7 +33,7 @@ const TGJU_HISTORY = "https://api.tgju.org/v1/market/indicator/summary-table-dat
 export async function backfillAll({ symbols, force = false } = {}) {
   const assets = await prisma.asset.findMany({
     where: { isActive: true, ...(symbols?.length ? { symbol: { in: symbols } } : {}) },
-    select: { id: true, symbol: true, category: true },
+    select: { id: true, symbol: true, category: true, unit: true },
   });
   const since = new Date(Date.now() - MAX_YEARS * 366 * 24 * 60 * 60 * 1000);
 
@@ -56,13 +56,15 @@ export async function backfillAll({ symbols, force = false } = {}) {
 
     try {
       const rows = await fetchTgjuDaily(spec.key, since);
-      if (spec.unit === "USD") usdByDay ||= await loadUsdByDay();
+      // دارایی که خودش دلاری نمایش داده می‌شود (نفت، فلزات) تبدیل تومانی لازم ندارد
+      const inDollars = spec.unit === "USD" && asset.unit === "USD";
+      if (spec.unit === "USD" && !inDollars) usdByDay ||= await loadUsdByDay();
 
       const candles = [];
       for (const row of rows) {
         let factor = 1;
         if (spec.unit === "IRR") factor = spec.factor ?? 0.1;
-        else if (spec.unit === "USD") {
+        else if (spec.unit === "USD" && !inDollars) {
           const usd = nearestUsd(usdByDay, row.day);
           if (!usd) continue;
           factor = usd;

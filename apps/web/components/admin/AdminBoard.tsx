@@ -38,6 +38,8 @@ import {
   type PricingRow,
   type ReceiptRow,
 } from "./PaymentAdmin";
+import SourcesAdmin, { type SourceRow } from "./SourcesAdmin";
+import UsersAdmin from "./UsersAdmin";
 
 type Payment = {
   id: string;
@@ -50,17 +52,7 @@ type Payment = {
   createdAt: string;
 };
 
-type Source = {
-  key: string;
-  title: string;
-  adapter: string;
-  status: "ONLINE" | "SLOW" | "DOWN";
-  isActive: boolean;
-  intervalSec: number;
-  lastFetchedAt: string | null;
-  lastLatencyMs: number | null;
-  lastError: string | null;
-};
+type Source = SourceRow;
 
 type Order = {
   id: string;
@@ -618,105 +610,10 @@ export default function AdminBoard({
             </Panel>
           ) : null}
 
-          {section === "users" ? (
-            <Panel title="کاربران اخیر" note="بیست حساب آخر ثبت‌شده در سامانه.">
-              <div className="table-scroll">
-                <table className="w-full min-w-[620px] text-right text-[12px]">
-                  <thead className="text-xxs text-muted">
-                    <tr>
-                      <th className="pb-3 font-semibold">کاربر</th>
-                      <th className="pb-3 font-semibold">نقش</th>
-                      <th className="pb-3 font-semibold">تاریخ ثبت‌نام</th>
-                      <th className="pb-3 font-semibold">آخرین ورود</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((item) => (
-                      <tr key={item.id} className="border-t border-line">
-                        <td className="py-3.5">
-                          <b className="block text-[12px]">{item.name}</b>
-                          <small dir="ltr" className="text-[10px] text-muted">
-                            {item.phone ?? item.email ?? "—"}
-                          </small>
-                        </td>
-                        <td className="py-3.5">
-                          <span className={item.role === "ADMIN" ? "state-approved" : "chip bg-soft text-sub"}>
-                            {item.role === "ADMIN" ? "مدیر" : "کاربر"}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-muted">{jalali(item.createdAt)}</td>
-                        <td className="py-3.5 text-muted">
-                          {item.lastSeenAt ? timeAgo(item.lastSeenAt) : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-          ) : null}
+          {section === "users" ? <UsersAdmin plans={pricing} onFlash={flash} /> : null}
 
           {section === "sources" ? (
-            <Panel title="سلامت منابع نرخ" note="آخرین دریافت، تأخیر و خطای هر منبع.">
-              <div className="space-y-2">
-                {sources.map((source) => (
-                  <div
-                    key={source.key}
-                    className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line py-3.5 text-[12px] first:border-t-0"
-                  >
-                    <span className="flex min-w-[150px] items-center gap-2">
-                      <i
-                        className={`h-2 w-2 shrink-0 rounded-full ${
-                          !source.isActive
-                            ? "bg-faint/40"
-                            : source.status === "ONLINE"
-                              ? "bg-green-dot"
-                              : source.status === "SLOW"
-                                ? "bg-amber"
-                                : "bg-danger"
-                        }`}
-                      />
-                      <b>{source.title}</b>
-                      <code dir="ltr" className="font-mono text-[10px] text-muted">{source.adapter}</code>
-                    </span>
-                    <span className="text-muted">
-                      {!source.isActive
-                        ? "غیرفعال"
-                        : source.status === "ONLINE"
-                          ? "متصل"
-                          : source.status === "SLOW"
-                            ? "کند"
-                            : "قطع"}
-                    </span>
-                    <span className="text-muted">
-                      {source.lastFetchedAt ? timeAgo(source.lastFetchedAt) : "هنوز اجرا نشده"}
-                    </span>
-                    <span className="text-muted">هر {fa(source.intervalSec)} ثانیه</span>
-                    <span className="tabular text-muted">
-                      {source.lastLatencyMs ? `${fa(source.lastLatencyMs)} ms` : "—"}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn-ghost mr-auto h-9 min-h-0 px-3 text-[11px]"
-                      onClick={() => runSource(source.key)}
-                      disabled={busy === source.key}
-                    >
-                      {busy === source.key ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      )}
-                      اجرای دستی
-                    </button>
-                    {source.lastError ? (
-                      <p className="w-full rounded-lg bg-danger-soft px-3 py-2 text-[10.5px] text-danger-ink">
-                        {source.lastError}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </Panel>
+            <SourcesAdmin sources={sources} onFlash={flash} onRun={(key) => runSource(key)} busy={busy} />
           ) : null}
 
           {section === "broadcast" ? <Broadcast onDone={flash} /> : null}

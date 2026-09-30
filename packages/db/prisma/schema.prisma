@@ -27,6 +27,8 @@ enum AssetTier {
 
 enum OtpPurpose {
   LOGIN
+  /// تأیید مرحله‌ی دوم مدیر برای ارتقای دستی کاربر به پریمیوم
+  ADMIN_GRANT
 }
 
 enum TicketStatus {

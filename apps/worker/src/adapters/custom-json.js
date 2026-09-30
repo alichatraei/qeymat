@@ -10,8 +10,12 @@ import { fetchJson } from "../lib/http.js";
  *   "sellKey": "sell",
  *   "buyKey": "buy",
  *   "changeKey": "change_percent",
+ *   "unit": "IRT",                     // IRT تومان · IRR ریال · USD دلار (کالاها)
  *   "headers": { "X-API-Key": "..." }
  * }
+ *
+ * بدون unit نرخ فقط برای دارایی‌هایی پذیرفته می‌شود که این منبع، منبع اصلی‌شان
+ * باشد (ریسک ده‌برابر شدن نرخ ریالی).
  */
 export async function fetchCustomJson(source) {
   const config = source.config || {};
@@ -29,6 +33,8 @@ export async function fetchCustomJson(source) {
   const sellKey = config.sellKey || "sell";
   const buyKey = config.buyKey || "buy";
   const changeKey = config.changeKey || "change";
+  // «USD» یعنی قیمت دلاری؛ برای دارایی تومانی در نرخ دلار ضرب می‌شود
+  const unit = config.unit === "USD" ? { usdQuoted: true } : config.unit ? { unit: String(config.unit).toUpperCase() } : {};
 
   if (Array.isArray(list)) {
     for (const item of list) {
@@ -39,6 +45,7 @@ export async function fetchCustomJson(source) {
         buy: toNumber(getPath(item, buyKey)) || Math.round(sell * 0.99),
         sell,
         changePercent: toNumber(getPath(item, changeKey)),
+        ...unit,
       };
     }
   } else if (list && typeof list === "object") {
@@ -49,6 +56,7 @@ export async function fetchCustomJson(source) {
         buy: typeof item === "object" ? toNumber(getPath(item, buyKey)) || Math.round(sell * 0.99) : Math.round(sell * 0.99),
         sell,
         changePercent: typeof item === "object" ? toNumber(getPath(item, changeKey)) : 0,
+        ...unit,
       };
     }
   }

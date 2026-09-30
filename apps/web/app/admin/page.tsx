@@ -192,6 +192,8 @@ export default async function AdminPage() {
         status: source.status,
         isActive: source.isActive,
         intervalSec: source.intervalSec,
+        weight: source.weight,
+        endpoint: source.endpoint,
         lastFetchedAt: source.lastFetchedAt?.toISOString() ?? null,
         lastLatencyMs: source.lastLatencyMs,
         lastError: source.lastError,

@@ -112,21 +112,33 @@ export async function aggregateAll() {
   const sourceByKey = new Map(sources.map((s) => [s.key, s]));
   const maxTtl = Math.max(QUOTE_TTL_MS, ...sources.map((s) => s.ttlMs));
 
-  const quotes = await prisma.sourceQuote.findMany({
-    where: { at: { gte: new Date(Date.now() - maxTtl) } },
-  });
+  // منبع «بی‌اثر» از پنل مدیریت: خوانده و نمایش داده می‌شود، ولی در نرخ اثر ندارد.
+  // هم کل منبع و هم منبع برای یک دارایی خاص (مثلاً دلارِ یک کانال) قابل بی‌اثر کردن است.
+  const muted = await loadMuted();
+  const symbolById = new Map(assets.map((asset) => [asset.id, asset.symbol]));
+  const counts = (quote) =>
+    !muted.sources.has(quote.sourceKey) &&
+    !muted.pairs.get(symbolById.get(quote.assetId))?.has(quote.sourceKey);
+
+  const quotes = (
+    await prisma.sourceQuote.findMany({
+      where: { at: { gte: new Date(Date.now() - maxTtl) } },
+    })
+  ).filter(counts);
   const quotesByAsset = groupBy(quotes, (quote) => quote.assetId);
 
   // برای دارایی‌های بدون نرخ: نقل‌قول‌های قدیمی‌تر از پنجره‌ی تازگی (تا ۳۶ ساعت)
   const unrated = assets.filter((asset) => !asset.rate).map((asset) => asset.id);
   const staleQuotesByAsset = unrated.length
     ? groupBy(
-        await prisma.sourceQuote.findMany({
-          where: {
-            assetId: { in: unrated },
-            at: { gte: new Date(Date.now() - 36 * 60 * 60 * 1000) },
-          },
-        }),
+        (
+          await prisma.sourceQuote.findMany({
+            where: {
+              assetId: { in: unrated },
+              at: { gte: new Date(Date.now() - 36 * 60 * 60 * 1000) },
+            },
+          })
+        ).filter(counts),
         (quote) => quote.assetId,
       )
     : new Map();
@@ -167,7 +179,9 @@ export async function aggregateAll() {
   for (const [symbol, proxy] of Object.entries(PROXIES)) {
     if (proxyRatio.has(symbol)) continue;
     const own = bySymbol.get(symbol)?.rate?.sell;
-    const base = bySymbol.get(proxy)?.rate?.sell;
+    const baseAsset = bySymbol.get(proxy);
+    let base = baseAsset?.rate?.sell;
+    if (base && baseAsset.unit === "USD") base *= usd || 0;
     if (own && base) proxyRatio.set(symbol, own / base);
   }
 
@@ -195,7 +209,7 @@ export async function aggregateAll() {
     // ---- نماینده‌ی شبانه ----
     const freshDirect = own.filter((point) => freshnessOfPoint(point) >= 0.5).length;
     const proxySymbol = PROXY_ENABLED ? PROXIES[asset.symbol] : null;
-    const proxyBase = proxySymbol ? direct.get(proxySymbol) : null;
+    const proxyBase = proxySymbol ? proxyValue(proxySymbol, direct, bySymbol, usd) : null;
 
     // ---- دور دوم: تخمین کمکی از روابط، وقتی منابع مستقیم کم‌اند ----
     const derived = [];
@@ -382,6 +396,30 @@ export async function aggregateAll() {
 }
 
 /**
+ * ارزش تومانی نماینده. انس جهانی دلاری است؛ برای طلای داخلی در نرخ دلار
+ * ضرب می‌شود تا طلا شب‌ها هم با انس و هم با دلار (که خودش با تتر می‌رود) حرکت کند.
+ */
+function proxyValue(symbol, direct, bySymbol, usd) {
+  const base = direct.get(symbol);
+  if (!base) return null;
+  if (bySymbol.get(symbol)?.unit !== "USD") return base;
+  if (!usd) return null;
+  return { ...base, sell: base.sell * usd, buy: base.buy * usd };
+}
+
+/** منبع‌ها و جفت‌های «منبع/دارایی» بی‌اثرشده از پنل مدیریت (Setting: engine.muted) */
+async function loadMuted() {
+  const row = await prisma.setting.findUnique({ where: { key: "engine.muted" } }).catch(() => null);
+  const value = row?.value || {};
+  return {
+    sources: new Set(Array.isArray(value.sources) ? value.sources : []),
+    pairs: new Map(
+      Object.entries(value.pairs || {}).map(([symbol, keys]) => [symbol, new Set(Array.isArray(keys) ? keys : [])]),
+    ),
+  };
+}
+
+/**
  * نقل‌قولی که بیش از maxGap با نرخ فعلی فاصله دارد فقط وقتی می‌ماند که منبع
  * مستقل دیگری همان سطح را (±۲٪) تأیید کند. جهش واقعی بازار در چند منبع دیده
  * می‌شود؛ پست اشتباه یک کانال (مثلاً نرخ مرکز مبادله به‌جای بازار آزاد) نه.
@@ -534,6 +572,8 @@ async function learnQuality(errorsBySource, sourceByKey) {
 
 /** قیمت جهانی: رمزارز بر حسب تتر، کالا و سهام بر حسب دلار */
 function globalPriceOf(asset, sell, { usd, usdt }) {
+  // دارایی که خودش دلاری است (نفت، فلزات جهانی) قیمت جهانی جدا لازم ندارد
+  if (asset.unit === "USD") return null;
   if (asset.category === "CRYPTO") {
     if (asset.symbol === "USDT") return 1;
     return usdt ? round(sell / usdt, 4) : null;

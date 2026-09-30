@@ -101,6 +101,7 @@ async function storeQuotes(source, rates) {
       sourceField: true,
       multiplier: true,
       sourceKey: true,
+      unit: true,
     },
   });
 
@@ -142,8 +143,10 @@ async function storeQuotes(source, rates) {
 
     let multiplier;
     if (raw.usdQuoted) {
-      if (!usdToman) continue;
-      multiplier = usdToman;
+      // نفت و فلزات جهانی به دلار نمایش داده می‌شوند؛ فقط دارایی تومانی تبدیل می‌شود
+      if (asset.unit === "USD") multiplier = 1;
+      else if (!usdToman) continue;
+      else multiplier = usdToman;
     } else if (raw.unit === "IRR") multiplier = 0.1;
     else if (raw.unit === "IRT" || raw.unit === "RAW") multiplier = 1;
     else if (isPrimary) multiplier = asset.multiplier || 1;
