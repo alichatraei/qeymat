@@ -23,7 +23,14 @@ const nextConfig = {
     "bcryptjs",
     "web-push",
     "ioredis",
+    // باینری Skia برای تصویر ربات تلگرام؛ باید همان‌طور که هست کنار سرور باشد
+    "@napi-rs/canvas",
   ],
+
+  // فونت‌های تصویر ربات با fs خوانده می‌شوند و tracer خودکار پیدایشان نمی‌کند
+  outputFileTracingIncludes: {
+    "/api/telegram/card": ["./assets/fonts/**/*", "../../node_modules/@napi-rs/**/*"],
+  },
 
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],

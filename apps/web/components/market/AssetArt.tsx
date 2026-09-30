@@ -456,6 +456,15 @@ const ARTS: Record<string, Art> = {
   IXIC: indexChart("NASDAQ", "#0996C7"),
 };
 
+/**
+ * محتوای SVG آواتار بدون hook — برای تصویرهای سمت سرور (ربات تلگرام) که
+ * react-dom/server در آن‌ها مجاز نیست. id باید در همان SVG یکتا باشد.
+ */
+export function assetArtContent(symbol: string, id: string) {
+  const art = ARTS[symbol];
+  return art ? art(id) : null;
+}
+
 export function hasAssetArt(symbol: string) {
   return symbol in ARTS;
 }
