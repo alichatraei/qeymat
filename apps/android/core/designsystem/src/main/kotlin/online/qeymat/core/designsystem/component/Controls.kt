@@ -241,6 +241,56 @@ fun <T> QSegmented(
     }
 }
 
+/**
+ * نوار دسته‌ها: همان کپسول کنترل بازه‌ی نمودار، با گزینه‌های آیکون‌دار و
+ * اسکرول افقی؛ گزینه‌ی انتخاب‌شده خودش به دید می‌آید.
+ */
+@Composable
+fun <T> QTabTrack(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    icon: (T) -> ImageVector?,
+    modifier: Modifier = Modifier,
+    onSelect: (T) -> Unit,
+) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(selected) {
+        val index = options.indexOf(selected)
+        if (index >= 0) runCatching { listState.animateScrollToItem((index - 1).coerceAtLeast(0)) }
+    }
+    androidx.compose.foundation.lazy.LazyRow(
+        state = listState,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(CircleShape)
+            .background(Q.Field)
+            .border(1.dp, Q.line(0.14f), CircleShape),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        items(options.size) { index ->
+            val option = options[index]
+            val on = option == selected
+            val color by animateColorAsState(if (on) Q.Mint else Q.Sub, label = "track")
+            Row(
+                modifier = Modifier
+                    .height(36.dp)
+                    .then(if (on) Modifier.qShadow(CircleShape, 4.dp) else Modifier)
+                    .clip(CircleShape)
+                    .background(if (on) Q.SegOn else Color.Transparent)
+                    .quietClick { onSelect(option) }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                icon(option)?.let { Icon(it, contentDescription = null, tint = color, modifier = Modifier.size(16.dp)) }
+                Text(label(option), color = color, fontSize = 12.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
+}
+
 @Composable
 fun QToggle(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     // مثل طراحی: روشن = دکمه سمت راست، مستقل از جهت چیدمان

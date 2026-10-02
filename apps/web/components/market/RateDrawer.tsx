@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ChartLine, Repeat, X } from "lucide-react";
-import { fa, movement, timeAgo, unitLabel } from "@qeymat/shared";
+import { fa, movement, relatedSymbols, timeAgo, unitLabel } from "@qeymat/shared";
 import RateIcon from "./RateIcon";
 import PriceChart, { formatPrice } from "./PriceChart";
 import AlertForm from "./AlertForm";
@@ -22,8 +22,29 @@ const RANGES = [
 
 const fetcher = (url: string) => fetch(url).then((response) => response.json());
 
-export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose: () => void }) {
+export default function RateDrawer({
+  rate,
+  assets = [],
+  onOpen,
+  onClose,
+}: {
+  rate: RateView;
+  /** همه‌ی نرخ‌ها، برای «نرخ‌های مرتبط» */
+  assets?: RateView[];
+  onOpen?: (rate: RateView) => void;
+  onClose: () => void;
+}) {
   const [range, setRange] = useState("1w");
+  const panel = useRef<HTMLElement>(null);
+  const bySymbol = new Map(assets.map((asset) => [asset.symbol, asset]));
+  const related = relatedSymbols(rate.symbol, assets)
+    .map((symbol) => bySymbol.get(symbol))
+    .filter((asset): asset is RateView => Boolean(asset));
+
+  // با رفتن به یک نرخ مرتبط، از بالای جزئیات شروع شود
+  useEffect(() => {
+    panel.current?.scrollTo({ top: 0 });
+  }, [rate.symbol]);
   const { data, isLoading } = useSWR<{ series: HistorySeries }>(
     `/api/public/history?symbol=${rate.symbol}&range=${range}`,
     fetcher,
@@ -50,7 +71,7 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
         onClick={onClose}
         aria-label="بستن"
       />
-      <aside className="absolute inset-y-0 right-0 flex w-[min(480px,100%)] animate-drawer-in flex-col overflow-y-auto bg-surface shadow-drawer">
+      <aside ref={panel} className="absolute inset-y-0 right-0 flex w-[min(480px,100%)] animate-drawer-in flex-col overflow-y-auto bg-surface shadow-drawer">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/95 px-5 py-4 backdrop-blur">
           <button
             type="button"
@@ -112,6 +133,33 @@ export default function RateDrawer({ rate, onClose }: { rate: RateView; onClose:
             <p className="mt-2 text-[10.5px] text-muted">
               تاریخچه‌ی این دارایی از {fa(Math.floor(series.yearsAvailable))} سال پیش موجود است.
             </p>
+          ) : null}
+
+          {related.length > 0 && onOpen ? (
+            <section className="mt-6">
+              <h3 className="mb-2.5 text-[13px] font-bold">نرخ‌های مرتبط</h3>
+              <div className="overflow-hidden rounded-2xl border border-line">
+                {related.map((item) => (
+                  <button
+                    key={item.symbol}
+                    type="button"
+                    onClick={() => onOpen(item)}
+                    className="flex w-full items-center gap-3 border-b border-line px-3.5 py-3 text-right last:border-b-0 hover:bg-soft"
+                  >
+                    <RateIcon rate={item} />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{item.nameFa}</span>
+                    <span className="text-left">
+                      <strong className="tabular block text-[13.5px]">
+                        {formatPrice(item.sell)} <small className="font-normal text-muted">{unitLabel(item.unit)}</small>
+                      </strong>
+                      <small className={`block text-[11px] font-bold ${item.changePercent >= 0 ? "text-green" : "text-danger"}`}>
+                        {movement(item.changePercent)}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ) : null}
 
           <div className="mt-6 grid grid-cols-2 gap-3">

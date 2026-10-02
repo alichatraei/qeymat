@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
+import androidx.compose.ui.test.performScrollTo
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import online.qeymat.core.data.MarketRepository
@@ -77,7 +79,21 @@ class ScreenshotTest {
             }
             compose.mainClock.advanceTimeBy(600)
             tab("قیمت")
+            tab("منتخب من")
             shot("$t-prices-list")
+            if (theme == ThemeMode.DARK) {
+                tab("ویرایش")
+                shot("dark-edit")
+                tab("تمام")
+                compose.onAllNodesWithText("نمودار، نرخ‌های مرتبط و هشدار").onFirst().performClick()
+                compose.mainClock.advanceTimeBy(1_500)
+                compose.onNodeWithText("نرخ‌های مرتبط").performScrollTo()
+                compose.mainClock.advanceTimeBy(600)
+                compose.waitForIdle()
+                captureScreenRoboImage(File(out, "dark-detail.png").path)
+                androidx.test.espresso.Espresso.pressBack()
+                compose.mainClock.advanceTimeBy(1_000)
+            }
             runBlocking { store.setViewMode(ViewMode.GRID) }
             compose.mainClock.advanceTimeBy(600)
             tab("طلا و سکه")

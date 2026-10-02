@@ -55,6 +55,7 @@ import online.qeymat.core.designsystem.component.QSegmented
 import online.qeymat.core.designsystem.component.QToggle
 import online.qeymat.core.designsystem.component.StarButton
 import online.qeymat.core.designsystem.component.toChartPoints
+import online.qeymat.core.designsystem.component.quietClick
 import online.qeymat.core.model.Analysis
 import online.qeymat.core.model.ChartRange
 import online.qeymat.core.model.format.Fa
@@ -66,6 +67,7 @@ fun DetailSheet(
     onDismiss: () -> Unit,
     onRange: (ChartRange) -> Unit,
     onStar: () -> Unit,
+    onOpenRelated: (online.qeymat.core.model.Asset) -> Unit,
     onRequireLogin: () -> Unit,
     createAlert: suspend (String, Double, Boolean) -> Result<Unit>,
 ) {
@@ -158,6 +160,39 @@ fun DetailSheet(
                 // منبع و اطمینان موتور نمایش داده نمی‌شود؛ «قیمت» خودش مرجع نرخ است
                 InfoBox("کمترین امروز", asset.dayLow?.let { Fa.price(it, asset.isUsd) } ?: "—", Modifier.weight(1f), small = true)
                 InfoBox("بیشترین امروز", asset.dayHigh?.let { Fa.price(it, asset.isUsd) } ?: "—", Modifier.weight(1f), small = true)
+            }
+
+            val related = remember(asset.symbol, ui.assets) { online.qeymat.core.model.RateFamilies.related(asset.symbol, ui.assets) }
+            if (related.isNotEmpty()) {
+                Text("نرخ‌های مرتبط", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Q.Gold, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .border(1.dp, Q.line(0.16f), RoundedCornerShape(18.dp)),
+                ) {
+                    related.forEachIndexed { index, item ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .quietClick { onOpenRelated(item) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            AssetTile(item, 34.dp)
+                            Text(item.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Q.Text, maxLines = 1, modifier = Modifier.weight(1f))
+                            Column(horizontalAlignment = Alignment.End) {
+                                NumText(Fa.price(item.sell, item.isUsd), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
+                                ChangeLabel(item.changePercent)
+                            }
+                            Icon(QIcons.ChevronLeft, contentDescription = null, tint = Q.Muted, modifier = Modifier.size(14.dp))
+                        }
+                        if (index < related.lastIndex) {
+                            Box(Modifier.fillMaxWidth().padding(start = 56.dp).height(1.dp).background(Q.line(0.1f)))
+                        }
+                    }
+                }
             }
 
             AnalysisSection(detail.analysis, plusActive = ui.plus.active, loggedIn = ui.loggedIn)

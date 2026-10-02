@@ -2,6 +2,11 @@ package online.qeymat.feature.prices
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +56,7 @@ import online.qeymat.core.designsystem.component.NumText
 import online.qeymat.core.designsystem.component.PillTone
 import online.qeymat.core.designsystem.component.PriceChart
 import online.qeymat.core.designsystem.component.QCard
-import online.qeymat.core.designsystem.component.QChip
+import online.qeymat.core.designsystem.component.QTabTrack
 import online.qeymat.core.designsystem.component.QIconButton
 import online.qeymat.core.designsystem.component.QPill
 import online.qeymat.core.designsystem.component.QSegmented
@@ -116,6 +121,7 @@ fun PricesRoute(onRequireLogin: () -> Unit, viewModel: PricesViewModel = koinVie
                 onDismiss = viewModel::closeDetail,
                 onRange = viewModel::selectDetailRange,
                 onStar = { viewModel.toggleFavorite(current.asset) },
+                onOpenRelated = viewModel::openDetail,
                 onRequireLogin = {
                     viewModel.closeDetail()
                     onRequireLogin()
@@ -124,6 +130,15 @@ fun PricesRoute(onRequireLogin: () -> Unit, viewModel: PricesViewModel = koinVie
             )
         }
     }
+}
+
+private fun PriceTab.icon() = when (this) {
+    PriceTab.FAVORITES -> QIcons.StarFilled
+    PriceTab.CURRENCY -> QIcons.Cash
+    PriceTab.GOLD -> QIcons.GoldBars
+    PriceTab.CRYPTO -> QIcons.Crypto
+    PriceTab.COMMODITY -> QIcons.Drop
+    PriceTab.STOCK -> QIcons.Bars
 }
 
 @Composable
@@ -142,6 +157,10 @@ private fun PricesScreen(
         val toKey = to.key as? String ?: return@rememberReorderableLazyGridState
         viewModel.move(fromKey, toKey)
     }
+    val favoritesTab = state.tab == PriceTab.FAVORITES
+    // در «منتخب من» اولی جدا و بزرگ بالای صفحه است؛ در حالت ویرایش همه در یک فهرست
+    val featured = if (favoritesTab && !state.edit) state.items.firstOrNull() else null
+    val rest = if (featured != null) state.items.drop(1) else state.items
 
     // ساعت سربرگ هر ۳۰ ثانیه
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -158,7 +177,7 @@ private fun PricesScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(if (grid) 2 else 1),
+            columns = GridCells.Fixed(if (grid && !state.edit) 2 else 1),
             state = gridState,
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -167,92 +186,117 @@ private fun PricesScreen(
             item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
                 Header(
                     dateLine = "${Jalali.full(now).substringBeforeLast(' ')} · ${Jalali.time(now)}",
-                    edit = state.edit,
-                    onEndEdit = viewModel::endEdit,
                     onSearch = onSearch,
                 )
             }
-            item(key = "chips", span = { GridItemSpan(maxLineSpan) }) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 2.dp),
-                    modifier = Modifier.padding(bottom = 12.dp).tourTarget(TourKeys.TABS),
-                ) {
-                    items(PriceTab.entries) { tab ->
-                        QChip(tab.label, tab == state.tab) { viewModel.selectTab(tab) }
-                    }
-                }
+            item(key = "tabs", span = { GridItemSpan(maxLineSpan) }) {
+                QTabTrack(
+                    options = PriceTab.entries,
+                    selected = state.tab,
+                    label = { it.label },
+                    icon = { it.icon() },
+                    modifier = Modifier.padding(bottom = 14.dp).tourTarget(TourKeys.TABS),
+                    onSelect = viewModel::selectTab,
+                )
             }
 
-            val hero = state.items.firstOrNull()
-            if (hero != null) {
-                item(key = "hero", span = { GridItemSpan(maxLineSpan) }) {
-                    HeroCard(
-                        asset = hero,
-                        favorite = state.isFavorite(hero),
-                        showBuy = state.settings.showBuy,
-                        range = state.heroRange,
-                        series = state.heroSeries,
-                        onRange = viewModel::selectHeroRange,
-                        onStar = { viewModel.toggleFavorite(hero) },
-                        onOpen = { viewModel.openDetail(hero) },
-                    )
-                }
-            } else if (!state.loaded) {
+            if (!state.loaded && state.items.isEmpty()) {
                 item(key = "loading", span = { GridItemSpan(maxLineSpan) }) {
-                    Box(Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
                         Text(state.error ?: "در حال دریافت قیمت‌ها…", color = Q.Sub, fontSize = 12.sp)
                     }
                 }
-            }
-
-            item(key = "section", span = { GridItemSpan(maxLineSpan) }) {
-                SectionHeader(
-                    modifier = Modifier.tourTarget(TourKeys.LIST),
-                    title = "${state.tab.listTitle} · ${Fa.number(state.items.size)} مورد",
-                    hint = "برای جابه‌جایی نگه دار",
-                ) {
-                    QIconButton(
-                        icon = if (grid) QIcons.ListView else QIcons.Grid,
-                        contentDescription = "تغییر نمایش",
-                        size = 32.dp,
-                    ) { viewModel.setViewMode(if (grid) ViewMode.LIST else ViewMode.GRID) }
+            } else if (favoritesTab && state.items.isEmpty()) {
+                item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyFavorites(onAdd = onSearch)
                 }
             }
 
-            items(state.items, key = { it.symbol }) { asset ->
+            if (featured != null) {
+                item(key = "featured", span = { GridItemSpan(maxLineSpan) }) {
+                    FeaturedCard(
+                        asset = featured,
+                        showBuy = state.settings.showBuy,
+                        onStar = { viewModel.toggleFavorite(featured) },
+                        onOpen = { viewModel.openDetail(featured) },
+                    )
+                }
+            }
+
+            if (state.items.isNotEmpty()) {
+                item(key = "section", span = { GridItemSpan(maxLineSpan) }) {
+                    if (state.edit) {
+                        EditBar(
+                            favorites = favoritesTab,
+                            onAdd = onSearch,
+                            onDone = viewModel::endEdit,
+                        )
+                    } else {
+                        SectionHeader(
+                            modifier = Modifier.tourTarget(TourKeys.LIST),
+                            title = if (rest.isEmpty() && favoritesTab) "منتخب‌ها" else "${state.tab.listTitle} · ${Fa.number(rest.size)} مورد",
+                        ) {
+                            QPill("ویرایش", icon = QIcons.Edit, tone = PillTone.Sub, onClick = viewModel::startEdit)
+                            QIconButton(
+                                icon = if (grid) QIcons.ListView else QIcons.Grid,
+                                contentDescription = "تغییر نمایش",
+                                size = 34.dp,
+                            ) { viewModel.setViewMode(if (grid) ViewMode.LIST else ViewMode.GRID) }
+                        }
+                    }
+                }
+            }
+
+            items(rest, key = { it.symbol }) { asset ->
                 ReorderableItem(reorder, key = asset.symbol) { dragging ->
-                    val handle = Modifier.longPressDraggableHandle(
+                    val longPress = Modifier.longPressDraggableHandle(
                         onDragStarted = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.startEdit()
                         },
                         onDragStopped = { viewModel.commitOrder() },
                     )
+                    val handle = Modifier.draggableHandle(
+                        onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                        onDragStopped = { viewModel.commitOrder() },
+                    )
                     val open = Modifier.quietClick(enabled = !state.edit) { viewModel.openDetail(asset) }
-                    if (grid) {
+                    if (state.edit) {
+                        AssetRow(
+                            asset = asset,
+                            favorite = state.isFavorite(asset),
+                            edit = true,
+                            dragging = dragging,
+                            handle = handle,
+                            badge = if (favoritesTab && asset == state.items.firstOrNull()) "بالای صفحه" else null,
+                            onStar = { viewModel.toggleFavorite(asset) },
+                            trailing = if (favoritesTab) {
+                                { RemoveButton { viewModel.toggleFavorite(asset) } }
+                            } else {
+                                null
+                            },
+                        )
+                    } else if (grid) {
                         AssetGridCard(
                             asset = asset,
                             favorite = state.isFavorite(asset),
-                            edit = state.edit,
                             dragging = dragging,
-                            modifier = handle.then(open),
+                            modifier = longPress.then(open),
                             onStar = { viewModel.toggleFavorite(asset) },
                         )
                     } else {
                         AssetRow(
                             asset = asset,
                             favorite = state.isFavorite(asset),
-                            edit = state.edit,
                             dragging = dragging,
-                            modifier = handle.then(open),
+                            modifier = longPress.then(open),
                             onStar = { viewModel.toggleFavorite(asset) },
                         )
                     }
                 }
             }
 
-            if (state.tab == PriceTab.CURRENCY) {
+            if (state.tab == PriceTab.CURRENCY && !state.edit) {
                 val total = state.assets.count { it.category == online.qeymat.core.model.Category.CURRENCY }
                 item(key = "catalog", span = { GridItemSpan(maxLineSpan) }) {
                     QPill(
@@ -269,12 +313,12 @@ private fun PricesScreen(
 }
 
 @Composable
-private fun Header(dateLine: String, edit: Boolean, onEndEdit: () -> Unit, onSearch: () -> Unit) {
+private fun Header(dateLine: String, onSearch: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(top = 16.dp, bottom = 12.dp),
+            .padding(top = 16.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -286,51 +330,112 @@ private fun Header(dateLine: String, edit: Boolean, onEndEdit: () -> Unit, onSea
             }
             Text(dateLine, fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
         }
-        if (edit) QPill("پایان ویرایش", icon = QIcons.Check, tone = PillTone.Mint, onClick = onEndEdit)
         QIconButton(QIcons.Search, contentDescription = "جستجو", modifier = Modifier.tourTarget(TourKeys.SEARCH), onClick = onSearch)
     }
 }
 
+/** نرخ ویژه: فقط با نرخ بزرگ‌تر از بقیه متمایز است؛ نمودار در جزئیات */
 @Composable
-private fun HeroCard(
-    asset: Asset,
-    favorite: Boolean,
-    showBuy: Boolean,
-    range: ChartRange,
-    series: online.qeymat.core.model.HistorySeries?,
-    onRange: (ChartRange) -> Unit,
-    onStar: () -> Unit,
-    onOpen: () -> Unit,
-) {
-    QCard(modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.HERO).quietClick(onClick = onOpen)) {
+private fun FeaturedCard(asset: Asset, showBuy: Boolean, onStar: () -> Unit, onOpen: () -> Unit) {
+    QCard(
+        modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.HERO).quietClick(onClick = onOpen),
+        borderAlpha = 0.3f,
+        padding = 18.dp,
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             online.qeymat.core.designsystem.component.AssetTile(asset, 46.dp)
             Column(Modifier.weight(1f)) {
                 Text(asset.nameFa, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Q.Text)
                 Text(asset.enLine(), fontSize = 10.5.sp, color = Q.Sub)
             }
-            StarButton(favorite, onClick = onStar)
+            StarButton(true, onClick = onStar)
         }
-        Spacer(Modifier.height(14.dp))
-        ChangeLabel(asset.changePercent, absolute = Fa.price(kotlin.math.abs(asset.changeAbsolute), asset.isUsd), big = true)
-        if (showBuy) {
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
-                NumText(Fa.price(asset.buy, asset.isUsd), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Q.Sub)
-                Text("خرید", fontSize = 10.5.sp, color = Q.Sub)
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
+            Text(Fa.unit(asset.isUsd), fontSize = 13.sp, color = Q.Sub, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 7.dp))
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ChangeLabel(asset.changePercent, absolute = Fa.price(kotlin.math.abs(asset.changeAbsolute), asset.isUsd))
+            Spacer(Modifier.weight(1f))
+            if (showBuy) {
+                Text("خرید ", fontSize = 11.sp, color = Q.Sub)
+                NumText(Fa.price(asset.buy, asset.isUsd), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Q.Soft)
             }
         }
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
-            Text(Fa.unit(asset.isUsd), fontSize = 12.sp, color = Q.Sub, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 5.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(top = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("نمودار، نرخ‌های مرتبط و هشدار", fontSize = 11.sp, color = Q.Mint, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Icon(QIcons.ChevronLeft, contentDescription = null, tint = Q.Mint, modifier = Modifier.size(14.dp))
         }
-        Spacer(Modifier.height(8.dp))
-        PriceChart(
-            points = series?.toChartPoints().orEmpty(),
-            interval = series?.interval ?: "day",
-            height = 96.dp,
-            usd = asset.isUsd,
+    }
+}
+
+/** نوار حالت ویرایش، جای ثابت و پیدا */
+@Composable
+private fun EditBar(favorites: Boolean, onAdd: () -> Unit, onDone: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Q.Mint.copy(alpha = 0.08f))
+            .border(1.dp, Q.Mint.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(QIcons.Edit, contentDescription = null, tint = Q.Mint, modifier = Modifier.size(18.dp))
+            Text(
+                if (favorites) "ویرایش منتخب‌ها" else "ویرایش ترتیب",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Q.Text,
+                modifier = Modifier.weight(1f),
+            )
+            if (favorites) QPill("افزودن", icon = QIcons.Plus, tone = PillTone.Gold, onClick = onAdd)
+            QPill("تمام", icon = QIcons.Check, tone = PillTone.Mint, onClick = onDone)
+        }
+        Text(
+            if (favorites) "با دستگیره‌ی کنار هر ردیف ترتیب را عوض کنید؛ اولی بزرگ بالای صفحه نمایش داده می‌شود."
+            else "با دستگیره‌ی کنار هر ردیف ترتیب را عوض کنید.",
+            fontSize = 11.5.sp,
+            color = Q.Soft,
+            lineHeight = 19.sp,
+            modifier = Modifier.padding(top = 8.dp),
         )
-        Spacer(Modifier.height(12.dp))
-        QSegmented(HERO_RANGES, range, label = { it.label }, onSelect = onRange)
+    }
+}
+
+@Composable
+private fun RemoveButton(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .quietClick(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(QIcons.Minus, contentDescription = "حذف از منتخب", tint = Q.Red, modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun EmptyFavorites(onAdd: () -> Unit) {
+    QCard(Modifier.fillMaxWidth(), padding = 22.dp) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(QIcons.Star, contentDescription = null, tint = Q.Gold, modifier = Modifier.size(30.dp))
+            Text("هنوز منتخبی ندارید", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text, modifier = Modifier.padding(top = 10.dp))
+            Text(
+                "روی ستاره‌ی هر نرخ بزنید یا از جستجو اضافه کنید.",
+                fontSize = 12.sp,
+                color = Q.Sub,
+                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp),
+            )
+            QPill("افزودن منتخب", icon = QIcons.Plus, tone = PillTone.Mint, onClick = onAdd)
+        }
     }
 }

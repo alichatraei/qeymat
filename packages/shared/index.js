@@ -174,6 +174,33 @@ export const CATEGORY_TABS = [
 export const DOLLAR_SYMBOLS = ["USD", "USD_FARDA", "USD_HERAT", "USDT"];
 
 /**
+ * خانواده‌ی نرخ‌های هم‌خانواده برای بخش «نرخ‌های مرتبط» در جزئیات:
+ * دلار تهران کنار فردایی، هرات و تتر؛ طلا کنار آبشده و انس؛ سکه‌ها کنار هم.
+ * اپ اندروید همین فهرست را در core/model دارد.
+ */
+export const RATE_FAMILIES = [
+  DOLLAR_SYMBOLS,
+  ["GOLD18", "GOLD24", "ABSHODEH", "OUNCE", "EMAMI"],
+  ["EMAMI", "BAHAR", "HALF", "QUARTER", "GRAMI", "GOLD18"],
+  ["BRENT", "WTI", "OPEC", "NATGAS"],
+  ["XAU", "OUNCE", "XAG", "SILVER999", "XPT", "XPD"],
+  ["BTC", "ETH", "USDT", "SOL", "TON"],
+];
+
+/** تا ۵ نرخ مرتبط؛ اگر دارایی خانواده نداشت، هم‌دسته‌های اول فهرست */
+export function relatedSymbols(symbol, assets, limit = 5) {
+  const available = new Set(assets.map((asset) => asset.symbol));
+  const family = RATE_FAMILIES.find((list) => list[0] === symbol) ?? RATE_FAMILIES.find((list) => list.includes(symbol));
+  let list = family ? family.filter((item) => item !== symbol && available.has(item)) : [];
+  if (list.length < 2) {
+    const category = assets.find((asset) => asset.symbol === symbol)?.category;
+    const peers = assets.filter((asset) => asset.category === category && asset.symbol !== symbol).map((asset) => asset.symbol);
+    list = [...list, ...peers.filter((item) => !list.includes(item))];
+  }
+  return list.slice(0, limit);
+}
+
+/**
  * بازه‌های نمودار. `days` صفر یعنی «همه‌ی تاریخچه‌ی موجود» که سقفش ۱۰ سال است.
  * `interval` پیش‌فرض دانه‌بندی مناسب همان بازه است.
  */

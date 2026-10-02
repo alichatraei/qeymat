@@ -49,6 +49,8 @@ export declare const CHART_RANGES: { id: ChartRangeId; label: string; days: numb
 export declare const CHART_INTERVALS: { id: Exclude<ChartInterval, "raw">; label: string }[];
 export declare const MAX_HISTORY_YEARS: number;
 export declare const DOLLAR_SYMBOLS: string[];
+export declare const RATE_FAMILIES: string[][];
+export declare function relatedSymbols(symbol: string, assets: { symbol: string; category: string }[], limit?: number): string[];
 export declare function unitLabel(unit: string | null | undefined): string;
 export declare const PLUS_FEATURES: string[];
 export declare function getPlusPlan(id: string): PlusPlan | null;

@@ -43,6 +43,7 @@ fun AssetRow(
     edit: Boolean = false,
     dragging: Boolean = false,
     handle: Modifier = Modifier,
+    badge: String? = null,
     onStar: () -> Unit,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -67,11 +68,25 @@ fun AssetRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (edit) {
-            Icon(QIcons.Handle, contentDescription = "جابه‌جایی", tint = Q.Muted, modifier = handle.size(18.dp))
+            Icon(QIcons.Handle, contentDescription = "جابه‌جایی", tint = Q.Sub, modifier = handle.size(22.dp))
         }
         AssetTile(asset, 40.dp)
         Column(Modifier.weight(1f)) {
-            Text(asset.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Q.Text, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(asset.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Q.Text, maxLines = 1)
+                if (badge != null) {
+                    Text(
+                        badge,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Q.Gold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Q.Gold.copy(alpha = 0.14f))
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
+            }
             Text(asset.enLine(), fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
         }
         Column(horizontalAlignment = Alignment.End) {

@@ -26,7 +26,8 @@ import online.qeymat.core.model.PlusStatus
 
 /** زبانه‌های صفحه‌ی قیمت — مطابق طراحی */
 enum class PriceTab(val label: String, val categories: Set<Category>, val listTitle: String) {
-    CURRENCY("ارز", setOf(Category.CURRENCY), "ارزهای منتخب"),
+    FAVORITES("منتخب من", emptySet(), "سایر منتخب‌ها"),
+    CURRENCY("ارز", setOf(Category.CURRENCY), "ارزها"),
     GOLD("طلا و سکه", setOf(Category.GOLD), "طلا و سکه"),
     CRYPTO("کریپتو", setOf(Category.CRYPTO), "کریپتو"),
     COMMODITY("کالا و انرژی", setOf(Category.COMMODITY), "کالا و انرژی"),
@@ -40,19 +41,17 @@ data class PricesUiState(
     val loaded: Boolean = false,
     val refreshing: Boolean = false,
     val error: String? = null,
-    val tab: PriceTab = PriceTab.CURRENCY,
+    val tab: PriceTab = PriceTab.FAVORITES,
     val items: List<Asset> = emptyList(),
     val assets: List<Asset> = emptyList(),
     val settings: UserSettings = UserSettings(),
-    val heroRange: ChartRange = ChartRange.WEEK,
-    val heroSeries: HistorySeries? = null,
     val edit: Boolean = false,
     val loggedIn: Boolean = false,
     val plus: PlusStatus = PlusStatus(),
     val updatedAt: String = "",
 ) {
-    fun isFavorite(asset: Asset): Boolean =
-        if (asset.category == Category.CURRENCY) asset.symbol in settings.favorites else asset.symbol in settings.stars
+    /** منتخب از هر دسته‌ای؛ ستاره‌های قدیمی دسته‌های دیگر هم منتخب حساب می‌شوند */
+    fun isFavorite(asset: Asset): Boolean = asset.symbol in settings.favorites || asset.symbol in settings.stars
 }
 
 data class DetailState(
@@ -65,8 +64,6 @@ data class DetailState(
 
 private data class Local(
     val tab: PriceTab,
-    val heroRange: ChartRange,
-    val heroSeries: HistorySeries?,
     val edit: Boolean,
     val order: List<String>?,
 )
@@ -77,14 +74,12 @@ class PricesViewModel(
     private val settingsStore: SettingsStore,
     private val account: AccountRepository,
 ) : ViewModel() {
-    private val tab = MutableStateFlow(PriceTab.CURRENCY)
-    private val heroRange = MutableStateFlow(ChartRange.WEEK)
-    private val heroSeries = MutableStateFlow<HistorySeries?>(null)
+    private val tab = MutableStateFlow(PriceTab.FAVORITES)
     private val edit = MutableStateFlow(false)
     /** ترتیب موقت هنگام کشیدن؛ با رها کردن ذخیره می‌شود */
     private val dragOrder = MutableStateFlow<List<String>?>(null)
 
-    private val local = combine(tab, heroRange, heroSeries, edit, dragOrder) { t, r, s, e, o -> Local(t, r, s, e, o) }
+    private val local = combine(tab, edit, dragOrder) { t, e, o -> Local(t, e, o) }
 
     val state: StateFlow<PricesUiState> = combine(
         market.snapshot,
@@ -102,8 +97,6 @@ class PricesViewModel(
             items = itemsFor(l.tab, assets, settings, l.order),
             assets = assets,
             settings = settings,
-            heroRange = l.heroRange,
-            heroSeries = l.heroSeries,
             edit = l.edit,
             loggedIn = session != null,
             plus = plus,
@@ -116,15 +109,6 @@ class PricesViewModel(
 
     init {
         viewModelScope.launch { market.loadCached() }
-        // نمودار کارت اصلی: اولین دارایی فهرست + بازه‌ی انتخاب‌شده
-        viewModelScope.launch {
-            combine(state.map { it.items.firstOrNull()?.symbol }.distinctUntilChanged(), heroRange) { symbol, range ->
-                symbol to range
-            }.distinctUntilChanged().collectLatest { (symbol, range) ->
-                heroSeries.value = null
-                if (symbol != null) market.history(symbol, range).onSuccess { heroSeries.value = it }
-            }
-        }
     }
 
     fun refresh() {
@@ -135,10 +119,6 @@ class PricesViewModel(
         tab.value = value
         edit.value = false
         dragOrder.value = null
-    }
-
-    fun selectHeroRange(range: ChartRange) {
-        heroRange.value = range
     }
 
     fun startEdit() {
@@ -169,8 +149,8 @@ class PricesViewModel(
         val order = dragOrder.value ?: return
         val current = tab.value
         viewModelScope.launch {
-            if (current == PriceTab.CURRENCY) {
-                // ارزهای منتخبی که الان در اسنپ‌شات نیستند هم حفظ می‌شوند
+            if (current == PriceTab.FAVORITES) {
+                // منتخب‌هایی که الان در اسنپ‌شات نیستند هم حفظ می‌شوند
                 val missing = state.value.settings.favorites.filter { it !in order }
                 settingsStore.setFavorites(order + missing)
             } else {
@@ -182,8 +162,13 @@ class PricesViewModel(
 
     fun toggleFavorite(asset: Asset) {
         viewModelScope.launch {
-            if (asset.category == Category.CURRENCY) settingsStore.toggleFavorite(asset.symbol)
-            else settingsStore.toggleStar(asset.symbol)
+            val settings = settingsStore.current()
+            if (asset.symbol in settings.favorites || asset.symbol in settings.stars) {
+                if (asset.symbol in settings.favorites) settingsStore.toggleFavorite(asset.symbol)
+                if (asset.symbol in settings.stars) settingsStore.toggleStar(asset.symbol)
+            } else {
+                settingsStore.toggleFavorite(asset.symbol)
+            }
         }
     }
 
@@ -226,8 +211,9 @@ class PricesViewModel(
     companion object {
         fun itemsFor(tab: PriceTab, assets: List<Asset>, settings: UserSettings, order: List<String>?): List<Asset> {
             val bySymbol = assets.associateBy { it.symbol }
-            if (tab == PriceTab.CURRENCY) {
-                return (order ?: settings.favorites).mapNotNull { bySymbol[it] }
+            if (tab == PriceTab.FAVORITES) {
+                val all = order ?: (settings.favorites + settings.stars.filter { it !in settings.favorites })
+                return all.mapNotNull { bySymbol[it] }
             }
             val base = assets.filter { it.category in tab.categories }
             val rank = (order ?: settings.orders[tab.orderKey].orEmpty())

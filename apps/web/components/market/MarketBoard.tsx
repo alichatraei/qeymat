@@ -271,7 +271,14 @@ export default function MarketBoard({
         ) : null}
       </section>
 
-      {selected ? <RateDrawer rate={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <RateDrawer
+          rate={snapshot.assets.find((asset) => asset.symbol === selected.symbol) ?? selected}
+          assets={snapshot.assets}
+          onOpen={setSelected}
+          onClose={() => setSelected(null)}
+        />
+      ) : null}
     </main>
   );
 }
