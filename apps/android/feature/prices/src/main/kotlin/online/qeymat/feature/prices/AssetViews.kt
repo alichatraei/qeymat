@@ -52,7 +52,7 @@ fun AssetRow(
             .padding(bottom = 8.dp)
             .scale(if (dragging) 1.02f else 1f)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.02f))
+            .background(if (Q.isDark) Q.Raised else Q.CardTop)
             .border(
                 1.dp,
                 when {
@@ -83,7 +83,7 @@ fun AssetRow(
     }
 }
 
-/** کارت شبکه‌ای یک دارایی */
+/** کارت شبکه‌ای یک دارایی؛ هم‌عرض ستون تا شبکه مرتب بماند */
 @Composable
 fun AssetGridCard(
     asset: Asset,
@@ -94,35 +94,31 @@ fun AssetGridCard(
     handle: Modifier = Modifier,
     onStar: () -> Unit,
 ) {
-    Box(
+    Column(
         modifier = modifier
+            .fillMaxWidth()
             .padding(bottom = 10.dp)
             .scale(if (dragging) 1.02f else 1f)
             .clip(RoundedCornerShape(20.dp))
             .background(Q.card)
             .border(1.dp, if (dragging) Q.Mint else if (edit) Q.line(0.4f) else Q.line(0.16f), RoundedCornerShape(20.dp))
-            .padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp),
+            .padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            AssetTile(asset, 44.dp)
-            Spacer(Modifier.height(2.dp))
-            Text(asset.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, color = Q.Text)
-            Text(asset.enLine(), fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
-            NumText(Fa.short(asset.sell, asset.isUsd), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
-            ChangeLabel(asset.changePercent)
+        Row(verticalAlignment = Alignment.Top) {
+            AssetTile(asset, 42.dp)
+            Spacer(Modifier.weight(1f))
+            if (edit) {
+                Icon(QIcons.Handle, contentDescription = "جابه‌جایی", tint = Q.Muted, modifier = handle.padding(top = 8.dp, end = 4.dp).size(18.dp))
+            }
+            StarButton(favorite, onClick = onStar)
         }
-        StarButton(favorite, modifier = Modifier.align(Alignment.TopEnd), onClick = onStar)
-        if (edit) {
-            Icon(
-                QIcons.Handle,
-                contentDescription = "جابه‌جایی",
-                tint = Q.Muted,
-                modifier = handle
-                    .align(Alignment.TopStart)
-                    .padding(top = 30.dp)
-                    .size(18.dp),
-            )
-        }
+        Spacer(Modifier.height(10.dp))
+        Text(asset.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, color = Q.Text)
+        Text(asset.enLine(), fontSize = 10.sp, color = Q.Sub, maxLines = 1)
+        Spacer(Modifier.height(8.dp))
+        NumText(Fa.short(asset.sell, asset.isUsd), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
+        Spacer(Modifier.height(2.dp))
+        ChangeLabel(asset.changePercent)
     }
 }
 
@@ -132,7 +128,7 @@ fun InfoBox(label: String, value: String, modifier: Modifier = Modifier, small: 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.02f))
+            .background(Q.Raised)
             .border(1.dp, Q.line(0.16f), RoundedCornerShape(16.dp))
             .padding(12.dp),
     ) {

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import online.qeymat.core.data.AccountRepository
 import online.qeymat.core.data.SettingsStore
+import online.qeymat.core.data.ThemeMode
 import online.qeymat.core.data.UserSettings
 import online.qeymat.core.data.ViewMode
 import online.qeymat.core.model.PlusStatus
@@ -33,6 +34,7 @@ class SettingsViewModel(
     fun setShowBuy(value: Boolean) = launch { store.setShowBuy(value) }
     fun setNotifications(value: Boolean) = launch { store.setNotifications(value) }
     fun setAutoRefresh(value: Boolean) = launch { store.setAutoRefresh(value) }
+    fun setThemeMode(mode: ThemeMode) = launch { store.setThemeMode(mode) }
     fun logout() = launch { account.logout() }
 
     private fun launch(block: suspend () -> Unit) {

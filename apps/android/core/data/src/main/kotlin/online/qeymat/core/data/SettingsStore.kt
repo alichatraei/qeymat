@@ -16,6 +16,9 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 enum class ViewMode { LIST, GRID }
 
+/** پوسته‌ی رنگی: پیرو گوشی، روشن یا تاریک */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 /**
  * تنظیمات کاربر روی دستگاه.
  *
@@ -32,6 +35,7 @@ data class UserSettings(
     val notifications: Boolean = true,
     val autoRefresh: Boolean = true,
     val widgetSymbols: List<String> = emptyList(),
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
 ) {
     companion object {
         val DEFAULT_FAVORITES = listOf(
@@ -50,6 +54,8 @@ class SettingsStore(private val context: Context) {
     private val autoRefreshKey = booleanPreferencesKey("auto_refresh")
     private val widgetSymbolsKey = stringPreferencesKey("widget_symbols")
     private val seenAlertsKey = stringPreferencesKey("seen_alerts")
+    private val themeModeKey = stringPreferencesKey("theme_mode")
+    private val tourDoneKey = booleanPreferencesKey("tour_done")
 
     val settings: Flow<UserSettings> = context.settingsDataStore.data.map { prefs ->
         UserSettings(
@@ -61,8 +67,12 @@ class SettingsStore(private val context: Context) {
             notifications = prefs[notificationsKey] ?: true,
             autoRefresh = prefs[autoRefreshKey] ?: true,
             widgetSymbols = prefs[widgetSymbolsKey]?.let(::splitList) ?: emptyList(),
+            themeMode = ThemeMode.entries.firstOrNull { it.name == prefs[themeModeKey] } ?: ThemeMode.SYSTEM,
         )
     }
+
+    /** آیا تور راهنما یک‌بار دیده شده (اپ تا خوانده شدنش تور را باز نمی‌کند) */
+    val tourDone: Flow<Boolean> = context.settingsDataStore.data.map { it[tourDoneKey] ?: false }
 
     suspend fun current(): UserSettings = settings.first()
 
@@ -90,6 +100,8 @@ class SettingsStore(private val context: Context) {
     suspend fun setShowBuy(value: Boolean) = put { it[showBuyKey] = value }
     suspend fun setNotifications(value: Boolean) = put { it[notificationsKey] = value }
     suspend fun setAutoRefresh(value: Boolean) = put { it[autoRefreshKey] = value }
+    suspend fun setThemeMode(mode: ThemeMode) = put { it[themeModeKey] = mode.name }
+    suspend fun setTourDone(value: Boolean) = put { it[tourDoneKey] = value }
     suspend fun setWidgetSymbols(symbols: List<String>) = put { it[widgetSymbolsKey] = symbols.joinToString(",") }
 
     /** شناسه‌ی هشدارهای اجراشده‌ای که اعلانشان نمایش داده شده */

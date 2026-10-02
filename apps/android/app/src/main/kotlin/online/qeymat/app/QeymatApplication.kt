@@ -32,7 +32,7 @@ import org.koin.core.context.startKoin
  *   feature:*        هر صفحه با ViewModel خودش
  *   widget           ویجت‌های صفحه‌ی اصلی با Glance
  */
-class QeymatApplication : Application() {
+open class QeymatApplication : Application() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {

@@ -25,7 +25,14 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         if (providers.gradleProperty("qeymat.useMirror").orNull == "true") {
-            maven("https://maven.aliyun.com/repository/google")
+            // آینه‌ی گوگلِ Aliyun برای بسته‌های غیرگوگلی خطای 502 می‌دهد؛ فقط گروه‌های گوگل از آن
+            maven("https://maven.aliyun.com/repository/google") {
+                content {
+                    includeGroupByRegex("com\\.android.*")
+                    includeGroupByRegex("com\\.google.*")
+                    includeGroupByRegex("androidx.*")
+                }
+            }
             maven("https://maven.aliyun.com/repository/central")
         }
         google()

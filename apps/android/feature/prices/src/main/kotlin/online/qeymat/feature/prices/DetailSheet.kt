@@ -80,7 +80,7 @@ fun DetailSheet(
         sheetState = sheetState,
         containerColor = Q.Sheet,
         contentColor = Q.Text,
-        scrimColor = Color(0x99030C08),
+        scrimColor = Q.Scrim,
         shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
         dragHandle = {
             Box(
@@ -104,7 +104,7 @@ fun DetailSheet(
                 AssetTile(asset, 44.dp)
                 Column(Modifier.weight(1f)) {
                     Text(asset.nameFa, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("${asset.enLine()} · ${asset.sourceLabel}", fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
+                    Text(asset.enLine(), fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
                 }
                 StarButton(favorite, onClick = onStar)
                 QIconButton(QIcons.Close, contentDescription = "بستن", size = 32.dp, onClick = onDismiss)
@@ -136,7 +136,7 @@ fun DetailSheet(
                         .fillMaxWidth()
                         .height(170.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.03f)),
+                        .background(Q.Raised),
                 )
             } else {
                 PriceChart(
@@ -203,7 +203,7 @@ private fun AnalysisSection(analysis: Analysis?, plusActive: Boolean, loggedIn: 
             .padding(top = 12.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(if (plusActive) Color.White.copy(alpha = 0.02f) else Q.Gold.copy(alpha = 0.06f))
+            .background(if (plusActive) Q.Raised else Q.Gold.copy(alpha = 0.06f))
             .border(1.dp, Q.line(if (plusActive) 0.16f else 0.3f), RoundedCornerShape(16.dp))
             .padding(12.dp),
     ) {

@@ -89,6 +89,12 @@ fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier 
     ),
 )
 
+/** سایه‌ی کارت: در تم تاریک عمیق، در تم روشن نرم و کم */
+fun Modifier.qShadow(shape: androidx.compose.ui.graphics.Shape, elevation: Dp = 14.dp): Modifier = this.then(
+    if (Q.isDark) Modifier.shadow(elevation, shape, ambientColor = Q.Shadow, spotColor = Q.Shadow)
+    else Modifier.shadow(elevation * 0.45f, shape, ambientColor = Q.Shadow.copy(alpha = 0.18f), spotColor = Q.Shadow.copy(alpha = 0.22f)),
+)
+
 /** کارت شیشه‌ای با گرادیان سبز و لبه‌ی طلایی */
 @Composable
 fun QCard(
@@ -100,7 +106,7 @@ fun QCard(
 ) {
     Column(
         modifier = modifier
-            .shadow(14.dp, RoundedCornerShape(radius), ambientColor = Color.Black, spotColor = Color.Black)
+            .qShadow(RoundedCornerShape(radius))
             .clip(RoundedCornerShape(radius))
             .background(Q.card)
             .border(1.dp, Q.line(borderAlpha), RoundedCornerShape(radius))
@@ -130,7 +136,7 @@ fun QPill(
     }
     val border = when (tone) {
         PillTone.Mint -> Q.Mint
-        PillTone.Sub -> Color.White.copy(alpha = 0.14f)
+        PillTone.Sub -> Q.line(0.3f)
         PillTone.Red -> Q.Red.copy(alpha = 0.5f)
         PillTone.Gold -> Q.Gold.copy(alpha = 0.45f)
     }
@@ -208,7 +214,7 @@ fun <T> QSegmented(
         modifier = modifier
             .fillMaxWidth()
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.28f))
+            .background(Q.Field)
             .border(1.dp, Q.line(0.14f), CircleShape)
             .padding(3.dp),
     ) {
@@ -253,7 +259,7 @@ fun QToggle(checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Un
             modifier = Modifier
                 .size(20.dp)
                 .clip(CircleShape)
-                .background(Q.Text),
+                .background(if (Q.isDark) Q.Text else Color.White),
         )
     }
 }
@@ -290,7 +296,7 @@ fun QSearchField(
         modifier = modifier
             .height(44.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.2f))
+            .background(Q.Field)
             .border(1.dp, Q.line(0.3f), CircleShape)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -342,7 +348,7 @@ fun QInputBox(
             .fillMaxWidth()
             .height(52.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.2f))
+            .background(Q.Field)
             .border(1.dp, Q.line(0.35f), CircleShape)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,

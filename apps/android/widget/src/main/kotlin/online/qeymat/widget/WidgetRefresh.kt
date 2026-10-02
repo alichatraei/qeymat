@@ -1,6 +1,9 @@
 package online.qeymat.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import androidx.glance.appwidget.updateAll
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -25,6 +28,20 @@ object QeymatWidgets {
     suspend fun updateAll(context: Context) {
         runCatching { PricesWidget().updateAll(context) }
         runCatching { DollarWidget().updateAll(context) }
+    }
+
+    /** آیا لانچر گوشی اجازه‌ی «افزودن ویجت از داخل اپ» می‌دهد (اندروید ۸ به بالا) */
+    fun canPin(context: Context): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
+
+    /** پنجره‌ی سیستمی افزودن ویجت «قیمت‌های منتخب» به صفحه‌ی اصلی */
+    fun requestPin(context: Context): Boolean {
+        if (!canPin(context)) return false
+        return runCatching {
+            AppWidgetManager.getInstance(context)
+                .requestPinAppWidget(ComponentName(context, PricesWidgetReceiver::class.java), null, null)
+        }.getOrDefault(false)
     }
 }
 

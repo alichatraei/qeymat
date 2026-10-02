@@ -9,22 +9,19 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import online.qeymat.app.ui.QeymatAppRoot
-import online.qeymat.core.designsystem.QeymatTheme
 import online.qeymat.widget.QeymatWidgets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
-        // طراحی همیشه تیره است؛ آیکون‌های نوار وضعیت روشن
+        // سبک نوارها بعد از خواندن پوسته در QeymatAppRoot تنظیم می‌شود
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
         setContent {
-            QeymatTheme {
-                QeymatAppRoot(versionName = BuildConfig.VERSION_NAME)
-            }
+            QeymatAppRoot(versionName = BuildConfig.VERSION_NAME)
         }
     }
 

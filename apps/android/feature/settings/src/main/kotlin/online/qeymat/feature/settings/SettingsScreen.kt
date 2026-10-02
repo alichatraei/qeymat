@@ -38,12 +38,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import online.qeymat.core.data.ThemeMode
 import online.qeymat.core.data.ViewMode
 import online.qeymat.core.designsystem.Q
 import online.qeymat.core.designsystem.QIcons
 import online.qeymat.core.designsystem.component.PillTone
 import online.qeymat.core.designsystem.component.QCard
 import online.qeymat.core.designsystem.component.QPill
+import online.qeymat.core.designsystem.component.QSegmented
 import online.qeymat.core.designsystem.component.QToggle
 import online.qeymat.core.designsystem.component.quietClick
 import online.qeymat.core.model.format.Fa
@@ -53,9 +55,17 @@ import org.koin.androidx.compose.koinViewModel
 /**
  * @param versionName نسخه‌ی اپ برای نمایش
  * @param onLogin رفتن به فرم ورود (زبانه‌ی هشدار)
+ * @param onStartTour نمایش دوباره‌ی تور راهنما
+ * @param onAddWidget افزودن ویجت به صفحه‌ی اصلی
  */
 @Composable
-fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsRoute(
+    versionName: String,
+    onLogin: () -> Unit,
+    onStartTour: () -> Unit,
+    onAddWidget: () -> Unit,
+    viewModel: SettingsViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     fun open(url: String) = runCatching {
@@ -68,7 +78,7 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
             .background(Q.Bg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp)
-            .padding(bottom = 120.dp),
+            .padding(bottom = 28.dp),
     ) {
         Column(Modifier.statusBarsPadding().padding(top = 16.dp, bottom = 12.dp)) {
             Text("تنظیمات", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
@@ -77,7 +87,7 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
 
         QCard(Modifier.fillMaxWidth(), radius = 20.dp, padding = 14.dp) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(QIcons.User, contentDescription = null, tint = Q.Gold, modifier = Modifier.size(26.dp))
+                IconTile(QIcons.User)
                 Column(Modifier.weight(1f)) {
                     Text("حساب کاربری", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text(
@@ -98,6 +108,32 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
             onUpgrade = { open("https://qeymat.online/plus") },
         )
 
+        GroupTitle("پوسته")
+        Group {
+            Column(Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    IconTile(QIcons.Contrast)
+                    Column(Modifier.weight(1f)) {
+                        Text("حالت رنگ", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("روشن، تاریک یا هماهنگ با گوشی", fontSize = 10.5.sp, color = Q.Sub)
+                    }
+                }
+                QSegmented(
+                    options = ThemeMode.entries,
+                    selected = state.settings.themeMode,
+                    label = {
+                        when (it) {
+                            ThemeMode.SYSTEM -> "مثل گوشی"
+                            ThemeMode.LIGHT -> "روشن"
+                            ThemeMode.DARK -> "تاریک"
+                        }
+                    },
+                    modifier = Modifier.padding(top = 12.dp),
+                    onSelect = viewModel::setThemeMode,
+                )
+            }
+        }
+
         GroupTitle("نمایش")
         Group {
             SettingRow(
@@ -117,7 +153,7 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
             SettingRow(QIcons.Refresh, "به‌روزرسانی خودکار", subtitle = "هر ۳۰ ثانیه وقتی برنامه باز است") {
                 QToggle(state.settings.autoRefresh, onChange = viewModel::setAutoRefresh)
             }
-            SettingRow(QIcons.Chart, "تحلیل قیمت پیشرفته", subtitle = "با اشتراک قیمت پلاس") {
+            SettingRow(QIcons.Chart, "تحلیل قیمت پیشرفته", subtitle = "با اشتراک قیمت پلاس", divider = false) {
                 Icon(
                     if (state.plus.active) QIcons.Check else QIcons.Lock,
                     contentDescription = null,
@@ -125,7 +161,12 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
                     modifier = Modifier.size(18.dp),
                 )
             }
-            SettingRow(QIcons.Moon, "حالت تاریک") { QToggle(checked = true, enabled = false) {} }
+        }
+
+        GroupTitle("راهنما و ویجت")
+        Group {
+            SettingRow(QIcons.Help, "راهنمای برنامه", subtitle = "دیدن دوباره‌ی تور امکانات", onClick = onStartTour) { Chevron() }
+            SettingRow(QIcons.Widget, "افزودن ویجت", subtitle = "قیمت‌های منتخب روی صفحه‌ی اصلی گوشی", onClick = onAddWidget, divider = false) { Chevron() }
         }
 
         GroupTitle("دربارهٔ برنامه")
@@ -142,7 +183,7 @@ fun SettingsRoute(versionName: String, onLogin: () -> Unit, viewModel: SettingsV
             }) { Chevron() }
             SettingRow(QIcons.Support, "پشتیبانی", onClick = { open("https://qeymat.online/panel/tickets") }) { Chevron() }
             SettingRow(QIcons.Lock, "حریم خصوصی", onClick = { open("https://qeymat.online/privacy") }) { Chevron() }
-            SettingRow(QIcons.Info, "نسخه") { Text(Fa.digits(versionName), color = Q.Sub, fontSize = 11.5.sp) }
+            SettingRow(QIcons.Info, "نسخه", divider = false) { Text(Fa.digits(versionName), color = Q.Sub, fontSize = 11.5.sp) }
         }
 
         Column(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -241,6 +282,7 @@ private fun ColumnScope.SettingRow(
     title: String,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
+    divider: Boolean = true,
     trailing: @Composable () -> Unit,
 ) {
     Row(
@@ -252,14 +294,28 @@ private fun ColumnScope.SettingRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = Q.Gold, modifier = Modifier.size(20.dp))
+        IconTile(icon)
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             if (subtitle != null) Text(subtitle, fontSize = 10.5.sp, color = Q.Sub)
         }
         trailing()
     }
-    HorizontalDivider(color = Q.line(0.1f), thickness = 1.dp)
+    if (divider) HorizontalDivider(color = Q.line(0.1f), thickness = 1.dp, modifier = Modifier.padding(start = 60.dp))
+}
+
+/** آیکون در کاشی گرد کم‌رنگ طلایی */
+@Composable
+private fun IconTile(icon: ImageVector) {
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(Q.Gold.copy(alpha = if (Q.isDark) 0.12f else 0.13f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Q.Gold, modifier = Modifier.size(19.dp))
+    }
 }
 
 @Composable

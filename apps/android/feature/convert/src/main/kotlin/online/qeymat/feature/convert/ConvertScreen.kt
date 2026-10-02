@@ -80,7 +80,7 @@ fun ConvertRoute(viewModel: ConvertViewModel = koinViewModel()) {
             .background(Q.Bg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp)
-            .padding(bottom = 120.dp),
+            .padding(bottom = 28.dp),
     ) {
         Column(Modifier.statusBarsPadding().padding(top = 16.dp, bottom = 12.dp)) {
             Text("تبدیل نرخ", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
@@ -152,7 +152,7 @@ fun ConvertRoute(viewModel: ConvertViewModel = koinViewModel()) {
                             .weight(1f)
                             .height(44.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.02f))
+                            .background(Q.Raised)
                             .border(1.dp, Q.line(0.2f), RoundedCornerShape(16.dp))
                             .quietClick { viewModel.quick(from, to) },
                         contentAlignment = Alignment.Center,
@@ -234,7 +234,7 @@ private fun AssetPicker(title: String, options: List<Asset>, onDismiss: () -> Un
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.02f))
+                            .background(Q.Raised)
                             .border(1.dp, Q.line(0.12f), RoundedCornerShape(16.dp))
                             .quietClick { onPick(asset) }
                             .padding(10.dp),

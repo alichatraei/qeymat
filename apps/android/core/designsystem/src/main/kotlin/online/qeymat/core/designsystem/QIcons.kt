@@ -59,13 +59,61 @@ object QIcons {
         "M96 192a32 32 0 0 0 64 0",
         "M56 104a72 72 0 0 1 144 0c0 35.8 8.2 64.5 14.8 75.9A8 8 0 0 1 208 192H48a8 8 0 0 1-6.9-12.1C47.8 168.5 56 139.8 56 104Z",
     )
-    val TabPrices = stroke("tabPrices", "M32 184l56-56 40 32 96-96", "M168 64h56v56")
-    val TabConvert = stroke("tabConvert", "M40 88h176M176 48l40 40-40 40", "M216 168H40M80 128l-40 40 40 40")
-    val TabSettings = stroke(
-        "tabSettings",
+    // زبانه‌ها: نسخه‌ی عادی و نسخه‌ی پررنگ برای زبانه‌ی انتخاب‌شده
+    private val TAB_PRICES = arrayOf("M40 40v144a32 32 0 0 0 32 32h144", "M80 160l40-44 32 28 60-68", "M172 76h40v40")
+    private val TAB_CONVERT = arrayOf(
+        "M52 108a76 76 0 0 1 136-40l12 16",
+        "M204 44v44h-44",
+        "M204 148a76 76 0 0 1-136 40l-12-16",
+        "M52 212v-44h44",
+    )
+    private val TAB_ALERTS = arrayOf(
+        "M60 112a68 68 0 0 1 136 0c0 42 10 64 20 78a6 6 0 0 1-5 10H45a6 6 0 0 1-5-10c10-14 20-36 20-78Z",
+        "M100 216a28 28 0 0 0 56 0",
+    )
+    private val TAB_SETTINGS = arrayOf(gearPath(), "M160 128a32 32 0 1 1-64 0a32 32 0 1 1 64 0Z")
+
+    val TabPrices = stroke("tabPrices", *TAB_PRICES)
+    val TabPricesOn = stroke("tabPricesOn", *TAB_PRICES, width = 22f)
+    val TabConvert = stroke("tabConvert", *TAB_CONVERT)
+    val TabConvertOn = stroke("tabConvertOn", *TAB_CONVERT, width = 22f)
+    val TabAlerts = stroke("tabAlerts", *TAB_ALERTS)
+    val TabAlertsOn = stroke("tabAlertsOn", *TAB_ALERTS, width = 22f)
+    val TabSettings = stroke("tabSettings", *TAB_SETTINGS)
+    val TabSettingsOn = stroke("tabSettingsOn", *TAB_SETTINGS, width = 22f)
+    val Sliders = stroke(
+        "sliders",
         "M40 80h56M136 80h80M40 176h120M200 176h16",
         "M136 80a20 20 0 1 1-40 0a20 20 0 1 1 40 0Z",
         "M200 176a20 20 0 1 1-40 0a20 20 0 1 1 40 0Z",
+    )
+    val Sun = stroke(
+        "sun",
+        "M168 128a40 40 0 1 1-80 0a40 40 0 1 1 80 0Z",
+        "M128 28v20M128 208v20M28 128h20M208 128h20M57 57l14 14M185 185l14 14M57 199l14-14M185 71l14-14",
+    )
+    val Contrast = stroke(
+        "contrast",
+        "M224 128a96 96 0 1 1-192 0a96 96 0 1 1 192 0Z",
+        "M128 32v192",
+        "M128 64h44M128 96h76M128 128h84M128 160h76M128 192h44",
+    )
+    val Widget = stroke(
+        "widget",
+        "M64 40h48a24 24 0 0 1 24 24v48a24 24 0 0 1-24 24H64a24 24 0 0 1-24-24V64a24 24 0 0 1 24-24Z",
+        "M180 36l40 40-40 40-40-40Z",
+        "M64 160h128a24 24 0 0 1 24 24v8a24 24 0 0 1-24 24H64a24 24 0 0 1-24-24v-8a24 24 0 0 1 24-24Z",
+    )
+    val Help = stroke(
+        "help",
+        "M224 128a96 96 0 1 1-192 0a96 96 0 1 1 192 0Z",
+        "M100 102a28 28 0 1 1 42 24c-9 5-14 11-14 20v6",
+        "M128 184h0.1",
+    )
+    val Hand = stroke(
+        "hand",
+        "M104 132V60a16 16 0 0 1 32 0v64",
+        "M136 116a16 16 0 0 1 32 0v16a16 16 0 0 1 32 0v40a64 64 0 0 1-64 64h-8c-30 0-46-14-64-40l-22-34a16 16 0 0 1 26-18l18 22",
     )
     val Logout = stroke("logout", "M112 40H48v176h64", "M104 128h112M176 88l40 40-40 40")
     val Phone = stroke("phone", "M76 24h104a12 12 0 0 1 12 12v184a12 12 0 0 1-12 12H76a12 12 0 0 1-12-12V36a12 12 0 0 1 12-12Z", "M112 56h32")
@@ -103,4 +151,20 @@ object QIcons {
     val Message = stroke("message", "M40 208V64a16 16 0 0 1 16-16h144a16 16 0 0 1 16 16v96a16 16 0 0 1-16 16H80Z", "M88 104h80M88 136h48")
     val Trash = stroke("trash", "M40 64h176M96 64V40h64v24M64 64l12 152h104l12-152")
     val Sparkle = stroke("sparkle", "M128 32l20 76 76 20-76 20-20 76-20-76-76-20 76-20Z")
+
+    /** چرخ‌دنده‌ی ۸ دندانه، محاسبه‌شده به‌جای مسیر دستی */
+    private fun gearPath(): String {
+        val points = buildList {
+            for (tooth in 0 until 8) {
+                val center = tooth * 45.0
+                for ((angle, radius) in listOf(center - 17 to 78.0, center - 9 to 100.0, center + 9 to 100.0, center + 17 to 78.0)) {
+                    val rad = Math.toRadians(angle)
+                    add(128 + radius * kotlin.math.cos(rad) to 128 + radius * kotlin.math.sin(rad))
+                }
+            }
+        }
+        return points.mapIndexed { index, (x, y) ->
+            "${if (index == 0) "M" else "L"}${"%.1f".format(java.util.Locale.US, x)} ${"%.1f".format(java.util.Locale.US, y)}"
+        }.joinToString("") + "Z"
+    }
 }

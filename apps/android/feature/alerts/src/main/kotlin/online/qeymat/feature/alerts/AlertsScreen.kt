@@ -83,7 +83,7 @@ fun AlertsRoute(onAddAlert: () -> Unit, viewModel: AlertsViewModel = koinViewMod
             .background(Q.Bg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp)
-            .padding(bottom = 120.dp),
+            .padding(bottom = 28.dp),
     ) {
         Row(
             Modifier.statusBarsPadding().padding(top = 16.dp, bottom = 12.dp),
@@ -214,7 +214,7 @@ private fun AlertRow(alert: PriceAlert, onDelete: () -> Unit) {
             .padding(top = 8.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.02f))
+            .background(Q.Raised)
             .border(1.dp, Q.line(0.12f), RoundedCornerShape(16.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -243,7 +243,7 @@ private fun AlertRow(alert: PriceAlert, onDelete: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .clip(CircleShape)
-                .border(1.dp, if (alert.isActive) Q.Mint.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.14f), CircleShape)
+                .border(1.dp, if (alert.isActive) Q.Mint.copy(alpha = 0.5f) else Q.line(0.3f), CircleShape)
                 .padding(horizontal = 10.dp, vertical = 4.dp),
         )
         Icon(

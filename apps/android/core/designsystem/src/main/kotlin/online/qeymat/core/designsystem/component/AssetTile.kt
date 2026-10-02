@@ -69,7 +69,7 @@ fun AssetTile(asset: Asset, size: Dp = 40.dp, modifier: Modifier = Modifier) {
             .border(
                 1.dp,
                 // آواتار رنگی زمینه‌ی خودش را دارد؛ لبه‌ی طلایی فقط برای کاشی تیره
-                if (glyph == Glyph.Art) Color.White.copy(alpha = 0.08f) else Q.Gold.copy(alpha = 0.5f),
+                if (glyph == Glyph.Art) Q.line(0.12f) else Q.Gold.copy(alpha = 0.5f),
                 shape,
             ),
         contentAlignment = Alignment.Center,
@@ -104,7 +104,7 @@ fun AssetTile(asset: Asset, size: Dp = 40.dp, modifier: Modifier = Modifier) {
     }
 }
 
-/** تغییر قیمت با فلش بالا/پایین */
+/** تغییر قیمت با فلش بالا/پایین؛ بدون تغییر خاکستری و بی‌فلش */
 @Composable
 fun ChangeLabel(
     percent: Double,
@@ -112,26 +112,29 @@ fun ChangeLabel(
     absolute: String? = null,
     big: Boolean = false,
 ) {
+    val flat = kotlin.math.abs(percent) < 0.005
     val up = percent >= 0
-    val color = Q.trend(up)
+    val color = Q.trend(percent)
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Icon(
-            if (up) QIcons.ArrowUp else QIcons.ArrowDown,
-            contentDescription = if (up) "افزایش" else "کاهش",
-            tint = color,
-            modifier = Modifier.size(if (big) 13.dp else 11.dp),
-        )
-        if (absolute != null) {
+        if (!flat) {
+            Icon(
+                if (up) QIcons.ArrowUp else QIcons.ArrowDown,
+                contentDescription = if (up) "افزایش" else "کاهش",
+                tint = color,
+                modifier = Modifier.size(if (big) 13.dp else 11.dp),
+            )
+        }
+        if (absolute != null && !flat) {
             NumText(absolute, color = color, fontWeight = FontWeight.Bold, fontSize = if (big) 14.sp else 13.sp)
         }
+        val percentText = if (flat) "۰٪" else online.qeymat.core.model.format.Fa.percent(percent)
         NumText(
-            text = if (absolute != null) "(${online.qeymat.core.model.format.Fa.percent(percent)})"
-            else online.qeymat.core.model.format.Fa.percent(percent),
-            color = if (absolute != null) color.copy(alpha = 0.85f) else color,
+            text = if (absolute != null && !flat) "($percentText)" else percentText,
+            color = if (absolute != null && !flat) color.copy(alpha = 0.85f) else color,
             fontWeight = FontWeight.Bold,
             fontSize = if (big) 14.sp else 11.sp,
         )

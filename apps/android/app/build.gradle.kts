@@ -63,6 +63,19 @@ android {
         buildConfig = true
     }
 
+    // تصویر صفحه‌ها بدون شبیه‌ساز (Robolectric + Roborazzi):
+    //   gradle :app:testDebugUnitTest --tests '*ScreenshotTest*' -Pqeymat.screenshots=true
+    // خروجی در app/build/screens
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { test ->
+            val record = providers.gradleProperty("qeymat.screenshots").orNull == "true"
+            test.systemProperty("roborazzi.test.record", record.toString())
+            test.systemProperty("qeymat.screenshots", record.toString())
+            test.maxHeapSize = "3g"
+        }
+    }
+
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/versions/9/previous-compilation-data.bin")
     }
@@ -88,4 +101,13 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.koin.androidx.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(platform(libs.androidx.compose.bom))
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

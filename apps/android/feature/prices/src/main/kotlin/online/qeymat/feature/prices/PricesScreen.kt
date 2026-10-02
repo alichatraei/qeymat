@@ -59,6 +59,8 @@ import online.qeymat.core.designsystem.component.SectionHeader
 import online.qeymat.core.designsystem.component.StarButton
 import online.qeymat.core.designsystem.component.quietClick
 import online.qeymat.core.designsystem.component.toChartPoints
+import online.qeymat.core.designsystem.component.TourKeys
+import online.qeymat.core.designsystem.component.tourTarget
 import online.qeymat.core.model.Asset
 import online.qeymat.core.model.ChartRange
 import online.qeymat.core.model.format.Fa
@@ -158,7 +160,7 @@ private fun PricesScreen(
         LazyVerticalGrid(
             columns = GridCells.Fixed(if (grid) 2 else 1),
             state = gridState,
-            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -174,7 +176,7 @@ private fun PricesScreen(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 2.dp),
-                    modifier = Modifier.padding(bottom = 12.dp),
+                    modifier = Modifier.padding(bottom = 12.dp).tourTarget(TourKeys.TABS),
                 ) {
                     items(PriceTab.entries) { tab ->
                         QChip(tab.label, tab == state.tab) { viewModel.selectTab(tab) }
@@ -206,6 +208,7 @@ private fun PricesScreen(
 
             item(key = "section", span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
+                    modifier = Modifier.tourTarget(TourKeys.LIST),
                     title = "${state.tab.listTitle} · ${Fa.number(state.items.size)} مورد",
                     hint = "برای جابه‌جایی نگه دار",
                 ) {
@@ -284,7 +287,7 @@ private fun Header(dateLine: String, edit: Boolean, onEndEdit: () -> Unit, onSea
             Text(dateLine, fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
         }
         if (edit) QPill("پایان ویرایش", icon = QIcons.Check, tone = PillTone.Mint, onClick = onEndEdit)
-        QIconButton(QIcons.Search, contentDescription = "جستجو", onClick = onSearch)
+        QIconButton(QIcons.Search, contentDescription = "جستجو", modifier = Modifier.tourTarget(TourKeys.SEARCH), onClick = onSearch)
     }
 }
 
@@ -299,7 +302,7 @@ private fun HeroCard(
     onStar: () -> Unit,
     onOpen: () -> Unit,
 ) {
-    QCard(modifier = Modifier.fillMaxWidth().quietClick(onClick = onOpen)) {
+    QCard(modifier = Modifier.fillMaxWidth().tourTarget(TourKeys.HERO).quietClick(onClick = onOpen)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             online.qeymat.core.designsystem.component.AssetTile(asset, 46.dp)
             Column(Modifier.weight(1f)) {

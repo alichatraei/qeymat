@@ -105,7 +105,7 @@ fun SearchOverlay(
             )
         },
     ) {
-        LazyColumn(contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 120.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 28.dp)) {
             if (query.isBlank()) item { SectionHeader("منتخب شما") }
             items(results, key = { it.symbol }) { asset ->
                 AssetRow(
@@ -165,7 +165,7 @@ fun CatalogOverlay(
             placeholder = "نام فارسی، انگلیسی یا کد ارز…",
             modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp),
         )
-        LazyColumn(contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 120.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 28.dp)) {
             items(list, key = { it.symbol }) { asset ->
                 AssetRow(
                     asset = asset,
