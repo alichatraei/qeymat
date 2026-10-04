@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
 import { activeServiceWorker, withTimeout } from "@/lib/service-worker";
+import { fetchRetry } from "@/lib/fetch-retry";
 
 type State = "unsupported" | "idle" | "loading" | "on" | "denied";
 
@@ -15,7 +16,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 async function saveSubscription(subscription: PushSubscription) {
-  const save = await fetch("/api/push/subscribe", {
+  const save = await fetchRetry("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(subscription.toJSON()),
@@ -66,7 +67,7 @@ export default function PushToggle({ compact = false }: { compact?: boolean }) {
         return;
       }
 
-      const keyResponse = await fetch("/api/push/key");
+      const keyResponse = await fetchRetry("/api/push/key");
       const { publicKey } = await keyResponse.json();
       if (!publicKey) throw new Error("کلید اعلان روی سرور تنظیم نشده است.");
 

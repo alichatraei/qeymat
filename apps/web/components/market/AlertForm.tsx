@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { Bell, Crown, LogIn, MessageSquareText } from "lucide-react";
 import { fa, parseNumber, unitLabel } from "@qeymat/shared";
 import PushToggle from "@/components/pwa/PushToggle";
+import { fetchRetry, networkErrorMessage } from "@/lib/fetch-retry";
 import type { PlusStatus, RateView } from "@/lib/types";
 
 type AlertsResponse = { plus: PlusStatus; smsUsed: number } | { error: { code: string; message: string } };
@@ -35,7 +36,8 @@ export default function AlertForm({ rate }: { rate: RateView }) {
     setState("saving");
     setMessage("");
     try {
-      const response = await fetch("/api/alerts", {
+      // ثبت دوباره بی‌خطر است: سرور هشدار قبلی همین دارایی را جایگزین می‌کند
+      const response = await fetchRetry("/api/alerts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ symbol: rate.symbol, threshold: target, sms }),
@@ -53,9 +55,9 @@ export default function AlertForm({ rate }: { rate: RateView }) {
         } می‌گیرید.`,
       );
       mutate();
-    } catch {
+    } catch (error) {
       setState("error");
-      setMessage("ارتباط با سرور برقرار نشد.");
+      setMessage(networkErrorMessage(error));
     }
   };
 
