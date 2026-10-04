@@ -16,7 +16,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   return (
     // پایین صفحه در موبایل به اندازه‌ی ناوبری شناور فاصله دارد تا فوتر زیرش نرود
-    <div className="flex min-h-screen flex-col pb-[calc(84px+env(safe-area-inset-bottom))] xl:pb-0">
+    <div className="flex min-h-screen flex-col pb-[calc(76px+env(safe-area-inset-bottom))] xl:pb-0">
       <SiteHeader user={user} hasPlus={hasPlus} />
       <div className="flex-1">{children}</div>
       <SiteFooter />

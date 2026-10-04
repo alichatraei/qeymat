@@ -81,7 +81,9 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  // iOS روی فیلدهای زیر ۱۶ پیکسل زوم می‌کند و بعد از بستن کیبورد برنمی‌گردد؛ برنامه مثل اپ بومی زوم ندارد
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 

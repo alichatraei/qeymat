@@ -7,8 +7,8 @@ import type { SessionUser } from "@/lib/types";
 
 /**
  * ناوبری پایین صفحه برای موبایل و نسخه‌ی نصب‌شده (PWA)، به‌جای منوی همبرگری.
- * شیشه‌ای و شناور بالای ناحیه‌ی امن پایین گوشی؛ از عرض xl که منوی بالا
- * جا می‌شود، پنهان است.
+ * تمام‌عرض و چسبیده به پایین، مثل نوار زبانه‌ی اپ؛ ناحیه‌ی امن پایین گوشی
+ * هم‌رنگ نوار است. از عرض xl که منوی بالا جا می‌شود، پنهان است.
  */
 export default function BottomNav({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
@@ -30,9 +30,9 @@ export default function BottomNav({ user }: { user: SessionUser | null }) {
   return (
     <nav
       aria-label="ناوبری اصلی"
-      className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-[520px] rounded-[24px] border border-white/60 bg-surface/65 p-1.5 shadow-[0_12px_40px_rgba(7,19,31,.18)] backdrop-blur-2xl backdrop-saturate-150 xl:hidden dark:border-white/10 dark:bg-surface/55 dark:shadow-[0_12px_40px_rgba(0,0,0,.5)]"
+      className="fixed inset-x-0 bottom-0 z-40 rounded-t-[22px] border-t border-line bg-surface/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-8px_30px_rgba(7,19,31,.08)] backdrop-blur-xl xl:hidden dark:shadow-[0_-8px_30px_rgba(0,0,0,.35)]"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="mx-auto grid max-w-[560px] grid-cols-5 pb-1.5">
         {items.map((item) => {
           const active = item.match ? item.match(pathname) : pathname.startsWith(item.href);
           return (
@@ -40,11 +40,17 @@ export default function BottomNav({ user }: { user: SessionUser | null }) {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-[54px] flex-col items-center justify-center gap-1 rounded-[18px] text-[10.5px] font-semibold transition-colors ${
-                  active ? "bg-green-soft/90 text-green-dark" : "text-muted hover:text-ink"
+                className={`flex h-[56px] flex-col items-center justify-center gap-1 text-[10.5px] font-semibold transition-colors ${
+                  active ? "text-green-dark dark:text-green" : "text-muted hover:text-ink"
                 }`}
               >
-                <item.icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.3 : 1.9} />
+                <span
+                  className={`grid h-[30px] w-[52px] place-items-center rounded-full transition-colors ${
+                    active ? "bg-green-soft" : ""
+                  }`}
+                >
+                  <item.icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.3 : 1.9} />
+                </span>
                 {item.label}
               </Link>
             </li>

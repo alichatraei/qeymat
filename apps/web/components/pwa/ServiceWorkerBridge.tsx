@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { registerServiceWorker } from "@/lib/service-worker";
 
 /** سرویس‌ورکر را ثبت می‌کند و نسخه‌ی تازه را بدون رفرش دستی فعال می‌کند. */
 export default function ServiceWorkerBridge() {
@@ -10,7 +11,7 @@ export default function ServiceWorkerBridge() {
 
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        const registration = await registerServiceWorker();
 
         registration.addEventListener("updatefound", () => {
           const installing = registration.installing;
@@ -26,7 +27,12 @@ export default function ServiceWorkerBridge() {
       }
     };
 
-    window.addEventListener("load", register);
+    // معمولاً load پیش از اجرای React رخ داده است؛ آن وقت همین حالا ثبت شود
+    if (document.readyState === "complete") {
+      register();
+      return;
+    }
+    window.addEventListener("load", register, { once: true });
     return () => window.removeEventListener("load", register);
   }, []);
 

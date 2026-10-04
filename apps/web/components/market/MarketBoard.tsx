@@ -103,7 +103,8 @@ export default function MarketBoard({
                 className="mr-auto inline-flex items-center gap-1.5 text-[11px] font-medium text-white/60 hover:text-white"
               >
                 <RefreshCw className={`h-[13px] w-[13px] ${isValidating ? "animate-spin" : ""}`} />
-                {timeAgo(snapshot.updatedAt)}
+                {/* زمان نسبی روی سرور و مرورگر یک ثانیه فرق می‌کند */}
+                <span suppressHydrationWarning>{timeAgo(snapshot.updatedAt)}</span>
               </button>
             </div>
 

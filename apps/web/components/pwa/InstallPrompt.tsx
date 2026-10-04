@@ -63,7 +63,7 @@ export default function InstallPrompt({ skipAndroid = false }: { skipAndroid?: b
   if (hidden) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-[calc(92px+env(safe-area-inset-bottom))] z-50 animate-toast-in sm:inset-x-auto sm:left-5 sm:w-[360px] xl:bottom-5">
+    <div className="fixed inset-x-3 bottom-[calc(86px+env(safe-area-inset-bottom))] z-50 animate-toast-in sm:inset-x-auto sm:left-5 sm:w-[360px] xl:bottom-5">
       <div className="card flex items-start gap-3 p-4 shadow-card">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-green-soft text-green">
           {showIos ? <Share className="h-5 w-5" /> : <Download className="h-5 w-5" />}
