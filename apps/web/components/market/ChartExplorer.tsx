@@ -7,6 +7,7 @@ import {
   CATEGORY_TABS,
   CHART_INTERVALS,
   CHART_RANGES,
+  intervalAllowed,
   movement,
   unitLabel,
 } from "@qeymat/shared";
@@ -50,13 +51,15 @@ export default function ChartExplorer({
   const bySymbol = useMemo(() => new Map(assets.map((asset) => [asset.symbol, asset])), [assets]);
   const rate = bySymbol.get(symbol) ?? assets[0];
   const rangeSpec = CHART_RANGES.find((item) => item.id === range)!;
-  const effectiveInterval = range === "1d" ? "raw" : interval ?? rangeSpec.interval;
+  // دانه‌بندی بی‌معنی برای این بازه (مثلاً «سالانه» روی یک هفته) نادیده گرفته می‌شود
+  const effectiveInterval =
+    range === "1d" ? "raw" : interval && intervalAllowed(range, interval) ? interval : rangeSpec.interval;
   const comparing = compare.length > 0;
 
   // آدرس صفحه با انتخاب‌ها همگام می‌ماند تا قابل اشتراک‌گذاری باشد
   useEffect(() => {
     const params = new URLSearchParams({ symbol, range });
-    if (interval) params.set("interval", interval);
+    if (interval && intervalAllowed(range, interval)) params.set("interval", interval);
     if (compare.length) params.set("compare", compare.join(","));
     window.history.replaceState(null, "", `/chart?${params}`);
   }, [symbol, range, interval, compare]);
@@ -201,16 +204,22 @@ export default function ChartExplorer({
               <div className="flex flex-wrap gap-2">
                 {range !== "1d" ? (
                   <div className="segmented">
-                    {CHART_INTERVALS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        data-active={effectiveInterval === item.id}
-                        onClick={() => setChartInterval(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
+                    {CHART_INTERVALS.map((item) => {
+                      const allowed = intervalAllowed(range, item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          data-active={effectiveInterval === item.id}
+                          disabled={!allowed}
+                          title={allowed ? undefined : "برای این بازه معنی ندارد؛ بازه‌ی بلندتری انتخاب کنید"}
+                          className="disabled:cursor-not-allowed disabled:opacity-35"
+                          onClick={() => setChartInterval(item.id)}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
                 {comparing ? (
@@ -356,30 +365,41 @@ function AssetPicker({
   });
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+    // در موبایل برگه‌ی پایین تمام‌عرض؛ min-w-0 تا ردیف دسته‌ها برگه را از صفحه بیرون نزند
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="absolute inset-0 animate-fade-in bg-overlay/40" onClick={onClose} aria-label="بستن" />
-      <div className="card relative flex max-h-[80vh] w-[min(520px,100%)] animate-rise-in flex-col shadow-drawer">
+      <div className="card relative flex max-h-[85vh] w-full min-w-0 max-w-full animate-rise-in flex-col overflow-hidden rounded-b-none pb-[env(safe-area-inset-bottom)] shadow-drawer sm:max-h-[80vh] sm:w-[520px] sm:rounded-b-card sm:pb-0">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <strong className="text-[13px]">{title}</strong>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-sub hover:bg-tab" aria-label="بستن">
-            <X className="h-4 w-4" />
+          <strong className="text-[14px]">{title}</strong>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-full border border-line text-sub hover:bg-tab"
+            aria-label="بستن"
+          >
+            <X className="h-[18px] w-[18px]" />
           </button>
         </div>
         <div className="border-b border-line p-3">
           <input
-            autoFocus
             value={term}
             onChange={(event) => setTerm(event.target.value)}
             placeholder="جست‌وجوی نام یا نماد"
             className="field"
           />
-          <div className="table-scroll mt-2">
-            <div className="segmented">
-              <button type="button" data-active={category === "ALL"} onClick={() => setCategory("ALL")}>
-                همه
-              </button>
-              {CATEGORY_TABS.map((tab) => (
-                <button key={tab.id} type="button" data-active={category === tab.id} onClick={() => setCategory(tab.id)}>
+          {/* همان دسته‌بندی صفحه‌ی اول */}
+          <div className="table-scroll mt-3 max-w-full">
+            <div className="segmented" role="tablist">
+              {[{ id: "ALL", label: "همه" }, ...CATEGORY_TABS].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={category === tab.id}
+                  data-active={category === tab.id}
+                  onClick={() => setCategory(tab.id)}
+                  className="min-w-[72px] !h-[36px] !px-3.5 !text-[12px]"
+                >
                   {tab.label}
                 </button>
               ))}

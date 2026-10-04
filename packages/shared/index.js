@@ -215,11 +215,23 @@ export const CHART_RANGES = [
   { id: "10y", label: "۱۰ سال", days: 10 * 366, interval: "month" },
 ];
 
+/**
+ * دانه‌بندی نمودار. `minDays` کوتاه‌ترین بازه‌ای است که این دانه‌بندی در آن
+ * معنی دارد (دست‌کم چند نقطه)؛ مثلاً «سالانه» روی بازه‌ی یک هفته یک نقطه است.
+ */
 export const CHART_INTERVALS = [
-  { id: "day", label: "روزانه" },
-  { id: "month", label: "ماهانه" },
-  { id: "year", label: "سالانه" },
+  { id: "day", label: "روزانه", minDays: 2 },
+  { id: "month", label: "ماهانه", minDays: 300 },
+  { id: "year", label: "سالانه", minDays: 3 * 366 },
 ];
+
+/** آیا این دانه‌بندی برای این بازه مجاز است */
+export function intervalAllowed(rangeId, intervalId) {
+  const range = CHART_RANGES.find((item) => item.id === rangeId);
+  const interval = CHART_INTERVALS.find((item) => item.id === intervalId);
+  if (!range || !interval) return false;
+  return range.days >= interval.minDays;
+}
 
 /** حداکثر عمق تاریخچه‌ی نمودار */
 export const MAX_HISTORY_YEARS = 10;

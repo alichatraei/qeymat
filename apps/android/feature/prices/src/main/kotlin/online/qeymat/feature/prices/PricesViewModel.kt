@@ -209,13 +209,16 @@ class PricesViewModel(
         account.createAlert(symbol, threshold, sms)
 
     companion object {
+        private val DOLLAR_VARIANTS = setOf("USD_FARDA", "USD_HERAT")
+
         fun itemsFor(tab: PriceTab, assets: List<Asset>, settings: UserSettings, order: List<String>?): List<Asset> {
             val bySymbol = assets.associateBy { it.symbol }
             if (tab == PriceTab.FAVORITES) {
                 val all = order ?: (settings.favorites + settings.stars.filter { it !in settings.favorites })
                 return all.mapNotNull { bySymbol[it] }
             }
-            val base = assets.filter { it.category in tab.categories }
+            // انواع دلار (فردایی، هرات) فقط در جزئیات و نمودار دلار؛ مگر کاربر خودش منتخبشان کرده باشد
+            val base = assets.filter { it.category in tab.categories && it.symbol !in DOLLAR_VARIANTS }
             val rank = (order ?: settings.orders[tab.orderKey].orEmpty())
                 .withIndex()
                 .associate { (index, symbol) -> symbol to index }

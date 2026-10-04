@@ -46,7 +46,8 @@ export declare function smsAlertLimit(planId: string | null | undefined): number
 export type ChartRangeId = "1d" | "1w" | "1m" | "3m" | "1y" | "3y" | "5y" | "10y";
 export type ChartInterval = "raw" | "day" | "month" | "year";
 export declare const CHART_RANGES: { id: ChartRangeId; label: string; days: number; interval: ChartInterval }[];
-export declare const CHART_INTERVALS: { id: Exclude<ChartInterval, "raw">; label: string }[];
+export declare const CHART_INTERVALS: { id: Exclude<ChartInterval, "raw">; label: string; minDays: number }[];
+export declare function intervalAllowed(rangeId: string, intervalId: string): boolean;
 export declare const MAX_HISTORY_YEARS: number;
 export declare const DOLLAR_SYMBOLS: string[];
 export declare const RATE_FAMILIES: string[][];

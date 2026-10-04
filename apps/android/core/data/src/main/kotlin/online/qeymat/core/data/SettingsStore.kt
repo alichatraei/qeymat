@@ -39,7 +39,8 @@ data class UserSettings(
 ) {
     companion object {
         val DEFAULT_FAVORITES = listOf(
-            "USD", "USD_HERAT", "EUR", "AED", "GBP", "TRY", "CNY", "CAD", "CHF", "AUD",
+            // فردایی و هرات در جزئیات دلار (نرخ‌های مرتبط) دیده می‌شوند
+            "USD", "EUR", "AED", "GBP", "TRY", "CNY", "CAD", "CHF", "AUD", "IQD",
         )
     }
 }

@@ -153,6 +153,9 @@ export default function PriceChart({
             labelFormatter={(time) => tooltipLabel(Number(time), interval)}
             contentStyle={tooltipStyle(colors.surface, colors.ink)}
             cursor={{ stroke: colors.tick, strokeDasharray: "3 3" }}
+            // بالای نمودار، نه کنار نقطه: انگشت از پایین می‌آید و راهنما را نمی‌پوشاند
+            position={{ y: 0 }}
+            wrapperStyle={{ zIndex: 5, pointerEvents: "none" }}
           />
           <Area
             type="monotone"
@@ -279,6 +282,9 @@ export function CompareChart({
             labelFormatter={(time) => tooltipLabel(Number(time), interval)}
             contentStyle={tooltipStyle(colors.surface, colors.ink)}
             cursor={{ stroke: colors.tick, strokeDasharray: "3 3" }}
+            // بالای نمودار، نه کنار نقطه: انگشت از پایین می‌آید و راهنما را نمی‌پوشاند
+            position={{ y: 0 }}
+            wrapperStyle={{ zIndex: 5, pointerEvents: "none" }}
           />
           {series.map((item, index) => (
             <Line

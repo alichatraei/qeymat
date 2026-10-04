@@ -64,9 +64,6 @@ export default function MarketBoard({
     [snapshot.assets],
   );
   const usd = bySymbol.get("USD");
-  const dollarFamily = DOLLAR_SYMBOLS.filter((symbol) => symbol !== "USD")
-    .map((symbol) => bySymbol.get(symbol))
-    .filter(Boolean) as RateView[];
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -75,7 +72,7 @@ export default function MarketBoard({
         term
           ? `${asset.nameFa} ${asset.symbol} ${asset.nameEn}`.toLowerCase().includes(term)
           : asset.category === category &&
-            // دلار و هم‌خانواده‌هایش بالای صفحه جدا نمایش داده می‌شوند
+            // دلار بالای صفحه است؛ فردایی و هرات در جزئیات و نمودار دلار
             !(category === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol)) &&
             // صدها ارز جهان فقط با جست‌وجو یا «همه‌ی ارزها» دیده می‌شوند
             (showAll || asset.featured !== false),
@@ -135,22 +132,6 @@ export default function MarketBoard({
               <p className="mt-6 text-white/70">نرخ دلار هنوز دریافت نشده است.</p>
             )}
 
-            {/* خانواده‌ی دلار: فردایی، هرات، تتر */}
-            {dollarFamily.length ? (
-              <div className="mt-7 grid grid-cols-3 gap-2.5">
-                {dollarFamily.map((rate) => (
-                  <button
-                    key={rate.symbol}
-                    type="button"
-                    onClick={() => setSelected(rate)}
-                    className="glass flex flex-col items-start gap-1 p-3.5 text-right transition-colors hover:bg-white/[.1]"
-                  >
-                    <span className="text-[11px] text-white/65">{rate.nameFa}</span>
-                    <strong className="tabular text-[19px] font-bold tracking-[-.5px]">{fa(rate.sell)}</strong>
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="glass min-w-0 animate-rise-in self-center p-4 sm:p-5 [animation-delay:80ms]">
