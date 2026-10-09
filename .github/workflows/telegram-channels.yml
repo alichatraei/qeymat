@@ -1,0 +1,38 @@
+name: Telegram Price Channels
+
+on:
+  schedule:
+    # هر نیم‌ساعت اجرا می‌شود؛ خود اسکریپت بازهٔ مجاز را با ساعت تهران می‌سنجد.
+    - cron: "0,30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: telegram-price-channels
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || vars.TELEGRAM_CHANNELS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: انتشار نرخ در چهار کانال
+        run: node scripts/publish-telegram-channels.mjs
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://qeymat.online' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_GOLD: ${{ secrets.TELEGRAM_CHANNEL_GOLD }}
+          TELEGRAM_CHANNEL_EUR: ${{ secrets.TELEGRAM_CHANNEL_EUR }}
+          TELEGRAM_CHANNEL_USD: ${{ secrets.TELEGRAM_CHANNEL_USD }}
+          TELEGRAM_CHANNEL_USDT: ${{ secrets.TELEGRAM_CHANNEL_USDT }}
+          TELEGRAM_MAIN_CHANNEL_URL: ${{ vars.TELEGRAM_MAIN_CHANNEL_URL }}
+          TELEGRAM_MAIN_CHANNEL_LABEL: ${{ vars.TELEGRAM_MAIN_CHANNEL_LABEL }}
+          TELEGRAM_PUBLISH_START: ${{ vars.TELEGRAM_PUBLISH_START || '09:00' }}
+          TELEGRAM_PUBLISH_END: ${{ vars.TELEGRAM_PUBLISH_END || '22:00' }}
+          TELEGRAM_FORCE_PUBLISH: ${{ github.event_name == 'workflow_dispatch' }}

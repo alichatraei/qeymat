@@ -1,0 +1,179 @@
+import { pathToFileURL } from "node:url";
+
+const TIME_ZONE = "Asia/Tehran";
+
+export const CHANNELS = [
+  { key: "GOLD", symbol: "GOLD18", title: "قیمت طلای ۱۸ عیار", emoji: "🟡" },
+  { key: "EUR", symbol: "EUR", title: "قیمت یورو", emoji: "🇪🇺" },
+  { key: "USD", symbol: "USD", title: "قیمت دلار", emoji: "💵" },
+  { key: "USDT", symbol: "USDT", title: "قیمت تتر", emoji: "₮" },
+];
+
+function parseClock(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) throw new Error(`زمان نامعتبر است: ${value || "(خالی)"}؛ نمونهٔ درست: 09:00`);
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) throw new Error(`زمان نامعتبر است: ${value}`);
+  return hour * 60 + minute;
+}
+
+export function tehranMinutes(date = new Date()) {
+  const parts = {};
+  for (const part of new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: TIME_ZONE,
+  }).formatToParts(date)) {
+    parts[part.type] = part.value;
+  }
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+/** بازهٔ عادی و بازهٔ عبوری از نیمه‌شب را پشتیبانی می‌کند؛ دو سر بازه شامل‌اند. */
+export function isWithinSchedule(date, start = "09:00", end = "22:00") {
+  const now = tehranMinutes(date);
+  const from = parseClock(start);
+  const to = parseClock(end);
+  return from <= to ? now >= from && now <= to : now >= from || now <= to;
+}
+
+const faNumber = (value, maximumFractionDigits = 0) =>
+  new Intl.NumberFormat("fa-IR", { maximumFractionDigits }).format(Number(value));
+
+export function stampText(date = new Date()) {
+  const parts = {};
+  for (const part of new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: TIME_ZONE,
+  }).formatToParts(date)) {
+    parts[part.type] = part.value;
+  }
+  return `${parts.year}/${parts.month}/${parts.day} | ${parts.hour}:${parts.minute}`;
+}
+
+export function formatCaption(spec, asset, date = new Date(), mainChannel = "") {
+  const price = faNumber(asset.sell, asset.unit === "USD" && asset.sell < 100 ? 2 : 0);
+  const unit = asset.unit === "USD" ? "دلار" : "تومان";
+  const change = Number(asset.changePercent) || 0;
+  const movement = change
+    ? `${change > 0 ? "▲ +" : "▼ −"}٪${faNumber(Math.abs(change), 2)} امروز`
+    : "بدون تغییر امروز";
+  const main = mainChannel ? `\n\nکانال اصلی قیمت: ${mainChannel}` : "";
+
+  return [
+    `${spec.emoji} ${spec.title} لحظه‌ای`,
+    "",
+    `💰 ${price} ${unit}`,
+    `${change >= 0 ? "📈" : "📉"} ${movement}`,
+    "",
+    `🕒 ${stampText(date)}`,
+    "🔗 qeymat.online",
+  ].join("\n") + main;
+}
+
+function imageUrl(site, symbol, date) {
+  const version = Math.floor(date.getTime() / 60_000);
+  return `${site}/api/telegram/card?s=${encodeURIComponent(symbol)}&v=${version}`;
+}
+
+async function loadSnapshot(site) {
+  const response = await fetch(`${site}/api/public/rates`, {
+    headers: { "User-Agent": "qeymat-telegram-publisher/1.0" },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) throw new Error(`دریافت نرخ‌ها ناموفق بود: HTTP ${response.status}`);
+  const snapshot = await response.json();
+  if (!Array.isArray(snapshot?.assets)) throw new Error("پاسخ نرخ‌ها ساختار معتبر ندارد");
+  return snapshot;
+}
+
+async function sendPhoto({ token, channel, photo, caption, chartUrl, mainChannelUrl }) {
+  const buttons = [{ text: "📈 نمودار و جزئیات", url: chartUrl }];
+  if (mainChannelUrl) buttons.push({ text: "کانال اصلی قیمت", url: mainChannelUrl });
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: channel,
+      photo,
+      caption,
+      reply_markup: { inline_keyboard: [buttons] },
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.ok) {
+    throw new Error(`ارسال به ${channel} ناموفق بود: ${payload?.description || `HTTP ${response.status}`}`);
+  }
+}
+
+export async function publish(env = process.env, now = new Date()) {
+  const start = env.TELEGRAM_PUBLISH_START || "09:00";
+  const end = env.TELEGRAM_PUBLISH_END || "22:00";
+  const forced = env.TELEGRAM_FORCE_PUBLISH === "true";
+  if (!forced && !isWithinSchedule(now, start, end)) {
+    console.log(`خارج از بازهٔ انتشار ${start} تا ${end} به وقت تهران؛ ارسالی انجام نشد.`);
+    return { skipped: true, sent: 0 };
+  }
+
+  const token = env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN تنظیم نشده است");
+
+  const site = (env.NEXT_PUBLIC_SITE_URL || "https://qeymat.online").replace(/\/+$/, "");
+  const mainChannelUrl = env.TELEGRAM_MAIN_CHANNEL_URL || "";
+  const mainChannelLabel = env.TELEGRAM_MAIN_CHANNEL_LABEL || mainChannelUrl;
+  const targets = CHANNELS.map((spec) => ({
+    ...spec,
+    channel: env[`TELEGRAM_CHANNEL_${spec.key}`],
+  }));
+  const missing = targets.filter((item) => !item.channel).map((item) => `TELEGRAM_CHANNEL_${item.key}`);
+  if (missing.length) throw new Error(`شناسهٔ کانال‌ها تنظیم نشده است: ${missing.join(", ")}`);
+
+  const snapshot = await loadSnapshot(site);
+  const bySymbol = new Map(snapshot.assets.map((asset) => [asset.symbol, asset]));
+  const dryRun = env.TELEGRAM_DRY_RUN === "true";
+
+  const results = await Promise.allSettled(
+    targets.map(async (spec) => {
+      const asset = bySymbol.get(spec.symbol);
+      if (!asset) throw new Error(`نرخ ${spec.symbol} در اسنپ‌شات موجود نیست`);
+      const caption = formatCaption(spec, asset, now, mainChannelLabel);
+      if (dryRun) {
+        console.log(`[dry-run] ${spec.channel}\n${caption}\n`);
+        return;
+      }
+      await sendPhoto({
+        token,
+        channel: spec.channel,
+        photo: imageUrl(site, spec.symbol, now),
+        caption,
+        chartUrl: `${site}/chart?symbol=${spec.symbol}`,
+        mainChannelUrl,
+      });
+      console.log(`✓ ${spec.title} به ${spec.channel} ارسال شد`);
+    }),
+  );
+
+  const failures = results.filter((result) => result.status === "rejected");
+  if (failures.length) {
+    failures.forEach((result) => console.error(result.reason?.message || result.reason));
+    throw new Error(`${failures.length} کانال از ${targets.length} کانال به‌روزرسانی نشد`);
+  }
+  return { skipped: false, sent: targets.length };
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMain) {
+  publish().catch((error) => {
+    console.error(error?.message || error);
+    process.exitCode = 1;
+  });
+}

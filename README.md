@@ -205,6 +205,27 @@ docker compose -f docker/docker-compose.yml exec postgres \
 کرالر خودش شبانه ساعت ۴ نقاط ۱۵ دقیقه‌ای قدیمی‌تر از `HISTORY_RETENTION_DAYS` و لاگ
 مصرف قدیمی‌تر از ۹۰ روز را پاک می‌کند. کندل‌های روزانه (`RateDaily`) پاک نمی‌شوند.
 
+## کانال‌های قیمت تلگرام
+
+چهار کانال مستقل برای طلای ۱۸ عیار، یورو، دلار و تتر می‌توانند هر نیم‌ساعت
+تصویر و نرخ تازه دریافت کنند. انتشار با workflow به نام `Telegram Price Channels`
+انجام می‌شود تا محدودیت دسترسی سرور ایران به API تلگرام مانع ارسال نشود.
+
+1. چهار کانال را بسازید و ربات را با مجوز `Post Messages` مدیر هر چهار کانال کنید.
+2. در GitHub Actions چهار Secret به نام‌های `TELEGRAM_CHANNEL_GOLD`،
+   `TELEGRAM_CHANNEL_EUR`، `TELEGRAM_CHANNEL_USD` و `TELEGRAM_CHANNEL_USDT`
+   و Secret موجود `TELEGRAM_BOT_TOKEN` را تنظیم کنید. مقدار کانال می‌تواند
+   `@username` یا شناسهٔ عددی `-100...` باشد.
+3. Variableهای `TELEGRAM_MAIN_CHANNEL_URL` و `TELEGRAM_MAIN_CHANNEL_LABEL` را
+   برای اتصال این کانال‌ها به کانال اصلی تنظیم کنید.
+4. بازهٔ پیش‌فرض ۹ صبح تا ۱۰ شب تهران است. در صورت نیاز با Variableهای
+   `TELEGRAM_PUBLISH_START` و `TELEGRAM_PUBLISH_END` تغییرش دهید.
+5. در پایان `TELEGRAM_CHANNELS_ENABLED=true` را به‌عنوان Repository Variable
+   بگذارید. پیش از فعال‌سازی، workflow را دستی اجرا کنید تا هر چهار ارسال آزمایش شود.
+
+لوگوهای آماده در `apps/web/public/telegram/channels` هستند و با دستور
+`npm run telegram:logos` دوباره ساخته می‌شوند.
+
 ---
 
 ## فازهای بعدی

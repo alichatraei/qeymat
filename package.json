@@ -21,7 +21,10 @@
     "db:push": "npm run push --workspace=@qeymat/db",
     "db:seed": "npm run seed --workspace=@qeymat/db",
     "vapid:generate": "node scripts/generate-vapid.mjs",
-    "icons:generate": "node scripts/generate-icons.mjs"
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "telegram:logos": "node scripts/generate-telegram-channel-logos.mjs",
+    "telegram:publish": "node scripts/publish-telegram-channels.mjs",
+    "test:telegram": "node --test scripts/publish-telegram-channels.test.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
