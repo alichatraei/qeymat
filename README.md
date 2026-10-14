@@ -211,11 +211,14 @@ docker compose -f docker/docker-compose.yml exec postgres \
 تصویر و نرخ تازه دریافت کنند. انتشار با workflow به نام `Telegram Price Channels`
 انجام می‌شود تا محدودیت دسترسی سرور ایران به API تلگرام مانع ارسال نشود.
 
-1. چهار کانال را بسازید و ربات را با مجوز `Post Messages` مدیر هر چهار کانال کنید.
+1. چهار کانال را بسازید و ربات کانال‌های قیمت (`@qeymat1bot`) را با مجوز
+   `Post Messages` مدیر هر چهار کانال کنید.
 2. در GitHub Actions چهار Secret به نام‌های `TELEGRAM_CHANNEL_GOLD`،
    `TELEGRAM_CHANNEL_EUR`، `TELEGRAM_CHANNEL_USD` و `TELEGRAM_CHANNEL_USDT`
-   و Secret موجود `TELEGRAM_BOT_TOKEN` را تنظیم کنید. مقدار کانال می‌تواند
-   `@username` یا شناسهٔ عددی `-100...` باشد.
+   و Secret `TELEGRAM_CHANNELS_BOT_TOKEN` (توکن همان رباتی که ادمین
+   کانال‌هاست؛ بدون آن از `TELEGRAM_BOT_TOKEN` ربات اعلان نسخه‌ها استفاده
+   می‌شود) را تنظیم کنید. مقدار کانال می‌تواند `@username`، یوزرنیم بدون `@`،
+   لینک `t.me/...` یا شناسهٔ عددی (با یا بدون `-100`) باشد.
 3. Variableهای `TELEGRAM_MAIN_CHANNEL_URL` و `TELEGRAM_MAIN_CHANNEL_LABEL` را
    برای اتصال این کانال‌ها به کانال اصلی تنظیم کنید.
 4. بازهٔ پیش‌فرض ۹ صبح تا ۱۰ شب تهران است. در صورت نیاز با Variableهای

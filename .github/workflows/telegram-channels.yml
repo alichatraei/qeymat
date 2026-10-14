@@ -26,7 +26,8 @@ jobs:
         run: node scripts/publish-telegram-channels.mjs
         env:
           NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://qeymat.online' }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # ربات کانال‌های قیمت (@qeymat1bot) از ربات اعلان نسخه‌ها جداست.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_CHANNELS_BOT_TOKEN || secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_GOLD: ${{ secrets.TELEGRAM_CHANNEL_GOLD }}
           TELEGRAM_CHANNEL_EUR: ${{ secrets.TELEGRAM_CHANNEL_EUR }}
           TELEGRAM_CHANNEL_USD: ${{ secrets.TELEGRAM_CHANNEL_USD }}
