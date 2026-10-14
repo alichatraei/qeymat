@@ -3,7 +3,8 @@ name: Telegram Price Channels
 on:
   schedule:
     # هر نیم‌ساعت اجرا می‌شود؛ خود اسکریپت بازهٔ مجاز را با ساعت تهران می‌سنجد.
-    - cron: "0,30 * * * *"
+    # دقیقهٔ ۰ و ۳۰ شلوغ‌ترین اسلات GitHub Actions است و اجراها حذف می‌شوند؛ دقایق ۷ و ۳۷ امن‌ترند.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 concurrency:
