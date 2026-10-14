@@ -220,8 +220,8 @@ docker compose -f docker/docker-compose.yml exec postgres \
    برای اتصال این کانال‌ها به کانال اصلی تنظیم کنید.
 4. بازهٔ پیش‌فرض ۹ صبح تا ۱۰ شب تهران است. در صورت نیاز با Variableهای
    `TELEGRAM_PUBLISH_START` و `TELEGRAM_PUBLISH_END` تغییرش دهید.
-5. در پایان `TELEGRAM_CHANNELS_ENABLED=true` را به‌عنوان Repository Variable
-   بگذارید. پیش از فعال‌سازی، workflow را دستی اجرا کنید تا هر چهار ارسال آزمایش شود.
+5. workflow را از بخش Actions یک‌بار دستی اجرا کنید تا هر چهار ارسال را بررسی
+   کنید؛ بعد از آن زمان‌بندی نیم‌ساعته به‌صورت خودکار اجرا می‌شود.
 
 لوگوهای آماده در `apps/web/public/telegram/channels` هستند و با دستور
 `npm run telegram:logos` دوباره ساخته می‌شوند.
