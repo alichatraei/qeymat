@@ -9,6 +9,18 @@ export const CHANNELS = [
   { key: "USDT", symbol: "USDT", title: "قیمت تتر", emoji: "₮" },
 ];
 
+/** یوزرنیم بدون @، لینک t.me و شناسهٔ عددی بدون پیشوند -100 را به فرمت موردقبول Bot API برمی‌گرداند. */
+export function normalizeChannelId(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  if (/^-\d+$/.test(value)) return value;
+  if (/^\d+$/.test(value)) return `-100${value}`;
+  const link = value.match(/^(?:https?:\/\/)?t(?:elegram)?\.me\/(?:s\/)?([A-Za-z]\w{3,31})\/?$/i);
+  if (link) return `@${link[1]}`;
+  if (/^[A-Za-z]\w{3,31}$/.test(value)) return `@${value}`;
+  return value;
+}
+
 function parseClock(value) {
   const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
   if (!match) throw new Error(`زمان نامعتبر است: ${value || "(خالی)"}؛ نمونهٔ درست: 09:00`);
@@ -137,7 +149,14 @@ async function inspectTelegramTargets(token, targets) {
         throw new Error("ربات باید در خود همین کانال ادمین باشد و Post Messages فعال باشد");
       }
     } catch (error) {
-      console.error(`بررسی TELEGRAM_CHANNEL_${target.key} در ${phase} ناموفق بود: ${error.message}`);
+      const kind = target.channel.startsWith("@") ? `یوزرنیم ${target.channel}` : "شناسهٔ عددی";
+      let hint = "";
+      if (/chat not found/i.test(error.message)) {
+        hint = target.channel.startsWith("@")
+          ? "؛ یا یوزرنیم کانال اشتباه است یا کانال خصوصی است (برای کانال خصوصی باید شناسهٔ ‎-100… را در Secret بگذارید و ربات از قبل ادمین باشد)"
+          : "؛ شناسهٔ عددی اشتباه است یا ربات هنوز به این کانال اضافه نشده (اول ربات را ادمین کانال کنید)";
+      }
+      console.error(`بررسی TELEGRAM_CHANNEL_${target.key} (${kind}) در ${phase} ناموفق بود: ${error.message}${hint}`);
       throw error;
     }
   }));
@@ -181,7 +200,7 @@ export async function publish(env = process.env, now = new Date()) {
   const mainChannelLabel = env.TELEGRAM_MAIN_CHANNEL_LABEL || mainChannelUrl;
   const targets = CHANNELS.map((spec) => ({
     ...spec,
-    channel: env[`TELEGRAM_CHANNEL_${spec.key}`]?.trim(),
+    channel: normalizeChannelId(env[`TELEGRAM_CHANNEL_${spec.key}`]),
   }));
   const missing = targets.filter((item) => !item.channel).map((item) => `TELEGRAM_CHANNEL_${item.key}`);
   if (missing.length) throw new Error(`شناسهٔ کانال‌ها تنظیم نشده است: ${missing.join(", ")}`);

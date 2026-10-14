@@ -1,6 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CHANNELS, formatCaption, isWithinSchedule, publish, stampText, tehranMinutes } from "./publish-telegram-channels.mjs";
+import { CHANNELS, formatCaption, isWithinSchedule, normalizeChannelId, publish, stampText, tehranMinutes } from "./publish-telegram-channels.mjs";
+
+test("فرمت‌های رایج شناسهٔ کانال نرمال می‌شوند", () => {
+  assert.equal(normalizeChannelId("@qeymat_usd"), "@qeymat_usd");
+  assert.equal(normalizeChannelId("qeymat_usd"), "@qeymat_usd");
+  assert.equal(normalizeChannelId(" https://t.me/qeymat_usd "), "@qeymat_usd");
+  assert.equal(normalizeChannelId("t.me/s/qeymat_usd/"), "@qeymat_usd");
+  assert.equal(normalizeChannelId("-1001234567890"), "-1001234567890");
+  assert.equal(normalizeChannelId("1234567890"), "-1001234567890");
+  assert.equal(normalizeChannelId(""), "");
+  assert.equal(normalizeChannelId(undefined), "");
+});
 
 test("بازهٔ روزانه دو سر ساعت را شامل می‌کند", () => {
   assert.equal(isWithinSchedule(new Date("2026-10-08T05:30:00Z"), "09:00", "22:00"), true);
@@ -34,6 +45,10 @@ test("کپشن نرخ، تغییر و کانال اصلی را دارد", () => 
 test("انتشار، چهار کانال را با تصویر مخصوص همان نماد به‌روز می‌کند", async () => {
   const originalFetch = globalThis.fetch;
   const telegramBodies = [];
+  const telegramJson = (result) => new Response(JSON.stringify({ ok: true, result }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
   globalThis.fetch = async (url, options = {}) => {
     if (String(url).endsWith("/api/public/rates")) {
       return new Response(JSON.stringify({
@@ -45,11 +60,15 @@ test("انتشار، چهار کانال را با تصویر مخصوص هما�
         })),
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
-    telegramBodies.push(JSON.parse(options.body));
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    const method = String(url).split("/").pop();
+    const body = JSON.parse(options.body);
+    if (method === "getMe") return telegramJson({ id: 42, username: "qeymat_bot" });
+    if (method === "getChat") return telegramJson({ id: -100123, type: "channel" });
+    if (method === "getChatMember") {
+      return telegramJson({ status: "administrator", can_post_messages: true });
+    }
+    telegramBodies.push(body);
+    return telegramJson({});
   };
 
   try {
