@@ -313,8 +313,9 @@ private fun TabBar(selected: AppTab, onSelect: (AppTab) -> Unit) {
         ) {
             for (tab in AppTab.entries) {
                 val on = tab == selected
-                val color by animateColorAsState(if (on) Q.Mint else Q.Sub, label = "tab")
-                val pill by animateDpAsState(if (on) 58.dp else 36.dp, label = "pill")
+                // فاز ۲: تب فعال با رنگ متن اصلی و «نقطهٔ نعنایی» کنار آیکن، بدون کپسول
+                val color by animateColorAsState(if (on) Q.Text else Q.Sub, label = "tab")
+                val dot = if (Q.isDark) androidx.compose.ui.graphics.Color(0xFF8FD8B8) else androidx.compose.ui.graphics.Color(0xFF1EB17A)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -324,15 +325,17 @@ private fun TabBar(selected: AppTab, onSelect: (AppTab) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(pill)
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(if (on) Q.Mint.copy(alpha = if (Q.isDark) 0.14f else 0.12f) else Q.Bar),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    Box(Modifier.size(width = 34.dp, height = 28.dp), contentAlignment = Alignment.Center) {
                         Icon(if (on) tab.iconOn else tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(22.dp))
+                        if (on) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(5.dp)
+                                    .clip(RoundedCornerShape(1.5.dp))
+                                    .background(dot),
+                            )
+                        }
                     }
                     Text(
                         tab.label,

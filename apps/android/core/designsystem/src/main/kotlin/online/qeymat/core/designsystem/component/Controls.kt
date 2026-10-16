@@ -128,8 +128,9 @@ fun QPill(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    // فاز ۲: دکمهٔ پیش‌فرض خنثی است (هیرلاین + متن اصلی)؛ طلایی فقط برای پلاس
     val color = when (tone) {
-        PillTone.Gold -> Q.Gold
+        PillTone.Gold -> Q.Text
         PillTone.Mint -> Q.Mint
         PillTone.Sub -> Q.Sub
         PillTone.Red -> Q.Red
@@ -138,7 +139,7 @@ fun QPill(
         PillTone.Mint -> Q.Mint
         PillTone.Sub -> Q.line(0.3f)
         PillTone.Red -> Q.Red.copy(alpha = 0.5f)
-        PillTone.Gold -> Q.Gold.copy(alpha = 0.45f)
+        PillTone.Gold -> Q.line(0.4f)
     }
     Row(
         modifier = modifier
@@ -171,12 +172,12 @@ fun QIconButton(
     size: Dp = 40.dp,
     onClick: () -> Unit,
 ) {
-    val color = if (tone == PillTone.Mint) Q.Mint else Q.Gold
+    val color = if (tone == PillTone.Mint) Q.Mint else Q.Text
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .border(1.dp, color.copy(alpha = 0.5f), CircleShape)
+            .border(1.dp, Q.line(0.3f), CircleShape)
             .quietClick(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -437,7 +438,7 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(title, color = Q.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = Q.Sub, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.weight(1f))
         if (hint != null) Text(hint, color = Q.Muted, fontSize = 10.sp)
         trailing()

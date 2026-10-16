@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -149,7 +150,9 @@ private fun PricesScreen(
     onCatalog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val grid = state.settings.viewMode == ViewMode.GRID
+    val mode = state.settings.viewMode
+    val grid = mode == ViewMode.GRID
+    val ring = mode == ViewMode.CIRCLE || mode == ViewMode.DIAL
     val gridState = rememberLazyGridState()
     val haptic = LocalHapticFeedback.current
     val reorder = rememberReorderableLazyGridState(gridState) { from, to ->
@@ -177,7 +180,7 @@ private fun PricesScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(if (grid && !state.edit) 2 else 1),
+            columns = GridCells.Fixed(if ((grid || ring) && !state.edit) 2 else 1),
             state = gridState,
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -186,6 +189,8 @@ private fun PricesScreen(
             item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
                 Header(
                     dateLine = "${Jalali.full(now).substringBeforeLast(' ')} · ${Jalali.time(now)}",
+                    mode = mode,
+                    onMode = viewModel::setViewMode,
                     onSearch = onSearch,
                 )
             }
@@ -214,12 +219,26 @@ private fun PricesScreen(
 
             if (featured != null) {
                 item(key = "featured", span = { GridItemSpan(maxLineSpan) }) {
-                    FeaturedCard(
-                        asset = featured,
-                        showBuy = state.settings.showBuy,
-                        onStar = { viewModel.toggleFavorite(featured) },
-                        onOpen = { viewModel.openDetail(featured) },
-                    )
+                    if (ring) {
+                        // در نمای دایره/سنجه، ویژه هم دایرهٔ بزرگ وسط صفحه است
+                        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp), contentAlignment = Alignment.Center) {
+                            AssetRingCard(
+                                asset = featured,
+                                dial = mode == ViewMode.DIAL,
+                                featured = true,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.64f)
+                                    .quietClick { viewModel.openDetail(featured) },
+                            )
+                        }
+                    } else {
+                        FeaturedCard(
+                            asset = featured,
+                            showBuy = state.settings.showBuy,
+                            onStar = { viewModel.toggleFavorite(featured) },
+                            onOpen = { viewModel.openDetail(featured) },
+                        )
+                    }
                 }
             }
 
@@ -238,10 +257,10 @@ private fun PricesScreen(
                         ) {
                             QPill("ویرایش", icon = QIcons.Edit, tone = PillTone.Sub, onClick = viewModel::startEdit)
                             QIconButton(
-                                icon = if (grid) QIcons.ListView else QIcons.Grid,
-                                contentDescription = "تغییر نمایش",
+                                icon = if (mode == ViewMode.LIST) QIcons.Grid else QIcons.ListView,
+                                contentDescription = if (mode == ViewMode.LIST) "نمای کارتی" else "نمای فهرستی",
                                 size = 34.dp,
-                            ) { viewModel.setViewMode(if (grid) ViewMode.LIST else ViewMode.GRID) }
+                            ) { viewModel.setViewMode(if (mode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST) }
                         }
                     }
                 }
@@ -275,6 +294,13 @@ private fun PricesScreen(
                             } else {
                                 null
                             },
+                        )
+                    } else if (ring) {
+                        AssetRingCard(
+                            asset = asset,
+                            dial = mode == ViewMode.DIAL,
+                            dragging = dragging,
+                            modifier = longPress.then(open),
                         )
                     } else if (grid) {
                         AssetGridCard(
@@ -313,14 +339,14 @@ private fun PricesScreen(
 }
 
 @Composable
-private fun Header(dateLine: String, onSearch: () -> Unit) {
+private fun Header(dateLine: String, mode: ViewMode, onMode: (ViewMode) -> Unit, onSearch: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(top = 16.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         BrandMark(42.dp)
         Column(Modifier.weight(1f)) {
@@ -331,6 +357,39 @@ private fun Header(dateLine: String, onSearch: () -> Unit) {
             Text(dateLine, fontSize = 10.5.sp, color = Q.Sub, maxLines = 1)
         }
         QIconButton(QIcons.Search, contentDescription = "جستجو", modifier = Modifier.tourTarget(TourKeys.SEARCH), onClick = onSearch)
+        ViewModeSwitch(mode = mode, onMode = onMode)
+    }
+}
+
+/** سوییچ سه‌حالتهٔ نما با thumb لغزان؛ فهرستی از سربرگ بخش در دسترس می‌ماند */
+@Composable
+private fun ViewModeSwitch(mode: ViewMode, onMode: (ViewMode) -> Unit) {
+    val options = listOf(
+        Triple(ViewMode.GRID, QIcons.ViewSquare, "نمای کارتی"),
+        Triple(ViewMode.CIRCLE, QIcons.ViewCircle, "نمای دایره‌ای"),
+        Triple(ViewMode.DIAL, QIcons.ViewDial, "نمای سنجه"),
+    )
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(Q.TileTop)
+            .border(1.dp, Q.line(0.16f), RoundedCornerShape(11.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        for ((value, icon, label) in options) {
+            val on = mode == value
+            Box(
+                Modifier
+                    .size(width = 34.dp, height = 34.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (on) Q.SegOn else Color.Transparent)
+                    .quietClick { onMode(value) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = label, tint = if (on) Q.Text else Q.Sub, modifier = Modifier.size(18.dp))
+            }
+        }
     }
 }
 
@@ -352,7 +411,7 @@ private fun FeaturedCard(asset: Asset, showBuy: Boolean, onStar: () -> Unit, onO
         }
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
+            NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = Q.trend(asset.changePercent))
             Text(Fa.unit(asset.isUsd), fontSize = 13.sp, color = Q.Sub, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 7.dp))
         }
         Spacer(Modifier.height(6.dp))

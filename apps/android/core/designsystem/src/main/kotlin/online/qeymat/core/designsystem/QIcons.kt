@@ -42,6 +42,11 @@ object QIcons {
     val ArrowUp = stroke("up", "M128 216V40M56 112l72-72 72 72")
     val ArrowDown = stroke("down", "M128 40v176M56 144l72 72 72-72")
     val Grid = stroke("grid", "M44 44h72v72H44ZM140 44h72v72h-72ZM44 140h72v72H44ZM140 140h72v72h-72Z")
+
+    // سوییچ سه‌حالتهٔ نما (فاز ۲): کارتی، دایره v1، سنجه v2
+    val ViewSquare = stroke("viewSquare", "M43 43h170v74H43ZM43 144h74v69H43ZM139 144h74v69h-74Z")
+    val ViewCircle = stroke("viewCircle", "M170 80a42 42 0 1 1-84 0a42 42 0 1 1 84 0ZM109 181a34 34 0 1 1-68 0a34 34 0 1 1 68 0ZM215 181a34 34 0 1 1-68 0a34 34 0 1 1 68 0Z")
+    val ViewDial = stroke("viewDial", "M170 207A91 91 0 1 1 207 170M128 128 171 75M187 187h34v34h-34Z")
     val ListView = stroke("list", "M88 64h128M88 128h128M88 192h128M44 64h0.1M44 128h0.1M44 192h0.1")
     val Handle = stroke(
         "handle",
