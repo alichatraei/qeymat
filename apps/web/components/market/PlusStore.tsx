@@ -60,37 +60,38 @@ export default function PlusStore({
   };
 
   return (
-    <main className="pb-20 pt-12">
-      <section className="content-width grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(300px,.72fr)] lg:items-center">
-        <div className="max-w-[54ch]">
-          <span className="inline-flex items-center gap-1.5 rounded-pill bg-amber-soft px-3 py-1.5 text-[11px] font-bold text-amber-ink">
-            <Crown className="h-3.5 w-3.5" />
-            قیمت پلاس
-          </span>
-          <h1 className="mt-4 text-[34px] font-extrabold leading-[1.25] tracking-[-1.2px]">
-            قیمت را ببینید، <span className="text-green">بازار را بفهمید</span>
-          </h1>
-          <p className="mt-4 text-[13px] leading-7 text-muted">
-            همه‌ی قیمت‌ها در «قیمت» رایگان است و رایگان می‌ماند. قیمت پلاس تحلیل هر دارایی را کنارش
-            می‌گذارد — روند، مومنتوم، حباب سکه، حمایت و مقاومت — و وقتی قیمت به هدفتان رسید، حتی
-            اگر مرورگر بسته باشد، پیامک می‌فرستد.
+    <main className="pb-20">
+      {/* هیروی برند فاز ۲: آرام، بدون فوریت؛ نقش نشانه در گوشه */}
+      <section className="relative overflow-hidden bg-brand-deep text-brand-cream">
+        <svg className="pointer-events-none absolute -left-20 -top-20 h-[340px] w-[340px] opacity-[.07]" viewBox="12 12 37 38" aria-hidden="true">
+          <path d="M45.86 37.90 A17.5 17.5 0 1 0 29.39 47.99 L29.65 40.49 A10 10 0 1 1 39.06 34.73 Z" fill="currentColor" />
+          <path d="M28.39 47.88 L28.39 34.30 L29.39 33.70 L35.79 28.90 L35.79 47.01 A17.5 17.5 0 0 1 28.39 47.88 Z" fill="currentColor" />
+        </svg>
+        <div className="content-width relative py-12">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--c-brand-mint))" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M18.93 16A8 8 0 1 0 16 18.93M12 8.5v7M8.5 12h7" />
+          </svg>
+          <h1 className="mt-4 text-[34px] font-extrabold leading-[1.25] tracking-[-1.2px]">قیمت پلاس</h1>
+          <p className="mt-3 max-w-[54ch] text-[13.5px] leading-7 text-brand-cream/80">
+            همهٔ قیمت‌ها رایگان است و رایگان می‌ماند. پلاس تحلیل هر دارایی را کنارش می‌گذارد و وقتی
+            قیمت به هدفتان رسید، حتی اگر مرورگر بسته باشد، پیامک می‌فرستد.
           </p>
-
           {hasPlus ? (
-            <div className="mt-6 flex items-center gap-3 rounded-xl border border-green-soft bg-green-soft/60 p-4">
-              <Check className="h-5 w-5 shrink-0 text-green-dark" />
+            <div className="mt-6 inline-flex items-center gap-3 rounded-[16px] border border-brand-cream/20 bg-brand-cream/[.05] p-4">
+              <Check className="h-5 w-5 shrink-0 text-brand-mint" />
               <span className="flex flex-col">
                 <b className="text-[12.5px]">اشتراک شما فعال است</b>
-                <small className="text-[11px] text-muted">
-                  {expiresAt ? `تا ${jalali(expiresAt)}` : "فعال"} — تمدید از انتهای همین تاریخ اعمال
-                  می‌شود.
+                <small className="text-[11px] text-brand-cream/70">
+                  {expiresAt ? `تا ${jalali(expiresAt)}` : "فعال"} — تمدید از انتهای همین تاریخ اعمال می‌شود.
                 </small>
               </span>
             </div>
           ) : null}
         </div>
+      </section>
 
-        <div className="card grid gap-4 p-6 shadow-card sm:grid-cols-2 lg:grid-cols-1">
+      <section className="content-width pt-10">
+        <div className="card grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-4">
           {PERKS.map((perk) => (
             <div key={perk.title} className="flex items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-green-soft text-green">
@@ -172,19 +173,19 @@ export default function PlusStore({
                 aria-pressed={isSelected}
                 className={`relative flex flex-col rounded-card border p-6 text-right transition-all ${
                   isSelected
-                    ? "border-green bg-surface shadow-card ring-1 ring-green/25"
+                    ? "border-purple bg-surface shadow-card ring-1 ring-[rgb(var(--c-purple))]"
                     : "border-line bg-surface hover:border-line-strong"
                 }`}
               >
                 {item.popular ? (
-                  <em className="absolute -top-2.5 right-6 rounded-pill bg-green px-2.5 py-1 text-[10px] font-bold not-italic text-white">
-                    پیشنهاد ما
+                  <em className="absolute -top-2.5 right-6 rounded-pill bg-purple px-2.5 py-1 text-[10px] font-bold not-italic text-white">
+                    محبوب‌ترین
                   </em>
                 ) : null}
 
                 <span
                   className={`absolute left-5 top-5 grid h-6 w-6 place-items-center rounded-full border ${
-                    isSelected ? "border-green bg-green text-white" : "border-line text-transparent"
+                    isSelected ? "border-purple bg-purple text-white" : "border-line text-transparent"
                   }`}
                 >
                   <Check className="h-3.5 w-3.5" />

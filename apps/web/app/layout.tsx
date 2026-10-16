@@ -75,9 +75,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // فاز ۲: theme-color برابر surface هر تم
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0c332a" },
-    { media: "(prefers-color-scheme: dark)", color: "#070e0c" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1613" },
   ],
   width: "device-width",
   initialScale: 1,

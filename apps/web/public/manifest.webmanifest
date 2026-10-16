@@ -13,8 +13,8 @@
     "minimal-ui"
   ],
   "orientation": "portrait-primary",
-  "background_color": "#fafcfb",
-  "theme_color": "#0c332a",
+  "background_color": "#07211b",
+  "theme_color": "#0d1613",
   "categories": [
     "finance",
     "business",
@@ -78,7 +78,7 @@
     {
       "name": "هشدارهای قیمت",
       "short_name": "هشدارها",
-      "url": "/panel#alerts",
+      "url": "/alerts",
       "icons": [
         {
           "src": "/icon-192.png",
