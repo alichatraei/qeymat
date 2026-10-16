@@ -45,7 +45,7 @@ export default function TickerStrip({ initialSnapshot }: { initialSnapshot: Mark
             return (
               <li key={item.symbol} className="snap-start">
                 <Link
-                  href={`/?symbol=${item.symbol}`}
+                  href={`/${item.symbol.toLowerCase()}`}
                   className="flex min-h-10 items-center gap-2 whitespace-nowrap no-underline"
                   aria-label={`${item.nameFa} ${marketPrice(item.sell, item.unit)} ${marketChange(item.changePercent)}`}
                 >
