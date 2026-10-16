@@ -24,7 +24,7 @@ const TABS: { id: string; label: string; d: string; dot: [number, number]; match
     label: "هشدار",
     d: "M6.5 10a5.5 5.5 0 0 1 11 0c0 5.5 2.5 7.5 2.5 7.5H4s2.5-2 2.5-7.5M10.2 20.5a2 2 0 0 0 3.6 0",
     dot: [17.5, 1.8],
-    match: /^\/panel#alerts$/,
+    match: /^\/alerts$/,
   },
   {
     id: "me",
@@ -39,13 +39,14 @@ export default function BottomNav({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
   const account = user ? (user.role === "ADMIN" ? "/admin" : "/panel") : "/login";
   const href = (id: string) =>
-    id === "market" ? "/" : id === "chart" ? "/chart" : id === "convert" ? "/converter" : id === "alerts" ? "/panel#alerts" : account;
+    id === "market" ? "/" : id === "chart" ? "/chart" : id === "convert" ? "/converter" : id === "alerts" ? "/alerts" : account;
 
   const activeId = (() => {
     if (pathname === "/") return "market";
     if (/^\/chart/.test(pathname)) return "chart";
     if (/^\/converter/.test(pathname)) return "convert";
-    if (/^\/(panel|login|admin|plus|developers|docs|dashboard)/.test(pathname)) return "me";
+    if (/^\/alerts/.test(pathname)) return "alerts";
+    if (/^\/(panel|me|login|admin|plus|developers|docs|dashboard)/.test(pathname)) return "me";
     return "";
   })();
 

@@ -14,7 +14,7 @@ const NAV = [
   { href: "/", label: "بازار" },
   { href: "/chart", label: "نمودار" },
   { href: "/converter", label: "تبدیل ارز" },
-  { href: "/panel#alerts", label: "هشدار قیمت" },
+  { href: "/alerts", label: "هشدار قیمت" },
 ];
 
 export default function SiteHeader({

@@ -116,6 +116,24 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, id: alert.id, direction });
 }
 
+/** روشن/خاموش کردن یک هشدار بدون حذف آن (Switch صفحهٔ هشدارها) */
+export async function PATCH(request: NextRequest) {
+  const user = await getSessionUser();
+  if (!user) return error("unauthenticated", "وارد نشده‌اید.", 401);
+
+  const body = await request.json().catch(() => null);
+  const id = typeof body?.id === "string" ? body.id : null;
+  const isActive = typeof body?.isActive === "boolean" ? body.isActive : null;
+  if (!id || isActive === null) return error("invalid_body", "شناسه و وضعیت هشدار لازم است.", 400);
+
+  await prisma.priceAlert.updateMany({
+    where: { id, userId: user.id },
+    // هشدار دوباره‌فعال‌شده از نو منتظر عبور قیمت می‌ماند
+    data: { isActive, ...(isActive ? { firedAt: null } : {}) },
+  });
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return error("unauthenticated", "وارد نشده‌اید.", 401);
