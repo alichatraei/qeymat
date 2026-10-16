@@ -91,6 +91,7 @@ export default function MarketBoard({
   const [editing, setEditing] = useState(false);
   const [pickedIndex, setPickedIndex] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [selected, setSelected] = useState<RateView | null>(null);
   const justDragged = useRef(false);
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,7 +133,7 @@ export default function MarketBoard({
               .filter(
                 (asset) =>
                   asset.category === cat &&
-                  asset.featured !== false &&
+                  (asset.featured !== false || (cat === "CURRENCY" && showAll)) &&
                   // فردایی و هرات داخل جزئیات دلارند، نه در شبکه؛ خود دلار اول فهرست است
                   !(cat === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol) && asset.symbol !== "USD"),
               )
@@ -144,7 +145,7 @@ export default function MarketBoard({
       const added = base.filter((symbol) => !inSaved.includes(symbol));
       return [...inSaved, ...added];
     },
-    [orders, snapshot.assets, bySymbol],
+    [orders, snapshot.assets, bySymbol, showAll],
   );
 
   const list = useMemo(
@@ -421,6 +422,18 @@ export default function MarketBoard({
           </SortableContext>
         </DndContext>
       )}
+
+      {category === "CURRENCY" && !searchRows && !editing ? (
+        <button
+          type="button"
+          onClick={() => setShowAll((value) => !value)}
+          className="mt-4 flex h-11 w-full items-center justify-center rounded-control border border-dashed border-line-strong text-[12px] font-semibold text-sub transition-colors hover:text-ink"
+        >
+          {showAll
+            ? "فقط ارزهای اصلی"
+            : `همهٔ ارزهای جهان · ${fa(snapshot.assets.filter((asset) => asset.category === "CURRENCY" && asset.featured === false).length)} ارز دیگر`}
+        </button>
+      ) : null}
 
       {!searchRows && !emptyPicks ? (
         <p className="mt-6 text-center text-[12px] text-muted">به تومان · لمس برای جزئیات · نگه داشتن برای جابه‌جایی</p>
