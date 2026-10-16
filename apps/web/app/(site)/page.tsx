@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import MarketBoard from "@/components/market/MarketBoard";
-import { getHistory, getSnapshot } from "@/lib/market";
+import { getSnapshot } from "@/lib/market";
 import type { AssetCategory } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function MarketPage({
   searchParams: Promise<{ category?: string }>;
 }) {
   const params = await searchParams;
-  const [snapshot, history] = await Promise.all([getSnapshot(), getHistory("USD", 7)]);
+  const snapshot = await getSnapshot();
 
   const requested = String(params.category || "").toUpperCase();
   const category: AssetCategory = ["CURRENCY", "GOLD", "CRYPTO", "COMMODITY", "STOCK", "INDEX"].includes(
@@ -32,11 +32,7 @@ export default async function MarketPage({
 
   return (
     <>
-      <MarketBoard
-        initialSnapshot={snapshot}
-        initialHistory={history}
-        initialCategory={category}
-      />
+      <MarketBoard initialSnapshot={snapshot} initialCategory={category} />
       {/* داده‌ی ساختاریافته برای نتایج جست‌وجوی گوگل */}
       {usd ? (
         <script

@@ -1,257 +1,430 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { ArrowLeftRight, ChartLine, ChevronLeft, RefreshCw, Search } from "lucide-react";
-import { CATEGORY_TABS, DOLLAR_SYMBOLS, fa, timeAgo, unitLabel } from "@qeymat/shared";
-import RateIcon from "./RateIcon";
-import PriceChart, { formatPrice } from "./PriceChart";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Check, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { CATEGORY_TABS, DOLLAR_SYMBOLS, fa, jalali, timeAgo } from "@qeymat/shared";
+import AssetCell, { type MarketLayout } from "./AssetCell";
+import ViewSwitch from "./ViewSwitch";
 import RateDrawer from "./RateDrawer";
-import RateCard from "./RateCard";
-import Favorites from "./Favorites";
-import type { AssetCategory, HistoryPoint, HistorySeries, MarketSnapshot, RateView } from "@/lib/types";
+import type { AssetCategory, MarketSnapshot, RateView } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((response) => response.json());
 
-const HERO_RANGES = [
-  { id: "1d", label: "امروز" },
-  { id: "1w", label: "هفته" },
-  { id: "1m", label: "ماه" },
-  { id: "1y", label: "سال" },
-  { id: "10y", label: "۱۰ سال" },
-];
+const LAYOUT_KEY = "qeymat.market.layout";
+const ORDER_KEY = "qeymat.market.order";
+const LEGACY_FAVORITES_KEY = "qeymat:favorites:v1";
+const PICKS = "PICKS";
+
+/** ترکیب پیش‌فرض «منتخب من»؛ خانهٔ اول ویژه است */
+const DEFAULT_PICKS = ["USD", "GOLD18", "EMAMI", "USDT", "EUR", "BTC", "ABSHODEH", "AED", "BRENT"];
+const PICK_SUGGESTIONS = ["USD", "GOLD18", "EMAMI", "USDT", "EUR", "BTC"];
+
+type OrderMap = Record<string, string[]>;
+
+function readLayout(): MarketLayout {
+  try {
+    const value = window.localStorage.getItem(LAYOUT_KEY);
+    return value === "circle" || value === "dial" ? value : "square";
+  } catch {
+    return "square";
+  }
+}
+
+function readOrders(): OrderMap {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ORDER_KEY) || "null");
+    if (parsed && typeof parsed === "object") return parsed as OrderMap;
+  } catch {
+    /* حالت خصوصی مرورگر */
+  }
+  // منتخب قدیمی (قبل از فاز ۲) به کلید جدید منتقل می‌شود
+  try {
+    const legacy = JSON.parse(window.localStorage.getItem(LEGACY_FAVORITES_KEY) || "null");
+    if (Array.isArray(legacy) && legacy.length) return { [PICKS]: legacy.filter((s) => typeof s === "string") };
+  } catch {
+    /* — */
+  }
+  return {};
+}
+
+function writeOrders(orders: OrderMap) {
+  try {
+    window.localStorage.setItem(ORDER_KEY, JSON.stringify(orders));
+  } catch {
+    /* — */
+  }
+}
 
 export default function MarketBoard({
   initialSnapshot,
-  initialHistory,
   initialCategory = "CURRENCY",
 }: {
   initialSnapshot: MarketSnapshot;
-  initialHistory: HistoryPoint[];
   initialCategory?: AssetCategory;
 }) {
-  const [chosenCategory, setCategory] = useState<AssetCategory>(initialCategory);
+  const params = useSearchParams();
+  const [layout, setLayout] = useState<MarketLayout>("square");
+  const [layoutTick, setLayoutTick] = useState(0);
+  const [category, setCategory] = useState<string>(initialCategory);
+  const [categoryTick, setCategoryTick] = useState(0);
+  const [orders, setOrders] = useState<OrderMap>({});
+  const [editing, setEditing] = useState(false);
+  const [pickedIndex, setPickedIndex] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RateView | null>(null);
-  const [heroRange, setHeroRange] = useState("1w");
-  const [showAll, setShowAll] = useState(false);
+  const justDragged = useRef(false);
+  const longPress = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // نرخ‌ها هر ۳۰ ثانیه تازه می‌شوند؛ داده‌ی اولیه از سرور می‌آید تا صفحه فوراً رندر شود
-  const { data, isValidating, mutate } = useSWR<MarketSnapshot>("/api/public/rates", fetcher, {
+  const { data, mutate } = useSWR<MarketSnapshot>("/api/public/rates", fetcher, {
     fallbackData: initialSnapshot,
     refreshInterval: 30000,
     revalidateOnFocus: true,
   });
-
-  const { data: heroSeries, isLoading: heroLoading } = useSWR<{ series: HistorySeries }>(
-    `/api/public/history?symbol=USD&range=${heroRange}`,
-    fetcher,
-    { keepPreviousData: true },
-  );
-
   const snapshot = data ?? initialSnapshot;
-  // دسته‌ای که هنوز هیچ نرخی ندارد (مثلاً سهام وقتی منبعش تنظیم نشده) نمایش داده نمی‌شود
-  const tabs = useMemo(
-    () => CATEGORY_TABS.filter((tab) => snapshot.assets.some((asset) => asset.category === tab.id)),
-    [snapshot.assets],
-  );
-  const category = tabs.some((tab) => tab.id === chosenCategory)
-    ? chosenCategory
-    : ((tabs[0]?.id ?? "CURRENCY") as AssetCategory);
-  const bySymbol = useMemo(
-    () => new Map(snapshot.assets.map((asset) => [asset.symbol, asset])),
-    [snapshot.assets],
-  );
-  const usd = bySymbol.get("USD");
 
-  const rows = useMemo(() => {
+  // نمای ذخیره‌شده بعد از mount خوانده می‌شود تا SSR با کلاینت یکی بماند
+  useEffect(() => {
+    setLayout(readLayout());
+    setOrders(readOrders());
+  }, []);
+
+  const bySymbol = useMemo(() => new Map(snapshot.assets.map((asset) => [asset.symbol, asset])), [snapshot.assets]);
+
+  // باز کردن جزئیات از لینک بیرونی: /?symbol=USD (آیتم‌های ticker)
+  useEffect(() => {
+    const symbol = params.get("symbol");
+    if (symbol && bySymbol.has(symbol.toUpperCase())) setSelected(bySymbol.get(symbol.toUpperCase()) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
+  const tabs = useMemo(() => {
+    const present = CATEGORY_TABS.filter((tab) => snapshot.assets.some((asset) => asset.category === tab.id));
+    return [{ id: PICKS, label: "منتخب من" }, ...present];
+  }, [snapshot.assets]);
+
+  /** فهرست نمادهای یک دسته با ترتیب ذخیره‌شدهٔ کاربر */
+  const symbolsOf = useCallback(
+    (cat: string): string[] => {
+      const base =
+        cat === PICKS
+          ? (orders[PICKS] ?? DEFAULT_PICKS).filter((symbol) => bySymbol.has(symbol))
+          : snapshot.assets
+              .filter(
+                (asset) =>
+                  asset.category === cat &&
+                  asset.featured !== false &&
+                  // فردایی و هرات داخل جزئیات دلارند، نه در شبکه؛ خود دلار اول فهرست است
+                  !(cat === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol) && asset.symbol !== "USD"),
+              )
+              .map((asset) => asset.symbol);
+      if (cat === PICKS) return base;
+      const saved = orders[cat];
+      if (!saved) return base;
+      const inSaved = saved.filter((symbol) => base.includes(symbol));
+      const added = base.filter((symbol) => !inSaved.includes(symbol));
+      return [...inSaved, ...added];
+    },
+    [orders, snapshot.assets, bySymbol],
+  );
+
+  const list = useMemo(
+    () => symbolsOf(category).map((symbol) => bySymbol.get(symbol)).filter(Boolean) as RateView[],
+    [symbolsOf, category, bySymbol],
+  );
+
+  const searchRows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return snapshot.assets
-      .filter((asset) =>
-        term
-          ? `${asset.nameFa} ${asset.symbol} ${asset.nameEn}`.toLowerCase().includes(term)
-          : asset.category === category &&
-            // دلار بالای صفحه است؛ فردایی و هرات در جزئیات و نمودار دلار
-            !(category === "CURRENCY" && DOLLAR_SYMBOLS.includes(asset.symbol)) &&
-            // صدها ارز جهان فقط با جست‌وجو یا «همه‌ی ارزها» دیده می‌شوند
-            (showAll || asset.featured !== false),
-      );
-  }, [snapshot.assets, category, search, showAll]);
-  const hiddenCount = snapshot.assets.filter(
-    (asset) => asset.category === category && asset.featured === false,
-  ).length;
+    if (!term) return null;
+    return snapshot.assets.filter((asset) =>
+      `${asset.nameFa} ${asset.symbol} ${asset.nameEn}`.toLowerCase().includes(term),
+    );
+  }, [search, snapshot.assets]);
 
-  const heroPoints = heroSeries?.series?.points ?? (heroRange === "1w" ? initialHistory : []);
+  const changeLayout = (next: MarketLayout) => {
+    if (next === layout) return;
+    setLayout(next);
+    setLayoutTick((tick) => tick + 1);
+    try {
+      window.localStorage.setItem(LAYOUT_KEY, next);
+    } catch {
+      /* — */
+    }
+  };
+
+  const saveOrder = (cat: string, symbols: string[]) => {
+    const next = { ...orders, [cat]: symbols };
+    setOrders(next);
+    writeOrders(next);
+  };
+
+  const move = (from: number, to: number) => {
+    if (from === to) return;
+    saveOrder(category, arrayMove(symbolsOf(category), from, to));
+    setPickedIndex(null);
+  };
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    setTimeout(() => (justDragged.current = false), 0);
+    if (!over || active.id === over.id) return;
+    const symbols = symbolsOf(category);
+    move(symbols.indexOf(String(active.id)), symbols.indexOf(String(over.id)));
+  };
+
+  /** نگه داشتن ۴۸۰ms روی هر خانه، حالت چیدمان را باز می‌کند */
+  const pressHandlers = (index: number) =>
+    editing
+      ? {}
+      : {
+          onPointerDown: () => {
+            longPress.current = setTimeout(() => {
+              longPress.current = null;
+              try {
+                navigator.vibrate?.(10);
+              } catch {
+                /* — */
+              }
+              setEditing(true);
+              setPickedIndex(index);
+            }, 480);
+          },
+          onPointerUp: () => {
+            if (longPress.current) clearTimeout(longPress.current);
+          },
+          onPointerLeave: () => {
+            if (longPress.current) clearTimeout(longPress.current);
+          },
+        };
+
+  const activate = (rate: RateView, index: number) => {
+    if (justDragged.current) return;
+    if (editing) {
+      if (pickedIndex === null) setPickedIndex(index);
+      else if (pickedIndex === index) setPickedIndex(null);
+      else move(pickedIndex, index);
+      return;
+    }
+    setSelected(rate);
+  };
+
+  const addPick = (symbol: string) => {
+    const current = (orders[PICKS] ?? []).filter((item) => bySymbol.has(item));
+    saveOrder(PICKS, [...current, symbol]);
+  };
+
+  const featured = list[0];
+  const rest = list.slice(1);
+  const emptyPicks = category === PICKS && list.length === 0;
+  const isSquare = layout === "square";
+
+  const gridClass = isSquare
+    ? "grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1000px]:grid-cols-5"
+    : "grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 min-[1000px]:grid-cols-5";
+  const featuredClass = isSquare
+    ? "col-span-2 min-[1000px]:row-span-2 min-[1000px]:[&>button]:h-full"
+    : "col-span-2 flex items-start justify-center py-1 sm:col-span-2 min-[1000px]:row-span-2 min-[1000px]:items-center";
 
   return (
-    <main className="pb-20">
-      {/* ------------------------- دلار، جدا از بقیه ------------------------- */}
-      <section className="hero-bg relative overflow-hidden text-white">
-        <div className="hero-grid pointer-events-none absolute inset-0" />
-        <div className="content-width relative grid gap-8 py-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-12 lg:py-14">
-          <div className="min-w-0 animate-rise-in">
-            <div className="flex items-center gap-2 text-[12px] font-semibold text-white/75">
-              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-green-dot" />
-              قیمت دلار — نرخ تحلیلی «قیمت»
-              <button
-                type="button"
-                onClick={() => mutate()}
-                className="mr-auto inline-flex items-center gap-1.5 text-[11px] font-medium text-white/60 hover:text-white"
-              >
-                <RefreshCw className={`h-[13px] w-[13px] ${isValidating ? "animate-spin" : ""}`} />
-                {/* زمان نسبی روی سرور و مرورگر یک ثانیه فرق می‌کند */}
-                <span suppressHydrationWarning>{timeAgo(snapshot.updatedAt)}</span>
-              </button>
-            </div>
+    <main className="content-width pb-24 pt-5">
+      {/* ------------------------------ سرصفحه ------------------------------ */}
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="flex items-center gap-2.5 text-[25px] font-extrabold tracking-[-.5px]">
+          بازار
+          <span className="h-1.5 w-1.5 animate-pulse-dot rounded-[2px] bg-green-dot" role="img" aria-label="قیمت‌ها زنده‌اند" />
+        </h1>
+        <span className="text-[12px] text-muted">{jalali()}</span>
+        <span className="mr-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="hidden items-center gap-1.5 text-[11.5px] font-medium text-muted transition-colors hover:text-ink sm:inline-flex"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-green-dot" aria-hidden="true" />
+            <span suppressHydrationWarning>زنده · {timeAgo(snapshot.updatedAt)}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing((value) => !value);
+              setPickedIndex(null);
+            }}
+            aria-pressed={editing}
+            className={`inline-flex h-[42px] items-center gap-1.5 rounded-control border px-3 text-[12px] font-bold transition-colors ${
+              editing ? "border-ink bg-ink text-page" : "border-line bg-surface text-sub hover:text-ink"
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            چیدمان
+          </button>
+          <ViewSwitch value={layout} onChange={changeLayout} />
+        </span>
+      </div>
 
-            {usd ? (
-              <button
-                type="button"
-                onClick={() => setSelected(usd)}
-                className="mt-6 block text-right"
-                aria-label="جزئیات دلار آمریکا"
-              >
-                <span className="flex items-center gap-3.5">
-                  <RateIcon rate={usd} size="large" />
-                  <span>
-                    <h1 className="text-[26px] font-bold tracking-[-.8px]">دلار آمریکا</h1>
-                    <small className="block text-[12px] text-white/60">نقدی تهران · USD</small>
-                  </span>
-                </span>
-
-                <span className="mt-6 flex flex-wrap items-end gap-x-3 gap-y-2">
-                  <strong className="tabular text-[clamp(44px,6vw,68px)] font-extrabold leading-none tracking-[-2.6px]">
-                    {fa(usd.sell)}
-                  </strong>
-                  <span className="pb-2 text-[14px] text-white/70">تومان</span>
-                  <ChevronLeft className="mb-2.5 h-5 w-5 text-white/50" />
-                </span>
-              </button>
-            ) : (
-              <p className="mt-6 text-white/70">نرخ دلار هنوز دریافت نشده است.</p>
-            )}
-
+      {/* ------------------------- جست‌وجو + دسته‌ها ------------------------- */}
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+        {editing ? (
+          <div className="flex min-h-[46px] flex-1 items-center justify-between gap-3 rounded-control border border-line bg-surface px-4" role="status">
+            <span className="flex flex-col py-1.5">
+              <b className="text-[13.5px]">چیدمان</b>
+              <span className="text-[11px] text-muted">بکش یا دو خانه را پشت هم لمس کن · خانهٔ اول ویژه است</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setPickedIndex(null);
+              }}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[9px] bg-brand px-3.5 text-[12px] font-bold text-brand-cream dark:bg-brand-mint dark:text-brand-deep"
+            >
+              <Check className="h-4 w-4" />
+              تمام
+            </button>
           </div>
-
-          <div className="glass min-w-0 animate-rise-in self-center p-4 sm:p-5 [animation-delay:80ms]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <strong className="text-[13px]">روند دلار</strong>
-              <div className="inline-grid grid-flow-col gap-1 rounded-xl bg-white/[.07] p-1">
-                {HERO_RANGES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setHeroRange(item.id)}
-                    className={`h-8 rounded-[8px] px-2.5 text-[11px] font-semibold transition-colors ${
-                      heroRange === item.id ? "bg-white text-brand" : "text-white/70 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+        ) : (
+          <>
+            <div className="seg-tabs flex min-w-0 flex-1 gap-0.5 overflow-x-auto border-b border-line" role="tablist" aria-label="دسته‌ها">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={category === tab.id && !searchRows}
+                  onClick={() => {
+                    setCategory(tab.id);
+                    setCategoryTick((tick) => tick + 1);
+                    setSearch("");
+                    setPickedIndex(null);
+                  }}
+                  className={`-mb-px inline-flex min-h-[46px] shrink-0 items-center gap-1.5 border-b-2 px-3 text-[14px] font-bold transition-colors ${
+                    category === tab.id && !searchRows ? "border-ink text-ink" : "border-transparent text-muted hover:text-sub"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <div className="mt-4 rounded-xl bg-surface/95 px-1 pb-1 pt-0.5 text-ink">
-              {heroLoading && !heroPoints.length ? (
-                <div className="mt-5 h-[230px] animate-pulse rounded-2xl bg-soft" />
-              ) : (
-                <PriceChart
-                  data={heroPoints}
-                  height={230}
-                  compactAxis={heroRange === "10y"}
-                  interval={heroSeries?.series?.interval ?? "day"}
-                />
-              )}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/chart?symbol=USD" className="btn-solid h-10 min-h-0 flex-1">
-                <ChartLine />
-                نمودار کامل و مقایسه
-              </Link>
-              <Link
-                href="/converter"
-                className="btn h-10 min-h-0 flex-1 border border-white/20 bg-white/[.06] text-white hover:bg-white/[.12]"
-              >
-                <ArrowLeftRight />
-                تبدیل ارز
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+            <label className="flex h-11 w-full items-center gap-2.5 rounded-control border border-line bg-field px-3.5 text-faint md:w-[280px]">
+              <Search className="h-4 w-4" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جست‌وجوی ارز، طلا یا رمزارز"
+                className="w-full border-0 bg-transparent text-[12.5px] text-ink outline-none placeholder:text-faint"
+                aria-label="جست‌وجوی دارایی"
+              />
+            </label>
+          </>
+        )}
+      </div>
 
-      {/* ------------------- منتخب من: ترکیبی و قابل چیدن ------------------- */}
-      <Favorites assets={snapshot.assets} onOpen={setSelected} />
-
-      {/* --------------------------- همه‌ی نرخ‌ها --------------------------- */}
-      <section className="content-width pt-12">
-        <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
-          <div>
-            <h2 className="text-[24px] font-bold tracking-[-.5px]">
-              همه‌ی نرخ‌ها
-            </h2>
-            <p className="mt-1.5 text-[12px] text-muted">
-              روی هر کارت بزنید تا نمودار، قیمت خرید و فروش، کمترین و بیشترین و هشدار قیمت را ببینید
-            </p>
-          </div>
-          <label className="flex h-11 w-full items-center gap-2.5 rounded-control border border-line bg-field px-3.5 text-faint md:w-[330px]">
-            <Search className="h-[16px] w-[16px]" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="جست‌وجو در همه‌ی دارایی‌ها"
-              className="w-full border-0 bg-transparent text-[12px] text-ink outline-none placeholder:text-faint"
-              aria-label="جست‌وجوی دارایی"
-            />
-          </label>
-        </div>
-
-        <div className="table-scroll mt-6">
-          <div className="segmented" role="tablist">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={category === tab.id}
-                data-active={category === tab.id && !search}
-                onClick={() => {
-                  setCategory(tab.id as AssetCategory);
-                  setSearch("");
-                }}
-                className="min-w-[88px] !h-[38px] !px-4 !text-[12px]"
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {rows.length ? (
-          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {rows.map((rate) => (
-              <RateCard key={rate.symbol} rate={rate} onOpen={() => setSelected(rate)} />
+      {/* ------------------------------- شبکه ------------------------------- */}
+      {searchRows ? (
+        searchRows.length ? (
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1000px]:grid-cols-5">
+            {searchRows.map((rate) => (
+              <AssetCell key={rate.symbol} rate={rate} layout="square" onActivate={() => setSelected(rate)} />
             ))}
           </div>
         ) : (
-          <div className="mt-5 flex flex-col items-center gap-2 rounded-card border border-dashed border-line py-14 text-center">
+          <div className="mt-5 flex flex-col items-center gap-2 rounded-[16px] border border-dashed border-line py-14 text-center">
             <Search className="h-6 w-6 text-faint" />
-            <strong className="text-[13px]">نرخی پیدا نشد</strong>
-            <span className="text-[11.5px] text-muted">عبارت دیگری را جست‌وجو کنید.</span>
+            <strong className="text-[13px]">نتیجه‌ای برای «{search.trim()}» پیدا نشد</strong>
+            <span className="text-[11.5px] text-muted">نماد را امتحان کن، مثلاً GBP.</span>
           </div>
-        )}
+        )
+      ) : emptyPicks ? (
+        <>
+          <div className="mt-5 flex flex-col items-center gap-2.5 rounded-[24px] border border-dashed border-line-strong bg-surface p-7 text-center">
+            <svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" className="overflow-visible">
+              <path d="M18.93 16A8 8 0 1 0 16 18.93" fill="none" stroke="rgb(var(--c-line-strong))" strokeWidth="1.6" strokeLinecap="round" />
+              <rect x="16.6" y="16.6" width="4" height="4" rx="0.9" fill="rgb(var(--c-icon-dot))" className="dot-pulse" />
+            </svg>
+            <b className="text-[16px]">منتخبت هنوز خالیه</b>
+            <span className="text-[13px] text-sub">هر چه این‌جا بزنی، اولین‌شان بزرگ بالای صفحه می‌نشیند.</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1000px]:grid-cols-6">
+            {PICK_SUGGESTIONS.map((symbol) => {
+              const rate = bySymbol.get(symbol);
+              if (!rate) return null;
+              return (
+                <div key={symbol} className="relative">
+                  <AssetCell rate={rate} layout="square" onActivate={() => addPick(symbol)} aria-label={`افزودن ${rate.nameFa}`} />
+                  <span className="pointer-events-none absolute bottom-3 left-3 grid h-7 w-7 place-items-center rounded-full bg-ink text-page" aria-hidden="true">
+                    <Plus className="h-3.5 w-3.5" />
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <DndContext
+          id="market-grid"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={() => (justDragged.current = true)}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setTimeout(() => (justDragged.current = false), 0)}
+        >
+          <SortableContext items={list.map((rate) => rate.symbol)} strategy={rectSortingStrategy} disabled={!editing}>
+            <div key={`${layout}-${layoutTick}-${category}-${categoryTick}`} className={`cells-in mt-4 ${gridClass}`}>
+              {featured ? (
+                <div className={featuredClass}>
+                  <SortableAssetCell
+                    rate={featured}
+                    layout={layout}
+                    featured
+                    editing={editing}
+                    selected={pickedIndex === 0}
+                    onActivate={() => activate(featured, 0)}
+                    {...pressHandlers(0)}
+                  />
+                </div>
+              ) : null}
+              {rest.map((rate, idx) => (
+                <SortableAssetCell
+                  key={rate.symbol}
+                  rate={rate}
+                  layout={layout}
+                  editing={editing}
+                  selected={pickedIndex === idx + 1}
+                  onActivate={() => activate(rate, idx + 1)}
+                  {...pressHandlers(idx + 1)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
-        {hiddenCount && !search ? (
-          <button
-            type="button"
-            onClick={() => setShowAll((value) => !value)}
-            className="mt-4 flex h-11 w-full items-center justify-center rounded-control border border-dashed border-line-strong text-[12px] font-semibold text-sub transition-colors hover:text-ink"
-          >
-            {showAll ? "فقط ارزهای اصلی" : `همه‌ی ارزهای جهان · ${fa(hiddenCount)} ارز دیگر`}
-          </button>
-        ) : null}
-      </section>
+      {!searchRows && !emptyPicks ? (
+        <p className="mt-6 text-center text-[12px] text-muted">به تومان · لمس برای جزئیات · نگه داشتن برای جابه‌جایی</p>
+      ) : null}
 
       {selected ? (
         <RateDrawer
@@ -262,5 +435,35 @@ export default function MarketBoard({
         />
       ) : null}
     </main>
+  );
+}
+
+function SortableAssetCell({
+  rate,
+  ...props
+}: {
+  rate: RateView;
+  layout: MarketLayout;
+  featured?: boolean;
+  editing?: boolean;
+  selected?: boolean;
+  onActivate: () => void;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: rate.symbol,
+    disabled: !props.editing,
+  });
+  return (
+    <AssetCell
+      ref={setNodeRef}
+      rate={rate}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`touch-manipulation select-none [-webkit-touch-callout:none] ${
+        isDragging ? "relative z-10 !shadow-[0_0_0_2px_rgb(var(--c-focus-ring))] scale-[.97]" : ""
+      }`}
+      {...attributes}
+      {...listeners}
+      {...props}
+    />
   );
 }

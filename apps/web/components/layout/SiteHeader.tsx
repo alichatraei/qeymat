@@ -9,13 +9,12 @@ import Brand from "./Brand";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import type { SessionUser } from "@/lib/types";
 
+/* فاز ۲: چهار لینک اصلی. API و مستندات به فوتر رفتند و Plus در ناحیهٔ انتهایی است */
 const NAV = [
   { href: "/", label: "بازار" },
-  { href: "/chart", label: "نمودار و مقایسه" },
-  { href: "/converter", label: "تبدیل ارزها" },
-  { href: "/plus", label: "قیمت پلاس", accent: true },
-  { href: "/developers", label: "API" },
-  { href: "/docs", label: "مستندات" },
+  { href: "/chart", label: "نمودار" },
+  { href: "/converter", label: "تبدیل ارز" },
+  { href: "/panel#alerts", label: "هشدار قیمت" },
 ];
 
 export default function SiteHeader({
@@ -57,12 +56,9 @@ export default function SiteHeader({
               key={item.href}
               href={item.href}
               className="nav-link whitespace-nowrap"
-              data-active={isActive(item.href)}
+              data-active={isActive(item.href.split("#")[0])}
             >
-              <span className="inline-flex items-center gap-1.5">
-                {item.accent ? <Crown className="h-[14px] w-[14px] text-amber" /> : null}
-                {item.label}
-              </span>
+              {item.label}
             </Link>
           ))}
         </nav>
@@ -85,13 +81,15 @@ export default function SiteHeader({
               پلاس
             </span>
           ) : (
-            // در موبایل «قیمت پلاس» در ناوبری پایین نیست؛ از همین‌جا در دسترس است
+            // نشان «قیمت پلاس» با حلقهٔ باز Q و علامت + (آیکن برند فاز ۲)
             <Link
               href="/plus"
-              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-[11.5px] font-bold text-amber-ink xl:hidden"
+              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-[11.5px] font-bold text-sub transition-colors hover:text-ink"
             >
-              <Crown className="h-4 w-4 text-amber" />
-              پلاس
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M18.93 16A8 8 0 1 0 16 18.93M12 8.5v7M8.5 12h7" />
+              </svg>
+              قیمت پلاس
             </Link>
           )}
 

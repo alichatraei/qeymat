@@ -41,6 +41,13 @@
     --c-blue: 57 117 198;
     --c-purple: 122 92 198;
     --shadow: 18 61 45;
+    /* فاز ۲ — توکن‌های قیمتی: کاهش قرمز است، جدا از قرمزِ خطا */
+    --c-price-up: 8 118 79;
+    --c-price-down: 184 71 75;
+    --c-down-soft: 253 243 243;
+    --c-price-stale: 116 128 137;
+    --c-icon-dot: 30 177 122;
+    --c-focus-ring: 12 51 42;
   }
 
   .dark {
@@ -76,6 +83,12 @@
     --c-blue: 110 160 230;
     --c-purple: 160 136 230;
     --shadow: 0 0 0;
+    --c-price-up: 88 214 164;
+    --c-price-down: 245 108 112;
+    --c-down-soft: 58 23 26;
+    --c-price-stale: 132 147 140;
+    --c-icon-dot: 143 216 184;
+    --c-focus-ring: 143 216 184;
   }
 
   html {
@@ -239,6 +252,70 @@
     @apply overflow-x-auto;
     scrollbar-width: thin;
   }
+
+  /* فاز ۲ — تیک قیمت: رقم‌ها در افزایش از پایین و در کاهش از بالا می‌چرخند،
+     بعد یک wash کم‌رنگ سبز یا قرمز پشت عدد محو می‌شود (۶۰۰ + ۱۲۰۰ms). */
+  .price-roll .dg {
+    display: inline-block;
+  }
+  .roll-uA,
+  .roll-uB {
+    animation: wash-up 1200ms cubic-bezier(0.2, 0, 0, 1) 600ms backwards;
+  }
+  .roll-dA,
+  .roll-dB {
+    animation: wash-down 1200ms cubic-bezier(0.2, 0, 0, 1) 600ms backwards;
+  }
+  .roll-uA .dg { animation: roll-up-a 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .roll-uB .dg { animation: roll-up-b 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .roll-dA .dg { animation: roll-down-a 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .roll-dB .dg { animation: roll-down-b 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes roll-up-a { from { transform: translateY(55%); opacity: 0; } }
+  @keyframes roll-up-b { from { transform: translateY(55%); opacity: 0; } }
+  @keyframes roll-down-a { from { transform: translateY(-55%); opacity: 0; } }
+  @keyframes roll-down-b { from { transform: translateY(-55%); opacity: 0; } }
+  @keyframes wash-up { from { background-color: rgb(var(--c-green-soft)); } }
+  @keyframes wash-down { from { background-color: rgb(var(--c-down-soft)); } }
+
+  /* ورود خانه‌ها هنگام تغییر نما: از scale کوچک با پله‌ی ۳۰ms */
+  .cells-in > * {
+    animation: cell-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .cells-in > *:nth-child(2) { animation-delay: 30ms; }
+  .cells-in > *:nth-child(3) { animation-delay: 60ms; }
+  .cells-in > *:nth-child(4) { animation-delay: 90ms; }
+  .cells-in > *:nth-child(5) { animation-delay: 120ms; }
+  .cells-in > *:nth-child(6) { animation-delay: 150ms; }
+  .cells-in > *:nth-child(n + 7) { animation-delay: 180ms; }
+  @keyframes cell-in {
+    from { opacity: 0; transform: scale(0.94); }
+  }
+
+  /* حالت چیدمان: لرزش ملایم خانه‌ها و انتخاب با زوم کوچک */
+  .arrange-wiggle {
+    animation: wiggle 0.5s ease-in-out infinite;
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-0.6deg); }
+    50% { transform: rotate(0.6deg); }
+  }
+
+  /* واترمارک Q پشت کارت ویژه: تنفس بسیار کم‌رنگ */
+  .wm-breathe {
+    animation: breathe 8s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: 0.04; }
+    50% { opacity: 0.075; }
+  }
+
+  .dot-pulse {
+    animation: dot-pulse 2.4s cubic-bezier(0.2, 0, 0, 1) infinite;
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
 }
 
 @layer utilities {
@@ -248,6 +325,16 @@
   }
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+  /* فاز ۲ — رنگ عدد از جهت تغییر می‌آید: قیمت و درصد هر دو */
+  .dir-up {
+    color: rgb(var(--c-price-up));
+  }
+  .dir-down {
+    color: rgb(var(--c-price-down));
+  }
+  .dir-flat {
+    color: rgb(var(--c-sub));
   }
   /* پس‌زمینه‌ی بخش قهرمان: گرادیان برند با نقش شبکه‌ای ملایم */
   .hero-bg {
