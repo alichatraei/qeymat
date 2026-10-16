@@ -26,8 +26,8 @@ const COLUMNS = [
     links: [
       { href: "/plus", label: "قیمت پلاس" },
       { href: "/alerts", label: "هشدارهای قیمت" },
-      { href: "/panel", label: "پنل کاربری" },
-      { href: "/panel/tickets", label: "پشتیبانی و تیکت" },
+      { href: "/me", label: "پنل کاربری" },
+      { href: "/me/tickets", label: "پشتیبانی و تیکت" },
     ],
   },
 ];

@@ -35,7 +35,7 @@ export default function SiteHeader({
   }, []);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-  const accountHref = user ? (user.role === "ADMIN" ? "/admin" : "/panel") : "/login";
+  const accountHref = user ? (user.role === "ADMIN" ? "/admin" : "/me") : "/login";
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/90 bg-page/90 backdrop-blur-[18px]">

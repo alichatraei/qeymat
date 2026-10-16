@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
-/** فهرست تیکت‌ها داخل خود پنل است؛ این مسیر فقط برای لینک‌های مستقیم می‌ماند. */
-export default function TicketsIndex() {
-  redirect("/panel?tab=tickets");
+export default function PanelTicketsRedirect() {
+  permanentRedirect("/me/tickets");
 }

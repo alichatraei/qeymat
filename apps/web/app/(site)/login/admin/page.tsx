@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "ورود مدیر", robots: { index:
 /** ورود با ایمیل و گذرواژه — فقط برای مدیران. کاربران عادی با موبایل وارد می‌شوند. */
 export default async function AdminLoginPage() {
   const user = await getSessionUser();
-  if (user) redirect(user.role === "ADMIN" ? "/admin" : "/panel");
+  if (user) redirect(user.role === "ADMIN" ? "/admin" : "/me");
 
   return <AuthForm mode="login" />;
 }

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   const result = await sendPush([sub], {
     title: "اعلان‌های «قیمت» روشن شد ✅",
     body: "از این به بعد هشدارهای قیمت همین‌جا می‌رسد.",
-    url: "/panel",
+    url: "/me",
     tag: "push-test",
   });
   return NextResponse.json(result);

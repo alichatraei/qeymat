@@ -427,7 +427,7 @@ export default function AdminBoard({
                 {tickets.map((ticket) => (
                   <Link
                     key={ticket.id}
-                    href={`/panel/tickets/${ticket.id}`}
+                    href={`/me/tickets/${ticket.id}`}
                     className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-line-strong hover:bg-hover"
                   >
                     <span

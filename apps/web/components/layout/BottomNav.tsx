@@ -31,13 +31,13 @@ const TABS: { id: string; label: string; d: string; dot: [number, number]; match
     label: "من",
     d: "M12 4.2a3.8 3.8 0 1 0 0 7.6a3.8 3.8 0 1 0 0-7.6M4.5 20.5a7.5 7.5 0 0 1 15 0",
     dot: [17.8, 2.6],
-    match: /^\/(panel|login|admin|plus|developers|docs|dashboard)/,
+    match: /^\/(me|panel|login|admin|plus|developers|docs|dashboard)/,
   },
 ];
 
 export default function BottomNav({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
-  const account = user ? (user.role === "ADMIN" ? "/admin" : "/panel") : "/login";
+  const account = user ? (user.role === "ADMIN" ? "/admin" : "/me") : "/login";
   const href = (id: string) =>
     id === "market" ? "/" : id === "chart" ? "/chart" : id === "convert" ? "/converter" : id === "alerts" ? "/alerts" : account;
 

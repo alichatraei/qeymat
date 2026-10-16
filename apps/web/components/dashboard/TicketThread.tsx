@@ -102,7 +102,7 @@ export default function TicketThread({
     <main className="pb-20 pt-10">
       <div className="content-width max-w-[760px]">
         <Link
-          href={isStaff ? "/admin" : "/panel?tab=tickets"}
+          href={isStaff ? "/admin" : "/me?tab=tickets"}
           className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-muted hover:text-ink"
         >
           <ChevronRight className="h-4 w-4" />

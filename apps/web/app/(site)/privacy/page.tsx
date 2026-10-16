@@ -150,11 +150,11 @@ const SECTIONS: { title: string; body: React.ReactNode }[] = [
     body: (
       <p>
         می‌توانید هشدارها و اعلان‌های خود را هر زمان از{" "}
-        <Link href="/panel" className="font-semibold text-green-dark hover:underline">
+        <Link href="/me" className="font-semibold text-green-dark hover:underline">
           پنل کاربری
         </Link>{" "}
         حذف کنید. برای دریافت رونوشت اطلاعاتتان یا حذف کامل حساب، از بخش{" "}
-        <Link href="/panel/tickets" className="font-semibold text-green-dark hover:underline">
+        <Link href="/me/tickets" className="font-semibold text-green-dark hover:underline">
           پشتیبانی
         </Link>{" "}
         درخواست بدهید. سوابق پرداخت ممکن است طبق الزامات قانونی و مالیاتی مدتی پس از حذف حساب نگه داشته

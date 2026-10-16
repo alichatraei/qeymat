@@ -77,7 +77,7 @@ export default function UserPanel({
   const router = useRouter();
   const [tab, setTab] = useState<"overview" | "alerts" | "orders" | "tickets">("overview");
 
-  // لینک مستقیم به بخش هشدارها: /panel#alerts
+  // لینک مستقیم به بخش هشدارها: /me#alerts
   useEffect(() => {
     if (window.location.hash === "#alerts") setTab("alerts");
   }, []);
@@ -445,7 +445,7 @@ export default function UserPanel({
                     return (
                       <Link
                         key={ticket.id}
-                        href={`/panel/tickets/${ticket.id}`}
+                        href={`/me/tickets/${ticket.id}`}
                         className="flex items-center gap-3 rounded-xl border border-line p-4 transition-colors hover:border-line-strong hover:bg-hover"
                       >
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-sub">

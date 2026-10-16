@@ -73,7 +73,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await notifyUser(ticket.userId, {
       title: "پاسخ پشتیبانی",
       body: `تیکت «${ticket.subject}» پاسخ داده شد.`,
-      url: `/panel/tickets/${ticket.id}`,
+      url: `/me/tickets/${ticket.id}`,
     });
   }
 

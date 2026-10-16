@@ -13,7 +13,7 @@ const STATES: Record<
     tone: "bg-green-soft text-green",
     title: "پرداخت با موفقیت انجام شد",
     note: "اشتراک شما فعال شد. جزئیات و تاریخ انقضا در پنل کاربری قابل مشاهده است.",
-    href: "/panel",
+    href: "/me",
     cta: "رفتن به پنل کاربری",
   },
   cancelled: {
@@ -29,7 +29,7 @@ const STATES: Record<
     tone: "bg-danger-soft text-danger",
     title: "پرداخت ناموفق بود",
     note: "اگر مبلغ از حساب شما کم شده، طی ۷۲ ساعت به‌صورت خودکار برمی‌گردد.",
-    href: "/panel/tickets",
+    href: "/me/tickets",
     cta: "ثبت تیکت پشتیبانی",
   },
 };
@@ -49,7 +49,7 @@ export default async function PaymentResultPage({
         ...(params.status === "success"
           ? api
             ? { note: "اشتراک وب‌سرویس فعال شد. کلید API و مصرف را در پنل توسعه‌دهنده ببینید.", href: "/dashboard", cta: "رفتن به پنل توسعه‌دهنده" }
-            : { note: "قیمت پلاس فعال شد: تحلیل قیمت و هشدار پیامکی.", href: "/panel", cta: "رفتن به پنل کاربری" }
+            : { note: "قیمت پلاس فعال شد: تحلیل قیمت و هشدار پیامکی.", href: "/me", cta: "رفتن به پنل کاربری" }
           : {}),
         ...(params.status === "cancelled" ? { href: api ? "/developers" : "/plus" } : {}),
       }
@@ -59,7 +59,7 @@ export default async function PaymentResultPage({
     tone: "bg-soft text-muted",
     title: "وضعیت پرداخت مشخص نیست",
     note: "اگر مبلغی از حساب شما کم شده است، با شماره پیگیری تیکت بزنید.",
-    href: "/panel/tickets",
+    href: "/me/tickets",
     cta: "ثبت تیکت",
   };
 
