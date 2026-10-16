@@ -11,7 +11,8 @@ import {
   movement,
   unitLabel,
 } from "@qeymat/shared";
-import RateIcon from "./RateIcon";
+import AssetIcon from "./AssetIcon";
+import AssetPicker from "./AssetPicker";
 import PriceChart, { CompareChart, formatPrice } from "./PriceChart";
 import AnalysisCard from "./AnalysisCard";
 import AlertForm from "./AlertForm";
@@ -120,7 +121,7 @@ export default function ChartExplorer({
                 onClick={() => setPicker("main")}
                 className="flex items-center gap-2.5 rounded-xl border border-line bg-field py-1.5 pl-3 pr-1.5 transition-colors hover:border-line-strong"
               >
-                <RateIcon rate={rate} size="small" />
+                <AssetIcon rate={rate} size={28} />
                 <span className="text-[13px] font-bold">{rate.nameFa}</span>
                 <Search className="h-3.5 w-3.5 text-faint" />
               </button>
@@ -169,7 +170,7 @@ export default function ChartExplorer({
                     </strong>
                     <span className="pb-1 text-[13px] text-muted">{unitLabel(rate.unit)}</span>
                   </div>
-                  <small className={`mt-1.5 block text-[12px] font-bold ${rate.changePercent >= 0 ? "text-green" : "text-danger"}`}>
+                  <small className={`mt-1.5 block text-[12px] font-bold ${rate.changePercent >= 0 ? "dir-up" : "dir-down"}`}>
                     {movement(rate.changePercent)} امروز
                   </small>
                 </div>
@@ -299,7 +300,7 @@ function PeriodStat({ label, value, tone }: { label: string; value: string; tone
       <dt className="text-[10.5px] text-muted">{label}</dt>
       <dd
         className={`tabular font-bold ${
-          tone === undefined || tone === null ? "text-ink" : tone >= 0 ? "text-green" : "text-danger"
+          tone === undefined || tone === null ? "text-ink" : tone >= 0 ? "dir-up" : "dir-down"
         }`}
       >
         {value}
@@ -324,7 +325,7 @@ function CompareTable({ series }: { series: HistorySeries[] }) {
             </span>
             <span className="flex items-center gap-3 text-[11.5px]">
               <span className="tabular text-muted">{last ? formatPrice(last) : "—"}</span>
-              <strong className={change === null ? "text-faint" : change >= 0 ? "text-green" : "text-danger"}>
+              <strong className={change === null ? "text-faint" : change >= 0 ? "dir-up" : "dir-down"}>
                 {change === null ? "—" : movement(change)}
               </strong>
             </span>
@@ -334,100 +335,3 @@ function CompareTable({ series }: { series: HistorySeries[] }) {
     </div>
   );
 }
-
-function AssetPicker({
-  assets,
-  exclude,
-  title,
-  onSelect,
-  onClose,
-}: {
-  assets: RateView[];
-  exclude: string[];
-  title: string;
-  onSelect: (symbol: string) => void;
-  onClose: () => void;
-}) {
-  const [term, setTerm] = useState("");
-  const [category, setCategory] = useState("ALL");
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const list = assets.filter((asset) => {
-    if (exclude.includes(asset.symbol)) return false;
-    if (category !== "ALL" && asset.category !== category) return false;
-    const query = term.trim().toLowerCase();
-    return query ? `${asset.nameFa} ${asset.symbol} ${asset.nameEn}`.toLowerCase().includes(query) : true;
-  });
-
-  return (
-    // در موبایل برگه‌ی پایین تمام‌عرض؛ min-w-0 تا ردیف دسته‌ها برگه را از صفحه بیرون نزند
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <button type="button" className="absolute inset-0 animate-fade-in bg-overlay/40" onClick={onClose} aria-label="بستن" />
-      <div className="card relative flex max-h-[85vh] w-full min-w-0 max-w-full animate-rise-in flex-col overflow-hidden rounded-b-none pb-[env(safe-area-inset-bottom)] shadow-drawer sm:max-h-[80vh] sm:w-[520px] sm:rounded-b-card sm:pb-0">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <strong className="text-[14px]">{title}</strong>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-full border border-line text-sub hover:bg-tab"
-            aria-label="بستن"
-          >
-            <X className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-        <div className="border-b border-line p-3">
-          <input
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder="جست‌وجوی نام یا نماد"
-            className="field"
-          />
-          {/* همان دسته‌بندی صفحه‌ی اول */}
-          <div className="table-scroll mt-3 max-w-full">
-            <div className="segmented" role="tablist">
-              {[{ id: "ALL", label: "همه" }, ...CATEGORY_TABS].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={category === tab.id}
-                  data-active={category === tab.id}
-                  onClick={() => setCategory(tab.id)}
-                  className="min-w-[72px] !h-[36px] !px-3.5 !text-[12px]"
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="overflow-y-auto p-2">
-          {list.map((asset) => (
-            <button
-              key={asset.symbol}
-              type="button"
-              onClick={() => onSelect(asset.symbol)}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-right transition-colors hover:bg-hover"
-            >
-              <RateIcon rate={asset} size="small" />
-              <span className="flex flex-1 flex-col">
-                <strong className="text-[12.5px]">{asset.nameFa}</strong>
-                <small dir="ltr" className="text-right text-[10.5px] text-muted">
-                  {asset.symbol}
-                </small>
-              </span>
-              <span className="tabular text-[12px] text-sub">{formatPrice(asset.sell)}</span>
-            </button>
-          ))}
-          {!list.length ? <p className="py-10 text-center text-[12px] text-muted">موردی پیدا نشد.</p> : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
