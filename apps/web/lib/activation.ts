@@ -41,7 +41,7 @@ export async function activatePurchase(params: {
     await notifyUser(userId, {
       title: "قیمت پلاس فعال شد",
       body: `اشتراک ${label} فعال است: تحلیل قیمت و هشدار پیامکی برای ${plan.smsAlerts} شاخص.`,
-      url: "/panel",
+      url: "/me",
     });
     return { ok: true, label };
   }

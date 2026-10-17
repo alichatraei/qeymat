@@ -121,7 +121,7 @@ fun DetailSheet(
                 }
             }
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                NumText(Fa.price(asset.sell, asset.isUsd), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Q.trend(asset.changePercent))
                 Text(Fa.unit(asset.isUsd), fontSize = 12.sp, color = Q.Sub, modifier = Modifier.padding(bottom = 5.dp))
             }
             if (points.isNotEmpty()) {
@@ -183,7 +183,7 @@ fun DetailSheet(
                             AssetTile(item, 34.dp)
                             Text(item.nameFa, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Q.Text, maxLines = 1, modifier = Modifier.weight(1f))
                             Column(horizontalAlignment = Alignment.End) {
-                                NumText(Fa.price(item.sell, item.isUsd), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Q.Text)
+                                NumText(Fa.price(item.sell, item.isUsd), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Q.trend(item.changePercent))
                                 ChangeLabel(item.changePercent)
                             }
                             Icon(QIcons.ChevronLeft, contentDescription = null, tint = Q.Muted, modifier = Modifier.size(14.dp))

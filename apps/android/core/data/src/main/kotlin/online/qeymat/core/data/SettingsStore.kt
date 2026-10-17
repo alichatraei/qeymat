@@ -14,7 +14,8 @@ import online.qeymat.core.model.Category
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-enum class ViewMode { LIST, GRID }
+/** نمای فهرست قیمت: کارتی (پیش‌فرض فاز ۲)، فهرستی، دایره v1 و سنجه v2 */
+enum class ViewMode { LIST, GRID, CIRCLE, DIAL }
 
 /** پوسته‌ی رنگی: پیرو گوشی، روشن یا تاریک */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -30,7 +31,7 @@ data class UserSettings(
     val favorites: List<String> = DEFAULT_FAVORITES,
     val stars: Set<String> = emptySet(),
     val orders: Map<Category, List<String>> = emptyMap(),
-    val viewMode: ViewMode = ViewMode.LIST,
+    val viewMode: ViewMode = ViewMode.GRID,
     val showBuy: Boolean = true,
     val notifications: Boolean = true,
     val autoRefresh: Boolean = true,
@@ -63,7 +64,7 @@ class SettingsStore(private val context: Context) {
             favorites = prefs[favoritesKey]?.let(::splitList) ?: UserSettings.DEFAULT_FAVORITES,
             stars = prefs[starsKey]?.let(::splitList)?.toSet() ?: emptySet(),
             orders = prefs[ordersKey]?.let(::decodeOrders) ?: emptyMap(),
-            viewMode = if (prefs[viewModeKey] == ViewMode.GRID.name) ViewMode.GRID else ViewMode.LIST,
+            viewMode = prefs[viewModeKey]?.let { saved -> ViewMode.entries.firstOrNull { it.name == saved } } ?: ViewMode.GRID,
             showBuy = prefs[showBuyKey] ?: true,
             notifications = prefs[notificationsKey] ?: true,
             autoRefresh = prefs[autoRefreshKey] ?: true,

@@ -47,6 +47,15 @@ const config: Config = {
         blue: token("blue"),
         purple: token("purple"),
         white: "#ffffff",
+        // فاز ۲ — رنگ جهت قیمت، جدا از قرمزِ خطا (danger)
+        price: {
+          up: token("price-up"),
+          down: token("price-down"),
+          stale: token("price-stale"),
+        },
+        "down-soft": token("down-soft"),
+        "icon-dot": token("icon-dot"),
+        "focus-ring": token("focus-ring"),
       },
       fontFamily: {
         sans: ["var(--font-vazirmatn)", "Vazirmatn", "Tahoma", "sans-serif"],

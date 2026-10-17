@@ -54,64 +54,63 @@ data class QPalette(
     val scrim: Color,
 )
 
-/** سبز جنگلی تیره، طلایی و نعنایی — طراحی اصلی */
+/** پالت فاز ۲ — همان توکن‌های دیزاین‌سیستم وب: سطوح خنثی، هیرلاین، سبز/قرمز قیمتی */
 val DarkPalette = QPalette(
     dark = true,
-    deep = Color(0xFF06120D),
-    bg = Color(0xFF0B1D17),
-    sheet = Color(0xFF0F251C),
-    bar = Color(0xFF0E231B),
-    cardTop = Color(0xFF153227),
-    cardBottom = Color(0xFF0E241C),
-    tileTop = Color(0xFF1B3C2F),
-    tileBottom = Color(0xFF0C231A),
-    segOn = Color(0xFF1D3B2E),
-    gold = Color(0xFFD8B56C),
-    goldLight = Color(0xFFE6C987),
-    goldDark = Color(0xFF6B5326),
-    mint = Color(0xFF4FD6A4),
-    red = Color(0xFFEF6F66),
-    text = Color(0xFFECE7DA),
-    sub = Color(0xFF8FA89B),
-    soft = Color(0xFFA9B8AC),
-    muted = Color(0xFF5F7A6D),
-    toggleOn = Color(0xFF2F8F6D),
-    toggleOff = Color(0xFF1C3A2D),
-    lineBase = Color(0xFFD8B56C),
-    field = Color(0x33000000),
-    raised = Color(0x08FFFFFF),
+    deep = Color(0xFF09261F), // brand-deep: متن روی دکمهٔ نعنایی
+    bg = Color(0xFF070E0C), // page
+    sheet = Color(0xFF0D1613), // surface
+    bar = Color(0xFF0D1613),
+    cardTop = Color(0xFF0D1613), // سطوح تختِ هیرلاین‌دار، بدون گرادیان
+    cardBottom = Color(0xFF0D1613),
+    tileTop = Color(0xFF131E1A), // soft
+    tileBottom = Color(0xFF131E1A),
+    segOn = Color(0xFF0D1613),
+    gold = Color(0xFFEAAA40), // amber: فقط برای پلاس و تأکیدهای غیرقیمتی
+    goldLight = Color(0xFFEEBE68),
+    goldDark = Color(0xFF54401E),
+    mint = Color(0xFF58D6A4), // price-up
+    red = Color(0xFFF56C70), // price-down (جدا از قرمز خطا در وب؛ این‌جا مشترک)
+    text = Color(0xFFE6EEEA), // ink
+    sub = Color(0xFFAAB8B2),
+    soft = Color(0xFFC2CEC8),
+    muted = Color(0xFF84938C),
+    toggleOn = Color(0xFF1EB17A),
+    toggleOff = Color(0xFF31433B),
+    lineBase = Color(0xFFE6EEEA), // با آلفای line() می‌شود 1f2d27/31433b دیزاین
+    field = Color(0xFF101A16),
+    raised = Color(0xFF131E1A),
     shadow = Color(0xFF000000),
-    scrim = Color(0xB3030C08),
+    scrim = Color(0xB3000000),
 )
 
-/** کاغذی گرم با همان سبز و طلایی، پررنگ‌تر برای خوانایی روی زمینه‌ی روشن */
 val LightPalette = QPalette(
     dark = false,
-    deep = Color(0xFFFFFFFF),
-    bg = Color(0xFFF3F5F0),
-    sheet = Color(0xFFFFFFFF),
+    deep = Color(0xFFF3EFE5), // brand-cream: متن روی دکمهٔ سبز تیره
+    bg = Color(0xFFFAFCFB), // page
+    sheet = Color(0xFFFFFFFF), // surface
     bar = Color(0xFFFFFFFF),
     cardTop = Color(0xFFFFFFFF),
-    cardBottom = Color(0xFFF9FBF8),
-    tileTop = Color(0xFFF1F5F1),
-    tileBottom = Color(0xFFE3ECE6),
+    cardBottom = Color(0xFFFFFFFF),
+    tileTop = Color(0xFFF4F7F5), // soft
+    tileBottom = Color(0xFFF4F7F5),
     segOn = Color(0xFFFFFFFF),
-    gold = Color(0xFFA67B26),
-    goldLight = Color(0xFF94681A),
-    goldDark = Color(0xFFEADBB8),
-    mint = Color(0xFF0E9A69),
-    red = Color(0xFFD5473D),
-    text = Color(0xFF15241D),
-    sub = Color(0xFF5D7067),
-    soft = Color(0xFF465850),
-    muted = Color(0xFF8D9C94),
-    toggleOn = Color(0xFF14A06F),
-    toggleOff = Color(0xFFD3DCD6),
-    lineBase = Color(0xFF7D8F74),
-    field = Color(0xFFEDF1EC),
-    raised = Color(0xFFF7F9F6),
-    shadow = Color(0xFF29473A),
-    scrim = Color(0x80142A20),
+    gold = Color(0xFFB07A1C),
+    goldLight = Color(0xFF8A5B10),
+    goldDark = Color(0xFFF2C27A),
+    mint = Color(0xFF08764F), // price-up (AA روی سفید)
+    red = Color(0xFFB8474B), // price-down
+    text = Color(0xFF07131F), // ink
+    sub = Color(0xFF505C64),
+    soft = Color(0xFF31433B),
+    muted = Color(0xFF748089),
+    toggleOn = Color(0xFF0B8F61),
+    toggleOff = Color(0xFFCBD6D1),
+    lineBase = Color(0xFF07131F),
+    field = Color(0xFFFBFCFB),
+    raised = Color(0xFFF7FAF8),
+    shadow = Color(0xFF123D2D),
+    scrim = Color(0x80071A13),
 )
 
 /**

@@ -25,9 +25,9 @@ const COLUMNS = [
     title: "اشتراک",
     links: [
       { href: "/plus", label: "قیمت پلاس" },
-      { href: "/panel#alerts", label: "هشدارهای قیمت" },
-      { href: "/panel", label: "پنل کاربری" },
-      { href: "/panel/tickets", label: "پشتیبانی و تیکت" },
+      { href: "/alerts", label: "هشدارهای قیمت" },
+      { href: "/me", label: "پنل کاربری" },
+      { href: "/me/tickets", label: "پشتیبانی و تیکت" },
     ],
   },
 ];

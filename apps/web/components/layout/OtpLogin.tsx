@@ -14,8 +14,8 @@ export default function OtpLogin() {
   const router = useRouter();
   const params = useSearchParams();
   // فقط مسیر داخلی پذیرفته می‌شود تا لینک ورود به سایت دیگری هدایت نکند
-  const rawNext = params.get("next") || "/panel";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/panel";
+  const rawNext = params.get("next") || "/me";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/me";
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");

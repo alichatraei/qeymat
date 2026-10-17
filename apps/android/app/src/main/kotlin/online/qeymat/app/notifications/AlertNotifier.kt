@@ -68,7 +68,7 @@ object AlertNotifier {
 
         val notification = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_qeymat)
-            .setColor(0xFF4FD6A4.toInt())
+            .setColor(0xFF58D6A4.toInt())
             .setContentTitle("${alert.nameFa} $direction ${Fa.price(alert.threshold, usd)} $unit")
             .setContentText(alert.current?.let { "قیمت فعلی ${Fa.price(it, usd)} $unit" } ?: "هشدار قیمت شما اجرا شد")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

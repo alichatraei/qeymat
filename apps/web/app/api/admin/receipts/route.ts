@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     await notifyUser(receipt.userId, {
       title: "فیش واریزی تأیید نشد",
       body: note || "فیش ارسالی تأیید نشد. برای پیگیری تیکت ثبت کنید.",
-      url: "/panel",
+      url: "/me",
     });
     return NextResponse.json({ ok: true, status: "REJECTED" });
   }

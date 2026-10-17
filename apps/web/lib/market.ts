@@ -13,11 +13,23 @@ export async function getSnapshot(): Promise<MarketSnapshot> {
   const cached = await cacheGet<MarketSnapshot>(SNAPSHOT_KEY);
   if (cached?.assets?.length) return cached;
 
-  const assets = await prisma.asset.findMany({
-    where: { isActive: true },
-    include: { rate: true },
-    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-  });
+  let assets;
+  try {
+    assets = await prisma.asset.findMany({
+      where: { isActive: true },
+      include: { rate: true },
+      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+    });
+  } catch (error) {
+    // فقط در توسعهٔ محلی: بدون دیتابیس، نرخ‌ها از سایت اصلی خوانده می‌شوند
+    if (process.env.NODE_ENV !== "production") {
+      const response = await fetch("https://qeymat.online/api/public/rates", {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (response.ok) return (await response.json()) as MarketSnapshot;
+    }
+    throw error;
+  }
 
   const snapshot: MarketSnapshot = {
     updatedAt: new Date().toISOString(),

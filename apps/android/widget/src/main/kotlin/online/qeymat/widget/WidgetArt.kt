@@ -39,15 +39,16 @@ object WidgetArt {
         val sub: Int,
     )
 
+    // پالت فاز ۲، هم‌رنگ توکن‌های دیزاین‌سیستم
     private val Dark = Colors(
-        bgTop = 0xFF14302A.toInt(), bgBottom = 0xFF0A1B15.toInt(), border = 0x40D8B56C,
-        row = 0x0FFFFFFF, gold = 0xFFD8B56C.toInt(), mint = 0xFF4FD6A4.toInt(), red = 0xFFEF6F66.toInt(),
-        ink = 0xFFF1ECE0.toInt(), sub = 0xFF8FA89B.toInt(),
+        bgTop = 0xFF0D1613.toInt(), bgBottom = 0xFF070E0C.toInt(), border = 0x3331433B,
+        row = 0x0FFFFFFF, gold = 0xFFEAAA40.toInt(), mint = 0xFF58D6A4.toInt(), red = 0xFFF56C70.toInt(),
+        ink = 0xFFE6EEEA.toInt(), sub = 0xFFAAB8B2.toInt(),
     )
     private val Light = Colors(
-        bgTop = 0xFFFFFFFF.toInt(), bgBottom = 0xFFF2F6F1.toInt(), border = 0x337D8F74,
-        row = 0x0A15241D, gold = 0xFFA67B26.toInt(), mint = 0xFF0E9A69.toInt(), red = 0xFFD5473D.toInt(),
-        ink = 0xFF15241D.toInt(), sub = 0xFF5D7067.toInt(),
+        bgTop = 0xFFFFFFFF.toInt(), bgBottom = 0xFFFAFCFB.toInt(), border = 0x33CBD6D1,
+        row = 0x0A07131F, gold = 0xFFB07A1C.toInt(), mint = 0xFF08764F.toInt(), red = 0xFFB8474B.toInt(),
+        ink = 0xFF07131F.toInt(), sub = 0xFF505C64.toInt(),
     )
 
     fun isDark(context: Context, mode: ThemeMode): Boolean = when (mode) {

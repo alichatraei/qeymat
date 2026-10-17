@@ -98,6 +98,17 @@ class ScreenshotTest {
             compose.mainClock.advanceTimeBy(600)
             tab("طلا و سکه")
             shot("$t-prices-grid")
+            if (theme == ThemeMode.DARK) {
+                // نماهای فاز ۲: دایره v1 و سنجه v2
+                runBlocking { store.setViewMode(ViewMode.CIRCLE) }
+                compose.mainClock.advanceTimeBy(600)
+                shot("dark-prices-circle")
+                runBlocking { store.setViewMode(ViewMode.DIAL) }
+                compose.mainClock.advanceTimeBy(600)
+                shot("dark-prices-dial")
+                runBlocking { store.setViewMode(ViewMode.GRID) }
+                compose.mainClock.advanceTimeBy(400)
+            }
             tab("تبدیل")
             shot("$t-convert")
             tab("هشدار")

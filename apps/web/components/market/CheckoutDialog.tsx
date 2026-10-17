@@ -164,7 +164,7 @@ export default function CheckoutDialog({
                 پس از بررسی و تأیید پشتیبانی، اشتراک به‌طور خودکار فعال می‌شود و اعلان دریافت می‌کنید. وضعیت را در
                 پنل کاربری ببینید.
               </p>
-              <Link href="/panel" className="btn-solid mt-5 w-full">
+              <Link href="/me" className="btn-solid mt-5 w-full">
                 رفتن به پنل کاربری
               </Link>
             </div>
