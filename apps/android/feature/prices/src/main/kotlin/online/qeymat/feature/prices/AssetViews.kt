@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import online.qeymat.core.designsystem.Q
 import online.qeymat.core.designsystem.QIcons
 import online.qeymat.core.designsystem.component.AssetTile
+import online.qeymat.core.designsystem.component.BrandMark
+import online.qeymat.core.designsystem.component.glassTile
 import online.qeymat.core.designsystem.component.ChangeLabel
 import online.qeymat.core.designsystem.component.NumText
 import online.qeymat.core.designsystem.component.StarButton
@@ -137,6 +140,104 @@ fun AssetGridCard(
         NumText(Fa.short(asset.sell, asset.isUsd), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Q.trend(asset.changePercent))
         Spacer(Modifier.height(2.dp))
         ChangeLabel(asset.changePercent)
+    }
+}
+
+
+/* ---------------- کاشی بنتوی شیشه‌ای (فاز شیشه‌ای) ---------------- */
+
+enum class BentoTier { HERO, MD, SM }
+
+/** چیپ تغییر روی شیشه: زمینهٔ نیمه‌شفاف سبز/قرمز با فلش */
+@Composable
+fun GlassChip(percent: Double, big: Boolean = false) {
+    val flat = kotlin.math.abs(percent) < 0.005
+    val up = percent >= 0
+    val fg = if (up) Q.Mint else Q.Red
+    val bg = if (Q.isDark) {
+        if (up) Color(0xBF113327) else Color(0xBF3A171A)
+    } else {
+        if (up) Color(0xF2E7F5EE) else Color(0xF2FDECED)
+    }
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(bg)
+            .padding(horizontal = if (big) 12.dp else 8.dp, vertical = if (big) 5.dp else 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        if (!flat) {
+            Text(if (up) "▲" else "▼", fontSize = 8.sp, color = fg)
+        }
+        NumText(
+            online.qeymat.core.model.format.Fa.percent(percent).trimStart('+', '-', '−'),
+            color = fg,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = if (big) 14.sp else 12.sp,
+        )
+    }
+}
+
+/**
+ * کاشی بنتو: شیشه، آیکن گرد، نام، قیمت درشت و چیپ تغییر.
+ * اندازه‌ها مطابق دیزاین: HERO تمام‌عرض با واترمارک نشان، MD دو‌ستونه، SM ردیف‌کوتاه.
+ */
+@Composable
+fun BentoTile(
+    asset: Asset,
+    tier: BentoTier,
+    modifier: Modifier = Modifier,
+    dragging: Boolean = false,
+) {
+    val priceSize = when (tier) {
+        BentoTier.HERO -> 44.sp
+        BentoTier.MD -> 25.sp
+        BentoTier.SM -> 20.sp
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(if (tier == BentoTier.SM) 88.dp else 184.dp)
+            .scale(if (dragging) 1.02f else 1f)
+            .glassTile(20.dp)
+            .padding(horizontal = if (tier == BentoTier.HERO) 18.dp else 13.dp, vertical = 11.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Box(Modifier.fillMaxWidth()) {
+            if (tier == BentoTier.HERO) {
+                BrandMark(
+                    52.dp,
+                    modifier = Modifier.align(Alignment.TopStart).alpha(0.14f),
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AssetTile(asset, if (tier == BentoTier.HERO) 38.dp else 26.dp)
+                Text(
+                    asset.nameFa,
+                    fontSize = if (tier == BentoTier.HERO) 17.sp else 13.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Q.Text,
+                    maxLines = 1,
+                )
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            NumText(
+                Fa.short(asset.sell, asset.isUsd),
+                fontSize = priceSize,
+                fontWeight = FontWeight.ExtraBold,
+                color = Q.Text,
+            )
+            GlassChip(asset.changePercent, big = tier == BentoTier.HERO)
+        }
     }
 }
 

@@ -151,8 +151,8 @@ private fun PricesScreen(
     modifier: Modifier = Modifier,
 ) {
     val mode = state.settings.viewMode
-    val grid = mode == ViewMode.GRID
-    val ring = mode == ViewMode.CIRCLE || mode == ViewMode.DIAL
+    // فاز شیشه‌ای: بنتو جایگزین شبکه/دایره/سنجه شد؛ فقط «فهرست» جداست
+    val bento = mode != ViewMode.LIST
     val gridState = rememberLazyGridState()
     val haptic = LocalHapticFeedback.current
     val reorder = rememberReorderableLazyGridState(gridState) { from, to ->
@@ -162,7 +162,7 @@ private fun PricesScreen(
     }
     val favoritesTab = state.tab == PriceTab.FAVORITES
     // در «منتخب من» اولی جدا و بزرگ بالای صفحه است؛ در حالت ویرایش همه در یک فهرست
-    val featured = if (favoritesTab && !state.edit) state.items.firstOrNull() else null
+    val featured = if (bento && !state.edit) state.items.firstOrNull() else null
     val rest = if (featured != null) state.items.drop(1) else state.items
 
     // ساعت سربرگ هر ۳۰ ثانیه
@@ -180,7 +180,7 @@ private fun PricesScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(if ((grid || ring) && !state.edit) 2 else 1),
+            columns = GridCells.Fixed(if (bento && !state.edit) 4 else 1),
             state = gridState,
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -219,26 +219,14 @@ private fun PricesScreen(
 
             if (featured != null) {
                 item(key = "featured", span = { GridItemSpan(maxLineSpan) }) {
-                    if (ring) {
-                        // در نمای دایره/سنجه، ویژه هم دایرهٔ بزرگ وسط صفحه است
-                        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp), contentAlignment = Alignment.Center) {
-                            AssetRingCard(
-                                asset = featured,
-                                dial = mode == ViewMode.DIAL,
-                                featured = true,
-                                modifier = Modifier
-                                    .fillMaxWidth(0.64f)
-                                    .quietClick { viewModel.openDetail(featured) },
-                            )
-                        }
-                    } else {
-                        FeaturedCard(
-                            asset = featured,
-                            showBuy = state.settings.showBuy,
-                            onStar = { viewModel.toggleFavorite(featured) },
-                            onOpen = { viewModel.openDetail(featured) },
-                        )
-                    }
+                    BentoTile(
+                        asset = featured,
+                        tier = BentoTier.HERO,
+                        modifier = Modifier
+                            .padding(bottom = 10.dp)
+                            .tourTarget(TourKeys.HERO)
+                            .quietClick { viewModel.openDetail(featured) },
+                    )
                 }
             }
 
@@ -256,17 +244,13 @@ private fun PricesScreen(
                             title = if (rest.isEmpty() && favoritesTab) "منتخب‌ها" else "${state.tab.listTitle} · ${Fa.number(rest.size)} مورد",
                         ) {
                             QPill("ویرایش", icon = QIcons.Edit, tone = PillTone.Sub, onClick = viewModel::startEdit)
-                            QIconButton(
-                                icon = if (mode == ViewMode.LIST) QIcons.Grid else QIcons.ListView,
-                                contentDescription = if (mode == ViewMode.LIST) "نمای کارتی" else "نمای فهرستی",
-                                size = 34.dp,
-                            ) { viewModel.setViewMode(if (mode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST) }
+
                         }
                     }
                 }
             }
 
-            items(rest, key = { it.symbol }) { asset ->
+            items(rest, key = { it.symbol }, span = { GridItemSpan(if (state.edit || !bento) maxLineSpan else 2) }) { asset ->
                 ReorderableItem(reorder, key = asset.symbol) { dragging ->
                     val longPress = Modifier.longPressDraggableHandle(
                         onDragStarted = {
@@ -295,20 +279,13 @@ private fun PricesScreen(
                                 null
                             },
                         )
-                    } else if (ring) {
-                        AssetRingCard(
+                    } else if (bento) {
+                        val index = rest.indexOf(asset)
+                        BentoTile(
                             asset = asset,
-                            dial = mode == ViewMode.DIAL,
+                            tier = if (favoritesTab && index < 2) BentoTier.MD else BentoTier.SM,
                             dragging = dragging,
-                            modifier = longPress.then(open),
-                        )
-                    } else if (grid) {
-                        AssetGridCard(
-                            asset = asset,
-                            favorite = state.isFavorite(asset),
-                            dragging = dragging,
-                            modifier = longPress.then(open),
-                            onStar = { viewModel.toggleFavorite(asset) },
+                            modifier = longPress.then(open).padding(bottom = 2.dp),
                         )
                     } else {
                         AssetRow(
@@ -365,9 +342,8 @@ private fun Header(dateLine: String, mode: ViewMode, onMode: (ViewMode) -> Unit,
 @Composable
 private fun ViewModeSwitch(mode: ViewMode, onMode: (ViewMode) -> Unit) {
     val options = listOf(
-        Triple(ViewMode.GRID, QIcons.ViewSquare, "نمای کارتی"),
-        Triple(ViewMode.CIRCLE, QIcons.ViewCircle, "نمای دایره‌ای"),
-        Triple(ViewMode.DIAL, QIcons.ViewDial, "نمای سنجه"),
+        Triple(ViewMode.GRID, QIcons.ViewSquare, "نمای کاشی"),
+        Triple(ViewMode.LIST, QIcons.ListView, "نمای فهرست"),
     )
     Row(
         Modifier
@@ -378,7 +354,7 @@ private fun ViewModeSwitch(mode: ViewMode, onMode: (ViewMode) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         for ((value, icon, label) in options) {
-            val on = mode == value
+            val on = if (value == ViewMode.LIST) mode == ViewMode.LIST else mode != ViewMode.LIST
             Box(
                 Modifier
                     .size(width = 34.dp, height = 34.dp)

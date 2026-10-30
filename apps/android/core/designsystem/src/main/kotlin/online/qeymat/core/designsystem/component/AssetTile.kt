@@ -67,6 +67,9 @@ private val BRAND_ICON_IDS = mapOf(
 
 fun brandIconAsset(symbol: String): String? = BRAND_ICON_IDS[symbol]?.let { "file:///android_asset/qicons/$it.svg" }
 
+/** فاز شیشه‌ای: دیسک گرد ست A — پیش‌فرض کاشی‌های بنتو */
+fun roundIconAsset(symbol: String): String? = BRAND_ICON_IDS[symbol]?.let { "file:///android_asset/qicons-a/$it.svg" }
+
 /**
  * نشانه‌ی دارایی در کادر گرد.
  * پرچم از شبکه می‌آید؛ طلا، سکه، رمزارز، کالا، سهام و شاخص‌ها آواتار
@@ -74,18 +77,26 @@ fun brandIconAsset(symbol: String): String? = BRAND_ICON_IDS[symbol]?.let { "fil
  * دارایی آواتار نداشت، نماد متنی جایش می‌نشیند.
  */
 @Composable
-fun AssetTile(asset: Asset, size: Dp = 40.dp, modifier: Modifier = Modifier) {
-    // آیکن برند فاز ۲ اگر موجود باشد؛ زیر ۲۴dp حلقهٔ Q ناخواناست
-    val brandIcon = if (size >= 24.dp) remember(asset.symbol) { brandIconAsset(asset.symbol) } else null
-    if (brandIcon != null) {
+fun AssetTile(asset: Asset, size: Dp = 40.dp, modifier: Modifier = Modifier, round: Boolean = true) {
+    // فاز شیشه‌ای: دیسک گرد ست A با حلقهٔ روشن؛ ست B مربعی اختیاری
+    val iconPath = remember(asset.symbol, round) {
+        if (round) roundIconAsset(asset.symbol) else brandIconAsset(asset.symbol)
+    }
+    if (iconPath != null) {
         val context = androidx.compose.ui.platform.LocalContext.current
+        val ring = if (Q.isDark) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.9f)
         AsyncImage(
             model = coil.request.ImageRequest.Builder(context)
-                .data(brandIcon)
+                .data(iconPath)
                 .decoderFactory(coil.decode.SvgDecoder.Factory())
                 .build(),
             contentDescription = null,
-            modifier = modifier.size(size),
+            modifier = if (round) {
+                modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
+                    .border(1.5.dp, ring, androidx.compose.foundation.shape.CircleShape)
+            } else {
+                modifier.size(size)
+            },
         )
         return
     }

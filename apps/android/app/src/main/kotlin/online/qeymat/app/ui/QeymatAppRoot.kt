@@ -63,6 +63,8 @@ import online.qeymat.core.designsystem.Q
 import online.qeymat.core.designsystem.QIcons
 import online.qeymat.core.designsystem.QeymatTheme
 import online.qeymat.core.designsystem.component.BrandMark
+import online.qeymat.core.designsystem.component.GlassOrbs
+import online.qeymat.core.designsystem.component.glassTile
 import online.qeymat.core.designsystem.component.LocalTourTargets
 import online.qeymat.core.designsystem.component.TourKeys
 import online.qeymat.core.designsystem.component.TourOverlay
@@ -82,7 +84,7 @@ enum class AppTab(val label: String, val icon: ImageVector, val iconOn: ImageVec
     PRICES("قیمت", QIcons.TabPrices, QIcons.TabPricesOn),
     CONVERT("تبدیل", QIcons.TabConvert, QIcons.TabConvertOn),
     ALERTS("هشدار", QIcons.TabAlerts, QIcons.TabAlertsOn),
-    SETTINGS("تنظیمات", QIcons.TabSettings, QIcons.TabSettingsOn),
+    SETTINGS("من", QIcons.TabSettings, QIcons.TabSettingsOn),
 }
 
 @Composable
@@ -162,6 +164,7 @@ private fun AppContent(versionName: String, settings: UserSettings, settingsStor
 
     CompositionLocalProvider(LocalTourTargets provides targets) {
         Box(Modifier.fillMaxSize().background(Q.Bg)) {
+            GlassOrbs(Modifier.fillMaxSize())
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) {
                     when (tab) {
@@ -296,25 +299,20 @@ private fun tabTarget(tab: AppTab) = TourKeys.tab(tab.name)
 /** نوار زبانه‌ی چسبیده به پایین، با نشانگر کپسولی زبانه‌ی فعال */
 @Composable
 private fun TabBar(selected: AppTab, onSelect: (AppTab) -> Unit) {
-    val line = Q.line(0.16f)
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(Q.Bar)
-            .drawBehind {
-                drawLine(line, Offset(0f, 0.5f), Offset(size.width, 0.5f), strokeWidth = 1.dp.toPx())
-            },
+            .padding(horizontal = 12.dp),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(66.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).glassTile(22.dp).padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             for (tab in AppTab.entries) {
                 val on = tab == selected
                 // فاز ۲: تب فعال با رنگ متن اصلی و «نقطهٔ نعنایی» کنار آیکن، بدون کپسول
-                val color by animateColorAsState(if (on) Q.Text else Q.Sub, label = "tab")
+                val color by animateColorAsState(if (on) Q.Mint else Q.Sub, label = "tab")
                 val dot = if (Q.isDark) androidx.compose.ui.graphics.Color(0xFF8FD8B8) else androidx.compose.ui.graphics.Color(0xFF1EB17A)
                 Column(
                     modifier = Modifier
@@ -346,7 +344,8 @@ private fun TabBar(selected: AppTab, onSelect: (AppTab) -> Unit) {
                 }
             }
         }
-        // زیر نوار ناوبری گوشی هم هم‌رنگ نوار است
+        // فاصلهٔ شناوری نوار از لبهٔ پایین + ناحیهٔ امن
+        Box(Modifier.fillMaxWidth().height(10.dp))
         Box(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
