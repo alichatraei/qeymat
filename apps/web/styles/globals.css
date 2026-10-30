@@ -201,7 +201,17 @@
   }
 
   .card {
-    @apply rounded-card border border-line bg-surface;
+    @apply rounded-card border;
+    border-color: var(--glass-edge);
+    background: linear-gradient(160deg, var(--glass-a), var(--glass-b));
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .card {
+      background: rgb(var(--c-surface) / 0.96);
+    }
   }
 
   /* کارت شیشه‌ای روی پس‌زمینه‌ی تیره‌ی برند */
