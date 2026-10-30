@@ -38,7 +38,7 @@ export default function SiteHeader({
   const accountHref = user ? (user.role === "ADMIN" ? "/admin" : "/me") : "/login";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/90 bg-page/90 backdrop-blur-[18px]">
+    <header className="glass-nav sticky top-0 z-40 border-b border-[var(--glass-edge)]">
       {/*
         چیدمان سه‌ستونی با grid به‌جای flex:
         ستون میانی منو را دقیقاً وسط نگه می‌دارد و ستون‌های کناری اجازه‌ی
@@ -51,16 +51,23 @@ export default function SiteHeader({
           className="hidden min-w-0 items-center justify-center gap-0.5 xl:flex"
           aria-label="منوی اصلی"
         >
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="nav-link whitespace-nowrap"
-              data-active={isActive(item.href.split("#")[0])}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map((item) => {
+            const active = isActive(item.href.split("#")[0]);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative inline-flex h-10 items-center whitespace-nowrap rounded-[10px] px-3.5 text-[14px] no-underline transition-colors ${
+                  active
+                    ? "font-bold text-ink after:absolute after:inset-x-3.5 after:-bottom-[15px] after:h-0.5 after:rounded-full after:bg-green-dot after:content-['']"
+                    : "font-medium text-sub hover:text-ink"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex min-w-0 items-center justify-end gap-2">
@@ -84,7 +91,7 @@ export default function SiteHeader({
             // نشان «قیمت پلاس» با حلقهٔ باز Q و علامت + (آیکن برند فاز ۲)
             <Link
               href="/plus"
-              className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-[11.5px] font-bold text-sub transition-colors hover:text-ink"
+              className="inline-flex h-8 items-center gap-1.5 rounded-pill bg-[rgba(233,185,73,.16)] px-3 text-[12.5px] font-bold text-amber-ink no-underline transition-colors hover:text-amber"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <path d="M18.93 16A8 8 0 1 0 16 18.93M12 8.5v7M8.5 12h7" />
@@ -105,8 +112,11 @@ export default function SiteHeader({
 
           <ThemeToggle />
 
-          <Link href={accountHref} className="btn-solid hidden h-10 min-h-0 xl:inline-flex">
-            <User />
+          <Link
+            href={accountHref}
+            className="hidden h-10 items-center gap-2 rounded-xl bg-green-dot px-4 text-[13px] font-extrabold text-brand-deep no-underline transition-transform active:scale-[.97] xl:inline-flex"
+          >
+            <User className="h-[18px] w-[18px]" />
             <span className="whitespace-nowrap">{user ? "حساب من" : "ورود"}</span>
           </Link>
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import MarketBoard from "@/components/market/MarketBoard";
+import BentoMarket from "@/components/market/BentoMarket";
 import { getSnapshot } from "@/lib/market";
 import type { AssetCategory } from "@/lib/types";
 
@@ -32,7 +32,7 @@ export default async function MarketPage({
 
   return (
     <>
-      <MarketBoard initialSnapshot={snapshot} initialCategory={category} />
+      <BentoMarket initialSnapshot={snapshot} />
       {/* داده‌ی ساختاریافته برای نتایج جست‌وجوی گوگل */}
       {usd ? (
         <script

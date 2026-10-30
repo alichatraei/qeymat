@@ -10,7 +10,7 @@
    */
   :root {
     color-scheme: light;
-    --c-page: 250 252 251;
+    --c-page: 238 244 241;
     --c-surface: 255 255 255;
     --c-soft: 244 247 245;
     --c-field: 251 252 251;
@@ -52,7 +52,7 @@
 
   .dark {
     color-scheme: dark;
-    --c-page: 7 14 12;
+    --c-page: 7 33 27;
     --c-surface: 13 22 19;
     --c-soft: 19 30 26;
     --c-field: 16 26 22;
@@ -60,8 +60,8 @@
     --c-hover: 19 31 26;
     --c-line: 31 45 39;
     --c-line-strong: 49 67 59;
-    --c-ink: 230 238 234;
-    --c-sub: 170 184 178;
+    --c-ink: 243 239 229;
+    --c-sub: 191 188 178;
     --c-muted: 132 147 140;
     --c-faint: 98 113 106;
     --c-overlay: 0 0 0;
@@ -349,5 +349,132 @@
       linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
     background-size: 36px 36px;
     mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
+  }
+}
+
+@layer components {
+  /*
+   * فاز شیشه‌ای — متغیرهای گلس از آرت‌بردهای نهایی بوم «بازار».
+   * کاشی: گرادیان سفید + لبهٔ روشن + blur؛ متن روی شیشه همیشه هاله دارد.
+   */
+  :root {
+    --glass-a: rgba(255, 255, 255, 0.78);
+    --glass-b: rgba(255, 255, 255, 0.42);
+    --glass-edge: rgba(255, 255, 255, 0.9);
+    --glass-shadow: 0 8px 24px rgba(18, 61, 45, 0.1);
+    --glass-highlight: inset 0 1px 0 #ffffff;
+    --glass-btn: rgba(255, 255, 255, 0.65);
+    --glass-btn-edge: rgba(12, 51, 42, 0.12);
+    --glass-nav: rgba(255, 255, 255, 0.55);
+    --glass-halo: 0 0 6px #ffffff, 0 0 12px rgba(255, 255, 255, 0.9);
+    --spark-up: 11 143 97;
+    --spark-down: 214 79 84;
+    --chip-up-bg: rgba(231, 245, 238, 0.95);
+    --chip-down-bg: rgba(253, 236, 237, 0.95);
+    --orb-1: #8fd8b8;
+    --orb-1-o: 0.55;
+    --orb-2: #b0dfc8;
+    --orb-2-o: 0.7;
+    --orb-3: #f2c27a;
+    --orb-3-o: 0.28;
+  }
+  .dark {
+    --glass-a: rgba(255, 255, 255, 0.16);
+    --glass-b: rgba(255, 255, 255, 0.04);
+    --glass-edge: rgba(255, 255, 255, 0.22);
+    --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    --glass-btn: rgba(255, 255, 255, 0.08);
+    --glass-btn-edge: rgba(255, 255, 255, 0.18);
+    --glass-nav: rgba(7, 33, 27, 0.55);
+    --glass-halo: 0 1px 8px rgba(7, 33, 27, 0.9);
+    --spark-up: 88 214 164;
+    --spark-down: 250 152 155;
+    --chip-up-bg: rgba(17, 51, 39, 0.75);
+    --chip-down-bg: rgba(58, 23, 26, 0.75);
+    --orb-1: #1eb17a;
+    --orb-1-o: 0.32;
+    --orb-2: #8fd8b8;
+    --orb-2-o: 0.3;
+    --orb-3: #e9b949;
+    --orb-3-o: 0.14;
+  }
+
+  .glass-tile {
+    background: linear-gradient(160deg, var(--glass-a), var(--glass-b));
+    border: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+  }
+  .glass-btn {
+    background: var(--glass-btn);
+    border: 1px solid var(--glass-btn-edge);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .glass-nav {
+    background: var(--glass-nav);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+  /* بدون پشتیبانی blur یا با ترجیح شفافیت کمتر: سطح یکدست ۹۶٪ */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass-tile,
+    .glass-btn,
+    .glass-nav {
+      background: rgb(var(--c-surface) / 0.96);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-tile,
+    .glass-btn,
+    .glass-nav {
+      background: rgb(var(--c-surface) / 0.96);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  .halo {
+    text-shadow: var(--glass-halo);
+  }
+
+  /* هاله‌های تارِ زمینه؛ پشت کل صفحه، بدون دخالت در لمس */
+  .orbs {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+  }
+  .orb-1 {
+    width: 480px;
+    height: 480px;
+    top: -160px;
+    inset-inline-end: -110px;
+    background: var(--orb-1);
+    opacity: var(--orb-1-o);
+  }
+  .orb-2 {
+    width: 420px;
+    height: 420px;
+    top: 420px;
+    inset-inline-start: -130px;
+    background: var(--orb-2);
+    opacity: var(--orb-2-o);
+  }
+  .orb-3 {
+    width: 340px;
+    height: 340px;
+    top: 220px;
+    inset-inline-start: 42%;
+    background: var(--orb-3);
+    opacity: var(--orb-3-o);
   }
 }

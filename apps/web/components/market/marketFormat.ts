@@ -39,6 +39,25 @@ export function marketChange(change: number): string {
   return `${faNum(Math.abs(change), 2)}٪`;
 }
 
+/**
+ * قیمت کاشی بنتو (فاز شیشه‌ای): عدد کوتاه + واحد جدا تا واحد در خط دوم‌نما
+ * بنشیند — «۱۱۲٫۴ میلیون»، «۹۶٬۴۲۰ دلار»، «۱۰۸٬۴۵۰ تومان».
+ */
+export function bentoPrice(value: number, unit?: string | null): { num: string; unit: string } {
+  if (unit === "USD") {
+    return { num: faNum(value, value < 100 ? 2 : 0), unit: "دلار" };
+  }
+  const abs = Math.abs(value);
+  if (abs >= 1e9) return { num: faNum(value / 1e9, 2), unit: "میلیارد" };
+  if (abs >= 1e6) return { num: faNum(value / 1e6, abs / 1e6 < 100 ? 2 : 1), unit: "میلیون" };
+  return { num: faNum(Math.round(value)), unit: "تومان" };
+}
+
+/** «۰٫۸٪» — یک رقم اعشار برای چیپ کاشی */
+export function bentoChange(change: number): string {
+  return `${faNum(Math.abs(change), 1)}٪`;
+}
+
 /** جای عقربهٔ سنجه در بازهٔ امروز؛ بدون دامنه، از درصد تغییر تخمین می‌خورد */
 export function gaugePosition(rate: Pick<RateView, "sell" | "dayLow" | "dayHigh" | "changePercent">): number {
   const { sell, dayLow, dayHigh } = rate;

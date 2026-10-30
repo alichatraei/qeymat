@@ -250,6 +250,9 @@ model User {
   alerts            PriceAlert[]
   receipts          ReceiptPayment[]
 
+  /// چیدمان بنتوی صفحهٔ بازار، جدا برای وب و موبایل: {"web":[{assetId,size}],"mobile":[…]}
+  marketLayout Json?
+
   @@index([phone])
 }
 

@@ -5,33 +5,45 @@ import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/types";
 
 /**
- * پنج تب فاز ۲: بازار · نمودار · تبدیل · هشدار · من، با آیکن‌های اختصاصی
- * «قیمت». تب فعال stroke ضخیم‌تر و نقطهٔ نعنایی دارد (امضای برند).
- * مسیر آیکن‌ها همان مجموعهٔ دیزاین است و نقطه در دهانهٔ هر آیکن می‌نشیند.
+ * نوار پایین شناور شیشه‌ای (فاز شیشه‌ای): بازار · منتخب من · هشدار · من.
+ * «منتخب من» صفحهٔ بازار را در حالت چیدمان باز می‌کند.
  */
-const TABS: { id: string; label: string; d: string; dot: [number, number]; match: RegExp }[] = [
-  { id: "market", label: "بازار", d: "M5 20h14M7.5 16.5v-5M12 16.5v-9M16.5 16.5V11", dot: [15, 4.6], match: /^\/$/ },
-  { id: "chart", label: "نمودار", d: "M3.5 3.5v17h17M7 15.5l3.5-4 3 3 4.5-5.5", dot: [17.2, 4.4], match: /^\/chart/ },
+const TABS: { id: string; label: string; icon: React.ReactNode }[] = [
   {
-    id: "convert",
-    label: "تبدیل",
-    d: "M18.5 9.6A7 7 0 0 0 5.7 7.6M5.2 4.2v3.6h3.6M5.5 14.4A7 7 0 0 0 18.3 16.4M18.8 19.8v-3.6h-3.6",
-    dot: [10.5, 10.5],
-    match: /^\/converter/,
+    id: "market",
+    label: "بازار",
+    icon: (
+      <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 4v16h18" /><path d="M7 15l4-4 3 3 6-7" />
+      </svg>
+    ),
+  },
+  {
+    id: "picks",
+    label: "منتخب من",
+    icon: (
+      <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+      </svg>
+    ),
   },
   {
     id: "alerts",
     label: "هشدار",
-    d: "M6.5 10a5.5 5.5 0 0 1 11 0c0 5.5 2.5 7.5 2.5 7.5H4s2.5-2 2.5-7.5M10.2 20.5a2 2 0 0 0 3.6 0",
-    dot: [17.5, 1.8],
-    match: /^\/alerts$/,
+    icon: (
+      <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />
+      </svg>
+    ),
   },
   {
     id: "me",
     label: "من",
-    d: "M12 4.2a3.8 3.8 0 1 0 0 7.6a3.8 3.8 0 1 0 0-7.6M4.5 20.5a7.5 7.5 0 0 1 15 0",
-    dot: [17.8, 2.6],
-    match: /^\/(me|panel|login|admin|plus|developers|docs|dashboard)/,
+    icon: (
+      <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+      </svg>
+    ),
   },
 ];
 
@@ -39,57 +51,36 @@ export default function BottomNav({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
   const account = user ? (user.role === "ADMIN" ? "/admin" : "/me") : "/login";
   const href = (id: string) =>
-    id === "market" ? "/" : id === "chart" ? "/chart" : id === "convert" ? "/converter" : id === "alerts" ? "/alerts" : account;
+    id === "market" ? "/" : id === "picks" ? "/?view=edit" : id === "alerts" ? "/alerts" : account;
 
   const activeId = (() => {
     if (pathname === "/") return "market";
-    if (/^\/chart/.test(pathname)) return "chart";
-    if (/^\/converter/.test(pathname)) return "convert";
     if (/^\/alerts/.test(pathname)) return "alerts";
-    if (/^\/(panel|me|login|admin|plus|developers|docs|dashboard)/.test(pathname)) return "me";
+    if (/^\/(me|panel|login|admin|plus|developers|docs|dashboard)/.test(pathname)) return "me";
     return "";
   })();
 
   return (
     <nav
-      aria-label="بخش‌های اصلی"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl xl:hidden"
+      aria-label="ناوبری اصلی"
+      className="glass-nav fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-40 grid h-16 grid-cols-4 rounded-[22px] border border-[var(--glass-edge)] xl:hidden"
     >
-      <ul className="mx-auto flex max-w-[560px]">
-        {TABS.map((tab) => {
-          const active = tab.id === activeId;
-          return (
-            <li key={tab.id} className="min-w-0 flex-1">
-              <Link
-                href={href(tab.id)}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-h-[56px] flex-col items-center justify-center gap-[3px] text-[12px] transition-colors ${
-                  active ? "font-bold text-ink" : "font-medium text-sub"
-                }`}
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={active ? 2 : 1.75}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className="overflow-visible"
-                >
-                  <path d={tab.d} />
-                  {active ? (
-                    <rect x={tab.dot[0]} y={tab.dot[1]} width="3" height="3" rx="0.65" fill="rgb(var(--c-icon-dot))" stroke="none" />
-                  ) : null}
-                </svg>
-                {tab.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {TABS.map((tab) => {
+        const active = tab.id === activeId;
+        return (
+          <Link
+            key={tab.id}
+            href={href(tab.id)}
+            aria-current={active ? "page" : undefined}
+            className={`flex flex-col items-center justify-center gap-0.5 text-[12px] no-underline transition-colors ${
+              active ? "font-extrabold text-green-dark dark:text-brand-mint" : "font-medium text-sub"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
