@@ -68,22 +68,24 @@ const ICON_IDS: Record<string, string> = {
   NATGAS: "natgas",
 };
 
-export function assetIconSrc(symbol: string): string | null {
+export function assetIconSrc(symbol: string, shape: "round" | "square" = "round"): string | null {
   const id = ICON_IDS[symbol];
-  return id ? `/icons/assets/asset-${id}-b.svg` : null;
+  return id ? `/icons/assets/asset-${id}-${shape === "round" ? "a" : "b"}.svg` : null;
 }
 
 export default function AssetIcon({
   rate,
   size = 40,
   className = "",
+  shape = "round",
 }: {
   rate: Pick<RateView, "symbol" | "countryCode" | "mark" | "category" | "nameFa">;
-  /** قطر به پیکسل؛ زیر ۲۴ حلقهٔ Q ناخواناست و آیکن قدیمی استفاده می‌شود */
   size?: number;
   className?: string;
+  /** فاز شیشه‌ای: دیسک گرد (ست A) پیش‌فرض است؛ قاب مربع برند (ست B) اختیاری */
+  shape?: "round" | "square";
 }) {
-  const src = size >= 24 ? assetIconSrc(rate.symbol) : null;
+  const src = assetIconSrc(rate.symbol, shape);
   if (!src) {
     const legacy = size >= 48 ? "large" : size >= 36 ? "normal" : "small";
     return <RateIcon rate={rate} size={legacy} />;
@@ -97,7 +99,7 @@ export default function AssetIcon({
       width={size}
       height={size}
       loading="lazy"
-      className={`shrink-0 select-none ${className}`}
+      className={`shrink-0 select-none ${shape === "round" ? "rounded-full shadow-[0_0_0_2px_var(--glass-edge)]" : ""} ${className}`}
       draggable={false}
     />
   );

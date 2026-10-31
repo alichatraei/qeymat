@@ -85,7 +85,10 @@ class ScreenshotTest {
                 tab("ویرایش")
                 shot("dark-edit")
                 tab("تمام")
-                compose.onAllNodesWithText("نمودار، نرخ‌های مرتبط و هشدار").onFirst().performClick()
+                // فاز شیشه‌ای: کل کاشی ویژه لینک جزئیات است؛ با نام اولین منتخب کلیک می‌کنیم
+                val firstFav = runBlocking { store.current().favorites }.firstOrNull()
+                val firstName = market.snapshot.value!!.assets.firstOrNull { it.symbol == firstFav }?.nameFa ?: "دلار"
+                compose.onAllNodesWithText(firstName, substring = true).onFirst().performClick()
                 compose.mainClock.advanceTimeBy(1_500)
                 compose.onNodeWithText("نرخ‌های مرتبط").performScrollTo()
                 compose.mainClock.advanceTimeBy(600)
@@ -113,7 +116,7 @@ class ScreenshotTest {
             shot("$t-convert")
             tab("هشدار")
             shot("$t-alerts")
-            tab("تنظیمات")
+            tab("من")
             shot("$t-settings")
         }
 
