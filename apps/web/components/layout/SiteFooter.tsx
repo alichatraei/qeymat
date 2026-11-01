@@ -34,7 +34,8 @@ const COLUMNS = [
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-surface">
+    // در نسخهٔ نصب‌شده (PWA) فوتر نمایش داده نمی‌شود؛ متن حقوقی داخل صفحه‌هاست
+    <footer className="border-t border-line bg-surface [@media(display-mode:standalone)]:hidden">
       <div className="content-width grid gap-10 py-12 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>
           <Brand />
@@ -109,10 +110,6 @@ export default function SiteFooter() {
             <Link href="/privacy" className="font-semibold text-sub hover:text-green-dark">
               حریم خصوصی
             </Link>
-          </p>
-          <p>
-            طراحی و توسعه:{" "}
-            <span className="font-semibold text-sub">علی چترایی — تیم برنامه‌نویسی آ</span>
           </p>
         </div>
       </div>
