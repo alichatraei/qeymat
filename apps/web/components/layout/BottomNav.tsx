@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/types";
 
 /**
- * نوار پایین شناور شیشه‌ای (فاز شیشه‌ای): بازار · منتخب من · هشدار · من.
- * «منتخب من» صفحهٔ بازار را در حالت چیدمان باز می‌کند.
+ * نوار پایین شناور شیشه‌ای: بازار · تبدیل · هشدار · من.
+ * «منتخب من» از نوار حذف شد و به‌عنوان اولین فیلتر در تب بازار می‌ماند.
  */
 const TABS: { id: string; label: string; icon: React.ReactNode }[] = [
   {
@@ -19,11 +19,11 @@ const TABS: { id: string; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "picks",
-    label: "منتخب من",
+    id: "convert",
+    label: "تبدیل",
     icon: (
       <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+        <path d="M4 8h14l-3-3M20 16H6l3 3" />
       </svg>
     ),
   },
@@ -51,10 +51,11 @@ export default function BottomNav({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
   const account = user ? (user.role === "ADMIN" ? "/admin" : "/me") : "/login";
   const href = (id: string) =>
-    id === "market" ? "/" : id === "picks" ? "/?view=edit" : id === "alerts" ? "/alerts" : account;
+    id === "market" ? "/" : id === "convert" ? "/converter" : id === "alerts" ? "/alerts" : account;
 
   const activeId = (() => {
     if (pathname === "/") return "market";
+    if (/^\/converter/.test(pathname)) return "convert";
     if (/^\/alerts/.test(pathname)) return "alerts";
     if (/^\/(me|panel|login|admin|plus|developers|docs|dashboard)/.test(pathname)) return "me";
     return "";

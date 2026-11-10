@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import { Check, ChevronDown, Clock, Copy, Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
-import { fa, parseNumber, clock } from "@qeymat/shared";
+import { Check, ChevronDown, Copy, Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
+import { clock, timeAgo } from "@qeymat/shared";
 import AssetIcon from "./AssetIcon";
 import AssetPicker from "./AssetPicker";
-import { formatPrice } from "./PriceChart";
+import { amountDisplay, amountInWords, convertAmount, toLatinDigits } from "./convertFormat";
 import {
   conversionImage,
   conversionText,
@@ -15,12 +15,27 @@ import {
   type Conversion,
   type ShareOutcome,
 } from "@/lib/share-conversion";
-import type { MarketSnapshot, RateView } from "@/lib/types";
+import type { MarketSnapshot } from "@/lib/types";
 
 const fetcher = (url: string) => fetch(url).then((response) => response.json());
-const QUICK = [100, 500, 1000, 5000];
-/** تومان یک گزینه‌ی مجازی کنار دارایی‌هاست */
+
+/** تومان یک گزینهٔ مجازی کنار دارایی‌هاست */
 const TOMAN = "IRT";
+const LAST_PAIR_KEY = "convert.lastPair";
+const QUICK = ["100", "500", "1000", "10000"];
+/** نرخ قدیمی‌تر از نیم ساعت، «قدیمی» نشان داده می‌شود */
+const STALE_MS = 30 * 60 * 1000;
+
+const KEYPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "del"] as const;
+const FA_KEY: Record<string, string> = { "1": "۱", "2": "۲", "3": "۳", "4": "۴", "5": "۵", "6": "۶", "7": "۷", "8": "۸", "9": "۹", "0": "۰" };
+
+/** جفت‌های پرکاربرد، مطابق آرت‌برد وب */
+const PAIRS: { from: string; to: string; title: string }[] = [
+  { from: "USD", to: TOMAN, title: "دلار به تومان" },
+  { from: "EMAMI", to: TOMAN, title: "سکه به تومان" },
+  { from: "EUR", to: "USD", title: "یورو به دلار" },
+  { from: "USDT", to: TOMAN, title: "تتر به تومان" },
+];
 
 export default function ConverterBoard({
   initialSnapshot,
@@ -33,17 +48,46 @@ export default function ConverterBoard({
     fallbackData: initialSnapshot,
     refreshInterval: 60000,
   });
-
   const assets = (data ?? initialSnapshot).assets;
+  const bySymbol = useMemo(() => new Map(assets.map((asset) => [asset.symbol, asset])), [assets]);
+
   const [from, setFrom] = useState(initialSymbol);
   const [to, setTo] = useState(TOMAN);
-  const [amount, setAmount] = useState("۱۰۰");
+  const [amt, setAmt] = useState("1000");
+  const [picker, setPicker] = useState<"from" | "to" | null>(null);
   const [sharing, setSharing] = useState(false);
 
-  const bySymbol = useMemo(() => new Map(assets.map((asset) => [asset.symbol, asset])), [assets]);
-  const usdToman = bySymbol.get("USD")?.sell ?? 0;
+  // آخرین جفت ارز روی دستگاه می‌ماند
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(LAST_PAIR_KEY) || "null");
+      if (
+        saved?.from &&
+        saved?.to &&
+        (saved.from === TOMAN || bySymbol.has(saved.from)) &&
+        (saved.to === TOMAN || bySymbol.has(saved.to))
+      ) {
+        setFrom(saved.from);
+        setTo(saved.to);
+      }
+    } catch {
+      /* — */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /** ارزش یک واحد به تومان؛ دارایی‌های دلاری (نفت، سهام) با نرخ دلار تبدیل می‌شوند */
+  const setPair = (nextFrom: string, nextTo: string, nextAmt?: string) => {
+    setFrom(nextFrom);
+    setTo(nextTo);
+    if (nextAmt !== undefined) setAmt(nextAmt);
+    try {
+      window.localStorage.setItem(LAST_PAIR_KEY, JSON.stringify({ from: nextFrom, to: nextTo }));
+    } catch {
+      /* — */
+    }
+  };
+
+  const usdToman = bySymbol.get("USD")?.sell ?? 0;
   const tomanOf = (symbol: string) => {
     if (symbol === TOMAN) return 1;
     const asset = bySymbol.get(symbol);
@@ -51,139 +95,246 @@ export default function ConverterBoard({
     return asset.unit === "USD" ? asset.sell * usdToman : asset.sell;
   };
   const nameOf = (symbol: string) => (symbol === TOMAN ? "تومان" : (bySymbol.get(symbol)?.nameFa ?? symbol));
+  const iconOf = (symbol: string, size: number) =>
+    symbol === TOMAN ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/icons/assets/asset-irt-a.svg"
+        alt=""
+        width={size}
+        height={size}
+        className="shrink-0 rounded-full shadow-[0_0_0_2px_var(--glass-edge)]"
+      />
+    ) : bySymbol.has(symbol) ? (
+      <AssetIcon rate={bySymbol.get(symbol)!} size={size} />
+    ) : null;
 
-  const value = parseNumber(amount);
+  const amount = parseFloat(amt || "0") || 0;
   const fromToman = tomanOf(from);
   const toToman = tomanOf(to);
-  const result = fromToman && toToman ? (value * fromToman) / toToman : 0;
-  const resultText = formatAmount(result);
-  const ready = value > 0 && result > 0;
+  const result = fromToman && toToman ? (amount * fromToman) / toToman : 0;
+  const unitRate = fromToman && toToman ? fromToman / toToman : 0;
 
-  const rateLine =
-    to === TOMAN || from === TOMAN
-      ? `۱ ${nameOf(from === TOMAN ? to : from)} = ${fa(Math.round(tomanOf(from === TOMAN ? to : from)))} تومان`
-      : `۱ ${nameOf(from)} = ${formatAmount(fromToman / toToman)} ${nameOf(to)} · از طریق تومان`;
+  // کهنگی نرخ از قدیمی‌ترین طرف غیرتومانی
+  const staleAt = [from, to]
+    .filter((symbol) => symbol !== TOMAN)
+    .map((symbol) => bySymbol.get(symbol)?.fetchedAt)
+    .filter(Boolean)
+    .map((at) => new Date(at as string).getTime())
+    .sort()[0];
+  const isStale = staleAt ? Date.now() - staleAt > STALE_MS : false;
 
-  const fromAsset = bySymbol.get(from);
-  const popular = assets.filter((asset) => asset.category === "CURRENCY" && asset.featured !== false).slice(0, 6);
+  const press = (key: (typeof KEYPAD)[number]) => {
+    setAmt((current) => {
+      if (key === "del") return current.slice(0, -1);
+      if (key === ".") return current.includes(".") ? current : `${current || "0"}.`;
+      const next = current === "0" ? "" : current;
+      if (next.replace(".", "").length >= 12) return current;
+      return next + key;
+    });
+  };
 
-  const swap = () => {
-    setFrom(to);
-    setTo(from);
+  const choose = (side: "from" | "to", symbol: string) => {
+    // انتخاب همان ارزِ طرف دیگر، دو طرف را جابه‌جا می‌کند
+    if (side === "from") setPair(symbol, symbol === to ? from : to);
+    else setPair(symbol === from ? to : from, symbol);
+    setPicker(null);
+  };
+
+  // نرخ خیلی کوچک (مثل تومان به دلار) معکوس نمایش داده می‌شود تا عدد معنادار بماند
+  const rateFlip = unitRate > 0 && unitRate < 0.01;
+  const rateLine = rateFlip
+    ? `هر ۱ ${nameOf(to)} = ${convertAmount(1 / unitRate)} ${nameOf(from)}`
+    : `هر ۱ ${nameOf(from)} = ${convertAmount(unitRate)} ${nameOf(to)}`;
+
+  const pickButton = (side: "from" | "to") => {
+    const symbol = side === "from" ? from : to;
+    return (
+      <button
+        type="button"
+        onClick={() => setPicker(side)}
+        aria-label={`انتخاب ارز، الان ${nameOf(symbol)}`}
+        className="glass-btn inline-flex h-11 items-center gap-2 self-start rounded-pill py-0 pe-2.5 ps-3.5 text-[15px] font-bold"
+      >
+        {iconOf(symbol, 26)}
+        {nameOf(symbol)}
+        <ChevronDown className="h-4 w-4 text-sub" />
+      </button>
+    );
   };
 
   return (
-    <main className="pb-20 pt-10">
-      <section className="content-width max-w-[980px]">
-        <div className="max-w-[52ch]">
-          <span className="text-[11.5px] font-bold text-green-dark">تبدیل ارزها</span>
-          <h1 className="mt-2 text-[28px] font-extrabold tracking-[-1px] sm:text-[32px]">
-            هر ارزی را به تومان یا ارز دیگر تبدیل کنید
-          </h1>
-          <p className="mt-3 text-[13px] leading-7 text-muted">
-            با نرخ لحظه‌ای بازار؛ نتیجه را به‌صورت متن یا تصویر برای دیگران بفرستید.
-          </p>
+    <main className="mx-auto w-full max-w-[880px] px-4 pb-32 pt-7 min-[900px]:px-8 min-[900px]:pb-20 min-[900px]:pt-12">
+      <div className="text-center">
+        <h1 className="text-[25px] font-extrabold leading-tight min-[900px]:text-[34px]">تبدیل</h1>
+        <p className="mt-2 flex items-center justify-center gap-2 text-[13px] font-medium text-sub" suppressHydrationWarning>
+          <span
+            className={`h-2 w-2 rounded-full ${isStale ? "bg-faint" : "bg-green-dot shadow-[0_0_0_4px_rgb(var(--c-green-dot)/.18)]"}`}
+            aria-hidden="true"
+          />
+          {isStale ? `قدیمی · ${timeAgo(new Date(staleAt!).toISOString())}` : "با نرخ لحظه‌ای بازار"} · نرخ تحلیلی قیمت
+        </p>
+      </div>
+
+      {/* ------------------------- دارم / می‌شود ------------------------- */}
+      <section className="card mt-7 rounded-[28px] p-4 min-[900px]:p-6" aria-label="تبدیل">
+        <div className="grid gap-3 min-[900px]:grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] min-[900px]:items-stretch min-[900px]:gap-4">
+          <div className="glass-btn flex min-w-0 flex-col gap-2.5 rounded-[20px] p-4 min-[900px]:p-5" aria-label="مبلغ ورودی">
+            <span className="text-[13.5px] font-bold text-sub">دارم</span>
+            {/* موبایل: نمایش + کیبورد داخلی؛ دسکتاپ: فیلد واقعی */}
+            <span className="tabular block min-h-[44px] break-all text-[clamp(26px,8.5vw,39px)] font-extrabold leading-tight min-[900px]:hidden">
+              {amountDisplay(amt)}
+              <i className="ms-1 inline-block h-[28px] w-0.5 translate-y-1 animate-pulse bg-brand-mint motion-reduce:animate-none" aria-hidden="true" />
+            </span>
+            <input
+              value={amt === "" ? "" : amountDisplay(amt)}
+              onChange={(event) => setAmt(toLatinDigits(event.target.value))}
+              inputMode="decimal"
+              aria-label="مبلغ"
+              className="tabular hidden w-full min-w-0 bg-transparent text-[39px] font-extrabold text-ink outline-none min-[900px]:block"
+            />
+            <p className="min-h-[21px] text-[13px] font-medium leading-6 text-sub">
+              {amount >= 1 ? `${amountInWords(amount)} ${nameOf(from)}` : ""}
+            </p>
+            {pickButton("from")}
+          </div>
+
+          <div className="relative z-[2] -my-5 flex items-center justify-center min-[900px]:my-0">
+            <button
+              type="button"
+              onClick={() => setPair(to, from)}
+              aria-label="جابه‌جا کردن دو ارز"
+              className="grid h-12 w-12 place-items-center rounded-full border-[3px] border-page bg-brand-cream text-brand shadow-[0_4px_14px_rgba(0,0,0,.25)] transition-transform active:scale-95 min-[900px]:h-[52px] min-[900px]:w-[52px] min-[900px]:border-0"
+            >
+              <svg
+                className="h-[22px] w-[22px] rotate-90 min-[900px]:rotate-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 8h14l-3-3M20 16H6l3 3" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="glass-btn flex min-w-0 flex-col gap-2.5 rounded-[20px] p-4 min-[900px]:p-5" aria-label="نتیجه">
+            <span className="text-[13.5px] font-bold text-sub">می‌شود</span>
+            <output className="tabular block min-h-[44px] break-all text-[clamp(26px,8.5vw,39px)] font-extrabold leading-tight text-green-dark dark:text-brand-mint" aria-live="polite">
+              {convertAmount(result)}
+            </output>
+            <p className="min-h-[21px] text-[13px] font-medium leading-6 text-sub">
+              {result >= 1 ? `${amountInWords(result)} ${nameOf(to)}` : ""}
+            </p>
+            {pickButton("to")}
+          </div>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,.8fr)]">
-          <div className="card p-5 shadow-card sm:p-6">
-            <label className="block">
-              <span className="mb-2 block text-xxs text-sub">مبلغ</span>
-              <input
-                value={amount}
-                inputMode="decimal"
-                onChange={(event) => setAmount(event.target.value)}
-                className="tabular h-[62px] w-full rounded-xl border border-line-strong bg-field px-4 text-[26px] font-bold outline-none focus:bg-surface"
-                aria-label="مبلغ"
-              />
-            </label>
-
-            <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-              <CurrencySelect label="از" value={from} onChange={setFrom} assets={assets} />
-              <button
-                type="button"
-                onClick={swap}
-                className="group mb-0.5 grid h-11 w-11 place-items-center rounded-full border border-line-strong bg-surface text-ink transition-transform hover:bg-soft active:scale-95"
-                aria-label="جابه‌جایی ارز مبدأ و مقصد"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" className="transition-transform duration-[280ms] ease-[cubic-bezier(.16,1,.3,1)] group-active:rotate-180" aria-hidden="true">
-                  <path d="M18.5 9.6A7 7 0 0 0 5.7 7.6M5.2 4.2v3.6h3.6M5.5 14.4A7 7 0 0 0 18.3 16.4M18.8 19.8v-3.6h-3.6" />
-                </svg>
-              </button>
-              <CurrencySelect label="به" value={to} onChange={setTo} assets={assets} />
-            </div>
-
-            <div className="mt-5 rounded-[16px] bg-soft p-5">
-              <span className="block text-xxs text-muted">
-                {fa(value)} {nameOf(from)} برابر است با
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-[13px] font-medium text-sub min-[900px]:text-[15px]">
+            هر ۱ {rateFlip ? nameOf(to) : nameOf(from)} ={" "}
+            <b className="tabular font-extrabold text-ink">{convertAmount(rateFlip ? 1 / unitRate : unitRate)}</b>{" "}
+            {rateFlip ? nameOf(from) : nameOf(to)}
+            {bySymbol.get(from === TOMAN ? to : from) ? (
+              <span className="ms-2 text-[11.5px] text-muted" suppressHydrationWarning>
+                · ساعت {clock(bySymbol.get(from === TOMAN ? to : from)!.fetchedAt)}
               </span>
-              <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
-                <strong className="tabular break-all text-[32px] font-bold tracking-[-1.2px] text-ink">
-                  {resultText}
-                </strong>
-                <small className="text-[13px] text-muted">{nameOf(to)}</small>
-              </div>
-              <p className="mt-3 flex items-center gap-2 text-[11px] text-muted">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                {rateLine}
-                {fromAsset ? ` · ساعت ${clock(fromAsset.fetchedAt)}` : ""}
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {QUICK.map((quick) => (
-                <button
-                  key={quick}
-                  type="button"
-                  onClick={() => setAmount(fa(quick))}
-                  className="rounded-[10px] border border-line bg-surface px-3 py-2 text-[11.5px] font-semibold text-sub hover:border-line-strong hover:bg-soft"
-                >
-                  {fa(quick)} {nameOf(from)}
-                </button>
-              ))}
-            </div>
-
+            ) : null}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {QUICK.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAmt(value)}
+                className="glass-btn tabular h-9 rounded-pill px-3.5 text-[13.5px] font-bold"
+              >
+                {amountDisplay(value)}
+              </button>
+            ))}
             <button
               type="button"
               onClick={() => setSharing(true)}
-              disabled={!ready}
-              className="mt-5 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[10px] bg-brand text-[13.5px] font-bold text-brand-cream transition-transform active:scale-[.98] disabled:opacity-60 dark:bg-brand-mint dark:text-brand-deep"
+              disabled={!(amount > 0 && result > 0)}
+              aria-label="اشتراک‌گذاری تبدیل"
+              className="glass-btn grid h-9 w-9 place-items-center rounded-pill disabled:opacity-50"
             >
-              <Share2 className="h-[18px] w-[18px]" />
-              اشتراک‌گذاری تبدیل
+              <Share2 className="h-4 w-4" />
             </button>
-            <p className="mt-3 text-[11px] text-muted">نتیجه تقریبی است و کارمزد صرافی را شامل نمی‌شود.</p>
           </div>
-
-          <aside className="card p-5">
-            <h2 className="text-[14px] font-bold">ارزهای پرکاربرد</h2>
-            <div className="mt-3 space-y-1.5">
-              {popular.map((item) => (
-                <button
-                  key={item.symbol}
-                  type="button"
-                  onClick={() => setFrom(item.symbol)}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-right transition-colors ${
-                    from === item.symbol ? "border-green-soft bg-green-soft" : "border-transparent hover:bg-soft"
-                  }`}
-                >
-                  <AssetIcon rate={item} size={28} />
-                  <strong className="flex-1 text-[12.5px]">{item.nameFa}</strong>
-                  <b className="tabular text-[12.5px] font-bold">{formatPrice(item.sell)}</b>
-                </button>
-              ))}
-            </div>
-          </aside>
         </div>
       </section>
+
+      {/* کیبورد داخلی موبایل، با ارقام فارسی */}
+      <div className="mt-4 grid grid-cols-3 gap-2 min-[900px]:hidden" aria-label="صفحه‌کلید عدد">
+        {KEYPAD.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => press(key)}
+            aria-label={key === "del" ? "پاک کردن آخرین رقم" : key === "." ? "ممیز" : FA_KEY[key]}
+            className={`glass-btn grid h-[50px] place-items-center rounded-[14px] font-bold active:scale-[.97] ${
+              key === "del" || key === "." ? "text-[16px] text-sub" : "text-[22px]"
+            }`}
+          >
+            {key === "del" ? "⌫" : key === "." ? "٫" : FA_KEY[key]}
+          </button>
+        ))}
+      </div>
+
+      {/* ------------------------ تبدیل‌های پرکاربرد ------------------------ */}
+      <section className="mt-8 hidden min-[600px]:block">
+        <h2 className="mb-3 text-[16px] font-extrabold">تبدیل‌های پرکاربرد</h2>
+        <div className="grid grid-cols-2 gap-3 min-[900px]:grid-cols-4">
+          {PAIRS.filter((pair) => (pair.from === TOMAN || bySymbol.has(pair.from)) && (pair.to === TOMAN || bySymbol.has(pair.to))).map(
+            (pair) => (
+              <button
+                key={pair.title}
+                type="button"
+                onClick={() => setPair(pair.from, pair.to, "1")}
+                className="card flex items-center gap-2.5 rounded-[18px] p-3.5 text-right"
+              >
+                <span className="flex shrink-0">
+                  {iconOf(pair.from, 26)}
+                  <span className="-ms-2 flex">{iconOf(pair.to, 26)}</span>
+                </span>
+                <span className="min-w-0">
+                  <b className="block truncate text-[13.5px] font-extrabold">{pair.title}</b>
+                  <span className="tabular block text-[12px] text-sub">
+                    ۱ = {convertAmount(tomanOf(pair.from) / tomanOf(pair.to))}
+                  </span>
+                </span>
+              </button>
+            ),
+          )}
+        </div>
+      </section>
+
+      <p className="mt-6 text-center text-[12.5px] leading-6 text-sub">
+        عددها تخمینی‌اند و بر اساس نرخ تحلیلی قیمت؛ نرخ خرید و فروش صرافی‌ها ممکن است فرق کند.
+      </p>
+
+      {picker ? (
+        <AssetPicker
+          assets={assets.filter((asset) => asset.featured !== false)}
+          exclude={[]}
+          extraOptions={[{ symbol: TOMAN, label: "تومان" }]}
+          title={picker === "from" ? "چه چیزی داری؟" : "به چه چیزی تبدیل شود؟"}
+          onSelect={(symbol) => choose(picker, symbol)}
+          onClose={() => setPicker(null)}
+        />
+      ) : null}
 
       {sharing ? (
         <ShareDialog
           conversion={{
-            amount: fa(value),
+            amount: amountDisplay(amt),
             fromName: nameOf(from),
             toName: nameOf(to),
-            result: resultText,
+            result: convertAmount(result),
             rateLine,
             // لحظه‌ی اشتراک، نه زمان آخرین نرخ؛ گیرنده می‌بیند تبدیل کی انجام شده
             at: new Date(),
@@ -192,61 +343,6 @@ export default function ConverterBoard({
         />
       ) : null}
     </main>
-  );
-}
-
-/** عدد بزرگ بدون اعشار، عدد کوچک (مثل تومان به بیت‌کوین) با اعشار کافی */
-function formatAmount(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "۰";
-  if (value >= 100) return fa(Math.round(value));
-  if (value >= 1) return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(value);
-  return new Intl.NumberFormat("fa-IR", { maximumSignificantDigits: 4 }).format(value);
-}
-
-function CurrencySelect({
-  label,
-  value,
-  onChange,
-  assets,
-}: {
-  label: string;
-  value: string;
-  onChange: (symbol: string) => void;
-  assets: RateView[];
-}) {
-  const [open, setOpen] = useState(false);
-  const asset = assets.find((item) => item.symbol === value);
-  return (
-    <div className="min-w-0">
-      <span className="mb-2 block text-xxs text-sub">{label}</span>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-[46px] w-full min-w-0 items-center gap-2 rounded-control border border-line bg-field px-2.5 text-right transition-colors hover:border-line-strong"
-        aria-label={`ارز ${label}: ${value === TOMAN ? "تومان" : (asset?.nameFa ?? value)}`}
-      >
-        {value === TOMAN ? (
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[23.4%] bg-brand text-[11px] font-extrabold text-brand-cream" aria-hidden="true">ت</span>
-        ) : asset ? (
-          <AssetIcon rate={asset} size={28} />
-        ) : null}
-        <strong className="min-w-0 flex-1 truncate text-[12.5px]">{value === TOMAN ? "تومان" : (asset?.nameFa ?? value)}</strong>
-        <ChevronDown className="h-4 w-4 shrink-0 text-faint" />
-      </button>
-      {open ? (
-        <AssetPicker
-          assets={assets}
-          exclude={[]}
-          extraOptions={[{ symbol: TOMAN, label: "تومان" }]}
-          title={`ارز ${label}`}
-          onSelect={(symbol) => {
-            onChange(symbol);
-            setOpen(false);
-          }}
-          onClose={() => setOpen(false)}
-        />
-      ) : null}
-    </div>
   );
 }
 
