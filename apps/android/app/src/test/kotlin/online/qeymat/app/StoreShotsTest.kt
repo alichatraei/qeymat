@@ -95,7 +95,7 @@ class StoreShotsTest {
             store.setThemeMode(ThemeMode.LIGHT)
             store.setViewMode(ViewMode.GRID)
         }
-        click("قیمت")
+        click("بازار")
         click("طلا و سکه")
         settle(2_000)
         shot("5-light-gold")

@@ -81,7 +81,7 @@ import online.qeymat.widget.WidgetArt
 import org.koin.compose.koinInject
 
 enum class AppTab(val label: String, val icon: ImageVector, val iconOn: ImageVector) {
-    PRICES("قیمت", QIcons.TabPrices, QIcons.TabPricesOn),
+    PRICES("بازار", QIcons.TabPrices, QIcons.TabPricesOn),
     CONVERT("تبدیل", QIcons.TabConvert, QIcons.TabConvertOn),
     ALERTS("هشدار", QIcons.TabAlerts, QIcons.TabAlertsOn),
     SETTINGS("من", QIcons.TabSettings, QIcons.TabSettingsOn),

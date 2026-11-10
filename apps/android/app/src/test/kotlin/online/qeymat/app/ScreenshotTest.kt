@@ -78,7 +78,7 @@ class ScreenshotTest {
                 store.setViewMode(ViewMode.LIST)
             }
             compose.mainClock.advanceTimeBy(600)
-            tab("قیمت")
+            tab("بازار")
             tab("منتخب من")
             shot("$t-prices-list")
             if (theme == ThemeMode.DARK) {

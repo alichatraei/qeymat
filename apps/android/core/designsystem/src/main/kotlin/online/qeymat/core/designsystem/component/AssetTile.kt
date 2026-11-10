@@ -52,6 +52,7 @@ fun cryptoLogoUrl(symbol: String) = "https://assets.coincap.io/assets/icons/${sy
  * کرم و نقطهٔ نعنایی، باندل‌شده در assets تا بدون شبکه هم کار کنند.
  */
 private val BRAND_ICON_IDS = mapOf(
+    "IRT" to "irt",
     "USD" to "usd", "USD_FARDA" to "usd", "USD_HERAT" to "usd", "EUR" to "eur", "AED" to "aed",
     "GBP" to "gbp", "TRY" to "try", "CAD" to "cad", "CNY" to "cny", "CHF" to "chf", "JPY" to "jpy",
     "RUB" to "rub", "INR" to "inr", "SAR" to "sar", "KWD" to "kwd", "IQD" to "iqd", "AUD" to "aud",
